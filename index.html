@@ -205,8 +205,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .save-btn{margin:0 14px 20px;padding:15px;background:var(--accent);border:none;border-radius:13px;
   font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#080810;cursor:pointer;width:calc(100% - 28px);}
 
-/* HISTORIAL */
-.hist-empty{text-align:center;padding:50px 20px;color:var(--muted);line-height:1.8;}
+/* HISTORIAL COMIDAS */
+.hist-comidas{border-top:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:6px;}
+.hcomida{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;
+  background:var(--s3);border-radius:8px;}
+.hcomida-nombre{font-size:13px;font-weight:500;}
+.hcomida-macros{font-size:11px;color:var(--muted);}
+.hist-repetir-btn{margin-top:4px;padding:9px;background:var(--accent-dim);border:1px solid rgba(212,240,74,0.3);
+  border-radius:9px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
+  cursor:pointer;text-align:center;}
 .hist-empty .big{font-size:44px;margin-bottom:14px;}
 .hist-day{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .hist-dh{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
@@ -614,6 +621,15 @@ function saveToday(){
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
   if(!idx.includes(TODAY)){idx.push(TODAY);localStorage.setItem('macroai_dias',JSON.stringify(idx));}
 }
+function getYesterdayComidas(){
+  try{
+    const ayer=new Date();ayer.setDate(ayer.getDate()-1);
+    const ayerStr=ayer.toISOString().split('T')[0];
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+ayerStr)||'null');
+    if(!d||!d.comidas||!d.comidas.length)return null;
+    return{fecha:ayerStr,comidas:d.comidas};
+  }catch(e){return null;}
+}
 
 // ── VISTAS ──
 function showView(id){
@@ -682,6 +698,15 @@ function renderHistorial(){
       const pC=Math.round(Math.min(100,(d.chC/d.chObj)*100));
       const pG=Math.round(Math.min(100,(d.grasaC/d.grasaObj)*100));
       const fmtF=new Date(fecha+'T12:00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
+      // Comidas del día con nombre
+      const comidasHTML=d.comidas&&d.comidas.length?`
+        <div class="hist-comidas">
+          ${d.comidas.map(c=>`<div class="hcomida">
+            <div class="hcomida-nombre">${c.nombre||'Comida'}</div>
+            <div class="hcomida-macros">${c.kcal}kcal · P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g</div>
+          </div>`).join('')}
+          <button class="hist-repetir-btn" onclick="repetirDia('${fecha}')">↩ Usar comidas de este día</button>
+        </div>`:'';
       body.innerHTML+=`<div class="hist-day">
         <div class="hist-dh"><div class="hist-date">${fmtF}</div><div class="hist-tipo ${d.tipoDia}">${d.tipoDia==='entreno'?'💪 Entreno':'😴 Descanso'}</div></div>
         <div class="hist-macros">
@@ -696,29 +721,59 @@ function renderHistorial(){
           <div class="hbr"><span class="hbr-lbl">CH</span><div class="hbr-track"><div class="hbr-fill" style="width:${pC}%;background:var(--yellow)"></div></div><span class="hbr-pct">${pC}%</span></div>
           <div class="hbr"><span class="hbr-lbl">Grasa</span><div class="hbr-track"><div class="hbr-fill" style="width:${pG}%;background:var(--blue)"></div></div><span class="hbr-pct">${pG}%</span></div>
         </div>
+        ${comidasHTML}
       </div>`;
     }catch(e){}
   });
+}
+
+function repetirDia(fecha){
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(!d||!d.comidas||!d.comidas.length)return;
+    const resumen=d.comidas.map(c=>`${c.nombre||'Comida'} (${c.kcal}kcal)`).join(', ');
+    showView('viewMain');
+    setTimeout(()=>sendDirect(`El ${fecha} comí: ${resumen}. Quiero repetir estas comidas hoy adaptándolas a mis macros actuales. Ayúdame.`),300);
+  }catch(e){}
 }
 
 // ── SYSTEM PROMPT ──
 function sysPrompt(){
   const r={kcal:S.kcalObj-S.kcalC,prot:S.prot-S.protC,ch:S.ch-S.chC,grasa:S.grasa-S.grasaC};
   const despStr=DESP.length?`\nDESPENSA DISPONIBLE: ${DESP.join(', ')}`:'\nDESPENSA: no configurada aún';
+
+  // Comidas de hoy con nombre e ingredientes
+  let comidasHoy='';
+  if(S.comidas.length){
+    comidasHoy='\nCOMIDAS DE HOY:\n'+S.comidas.map(c=>
+      `- ${c.nombre} (${c.hora||''}): ${c.kcal}kcal | P${c.prot}g CH${c.ch}g G${c.grasa}g${c.ingredientes?'\n  Ingredientes: '+c.ingredientes.substring(0,200):''}`
+    ).join('\n');
+  }
+
+  // Comidas de ayer
+  let comidasAyer='';
+  const ayer=getYesterdayComidas();
+  if(ayer&&ayer.comidas.length){
+    comidasAyer='\nCOMIDAS DE AYER ('+ayer.fecha+'):\n'+ayer.comidas.map(c=>
+      `- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g${c.ingredientes?'\n  Ingredientes: '+c.ingredientes.substring(0,200):''}`
+    ).join('\n');
+  }
+
   return `Eres MacroAI, consejera de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora.
 
 PERFIL HOY (${S.tipoDia==='entreno'?'DÍA DE ENTRENO':'DÍA DE DESCANSO'}):
 - Objetivo: ${S.kcalObj} kcal | Prot ${S.prot}g | CH ${S.ch}g | Grasa ${S.grasa}g
 - Consumido: ${S.kcalC} kcal | Prot ${S.protC}g | CH ${S.chC}g | Grasa ${S.grasaC}g
-- Quedan: ${r.kcal} kcal | Prot ${r.prot}g | CH ${r.ch}g | Grasa ${r.grasa}g
-- Comidas registradas: ${S.comidas.length}${despStr}
+- Quedan: ${r.kcal} kcal | Prot ${r.prot}g | CH ${r.ch}g | Grasa ${r.grasa}g${comidasHoy}${comidasAyer}${despStr}
 ${S.planDia?`- Plan del día activo: ${JSON.stringify(S.planDia)}`:''}
 
 REGLAS:
 - Usa siempre los alimentos de la despensa si están disponibles
+- Cuando el cliente pida "el desayuno de ayer" o "lo de ayer", usa las comidas de ayer para replicar o adaptar
 - Cuando generes un menú completo, usa el formato PLAN_DIA
-- Cuando calcules ingredientes, da gramos exactos con INGREDIENTES
+- Cuando calcules ingredientes de una comida, usa INGREDIENTES y luego REGISTRAR y COMIDA juntos
 - Actúa como consejera: si falta proteína sugiere añadir, si sobra grasa avisa
+- Si el cliente pregunta por un alimento (ej: "¿el arroz tiene mucha azúcar?"), responde con análisis nutricional completo: calorías por 100g, azúcares, grasas saturadas, fibra, sodio, y si es recomendable para sus macros actuales
 - Máximo 2-3 frases de texto + datos. Termina con pregunta o acción.
 - Español siempre.
 
@@ -739,6 +794,7 @@ emoji Nombre:XXXg:XXXkcal:nota
 TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/INGREDIENTES]
 
+[COMIDA]Nombre descriptivo de la comida[/COMIDA]
 [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
 [AVISO_WARN]texto[/AVISO_WARN]
 [AVISO_OK]texto[/AVISO_OK]
@@ -775,7 +831,18 @@ function parseAI(raw){
   const regMatch=text.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
   if(regMatch){
     S.kcalC+=parseInt(regMatch[1]);S.protC+=parseInt(regMatch[2]);S.chC+=parseInt(regMatch[3]);S.grasaC+=parseInt(regMatch[4]);
-    S.comidas.push({kcal:parseInt(regMatch[1])});updateBars();saveToday();text=text.replace(regMatch[0],'').trim();
+    // Guardar nombre de comida e ingredientes si están disponibles
+    const nombreMatch=text.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
+    const nombre=nombreMatch?nombreMatch[1].trim():`Comida ${S.comidas.length+1}`;
+    const ingredientesTexto=ingMatch?ingMatch[1].trim():'';
+    S.comidas.push({
+      nombre, hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+      kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),
+      ingredientes:ingredientesTexto
+    });
+    updateBars();saveToday();
+    text=text.replace(regMatch[0],'').trim();
+    if(nombreMatch)text=text.replace(nombreMatch[0],'').trim();
   }
   const wM=text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
   if(wM){elements.push({type:'html',content:`<div class="alert-card warn">⚠️ <span>${wM[1]}</span></div>`});text=text.replace(wM[0],'').trim();}
