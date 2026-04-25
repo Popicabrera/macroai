@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MacroAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080810;
+  --s1: #111118;
+  --s2: #18181f;
+  --s3: #22222c;
+  --border: rgba(255,255,255,0.07);
+  --accent: #d4f04a;
+  --accent-dim: rgba(212,240,74,0.1);
+  --accent-glow: rgba(212,240,74,0.25);
+  --red: #ff6b6b;
+  --yellow: #ffd93d;
+  --blue: #6bb8f6;
+  --teal: #3ff0c0;
+  --text: #eeeff5;
+  --muted: #5a5a70;
+  --muted2: #3a3a50;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+.ambient{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 5%, rgba(212,240,74,0.05) 0%,transparent 65%),
+    radial-gradient(ellipse 50% 50% at 90% 90%, rgba(63,240,192,0.04) 0%,transparent 65%);
+}
+
+.app{
+  position:relative;z-index:1;
+  max-width:430px;margin:0 auto;
+  height:100vh;display:flex;flex-direction:column;
+}
+
+/* HEADER */
+.header{
+  flex-shrink:0;
+  padding:14px 18px 12px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,8,16,0.85);backdrop-filter:blur(20px);
+}
+.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+.logo em{color:var(--accent);font-style:normal;}
+.day-pill{
+  display:flex;align-items:center;gap:5px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 10px;font-size:11px;
+}
+.pdot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 2s infinite;}
+
+/* MACRO BAR */
+.macro-bar{
+  flex-shrink:0;padding:10px 16px;
+  background:var(--s1);border-bottom:1px solid var(--border);
+  display:flex;gap:6px;
+}
+.mc{
+  flex:1;background:var(--s2);border:1px solid var(--border);
+  border-radius:10px;padding:7px 8px;
+}
+.mc-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
+.mc-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;line-height:1.2;margin-top:1px;}
+.mc-sub{font-size:9px;color:var(--muted);margin-top:1px;}
+.mc-track{height:3px;background:var(--s3);border-radius:3px;margin-top:4px;overflow:hidden;}
+.mc-fill{height:100%;border-radius:3px;transition:width 0.8s ease;width:0%;}
+.mc.kcal{background:linear-gradient(135deg,rgba(212,240,74,0.08),rgba(212,240,74,0.03));border-color:rgba(212,240,74,0.15);}
+.mc.kcal .mc-val{color:var(--accent);}
+
+/* MESSAGES */
+.messages{
+  flex:1;overflow-y:auto;
+  padding:14px 14px 6px;
+  display:flex;flex-direction:column;gap:10px;
+  scroll-behavior:smooth;
+}
+.messages::-webkit-scrollbar{width:0;}
+
+/* BUBBLES */
+.msg{display:flex;gap:7px;animation:fadeUp 0.3s ease both;}
+.msg.user{flex-direction:row-reverse;}
+
+.av{
+  width:26px;height:26px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;align-self:flex-end;
+  background:var(--s2);border:1px solid var(--border);
+}
+.msg.ai .av{
+  background:var(--accent-dim);border-color:rgba(212,240,74,0.2);
+  font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);
+}
+
+.bubble{
+  max-width:80%;background:var(--s2);border:1px solid var(--border);
+  border-radius:16px;padding:10px 13px;
+  font-size:14px;line-height:1.55;
+}
+.msg.user .bubble{
+  background:var(--accent-dim);border-color:rgba(212,240,74,0.2);
+  border-bottom-right-radius:4px;
+}
+.msg.ai .bubble{border-bottom-left-radius:4px;}
+
+/* QUICK REPLIES */
+.quick-replies{
+  display:flex;flex-wrap:wrap;gap:6px;
+  padding:0 14px 4px;
+  animation:fadeUp 0.3s ease both;
+}
+.qr{
+  background:var(--s2);border:1px solid rgba(212,240,74,0.25);
+  border-radius:20px;padding:7px 13px;
+  font-size:13px;color:var(--text);cursor:pointer;
+  transition:all 0.2s;white-space:nowrap;
+}
+.qr:hover{background:var(--accent-dim);border-color:rgba(212,240,74,0.5);transform:scale(1.02);}
+.qr:active{transform:scale(0.97);}
+
+/* PLAN CARD */
+.plan-card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-top:6px;
+}
+.plan-header{
+  padding:8px 12px;background:rgba(212,240,74,0.07);
+  border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--accent);
+}
+.plan-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 12px;border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+.plan-item:last-child{border-bottom:none;}
+.pi-left{display:flex;flex-direction:column;gap:2px;}
+.pi-name{font-weight:500;}
+.pi-note{font-size:11px;color:var(--muted);}
+.pi-right{text-align:right;}
+.pi-grams{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--accent);}
+.pi-kcal{font-size:10px;color:var(--muted);}
+
+.plan-total{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;background:rgba(255,255,255,0.02);
+  border-top:1px solid var(--border);
+}
+.pt-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.pt-macros{display:flex;gap:8px;}
+.ptm{font-size:12px;font-weight:500;}
+
+/* DAY PLAN */
+.day-plan-card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-top:6px;
+}
+.dp-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 12px;border-bottom:1px solid var(--border);
+  font-size:14px;cursor:pointer;transition:background 0.2s;
+}
+.dp-item:last-child{border-bottom:none;}
+.dp-item:hover{background:rgba(255,255,255,0.02);}
+.dp-left{display:flex;align-items:center;gap:8px;}
+.dp-emoji{font-size:18px;}
+.dp-name{font-weight:500;}
+.dp-kcal{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);}
+.dp-macros{font-size:11px;color:var(--muted);text-align:right;margin-top:1px;}
+
+/* WARN / OK */
+.alert-card{
+  border-radius:10px;padding:9px 12px;margin-top:6px;
+  font-size:13px;display:flex;gap:8px;align-items:flex-start;line-height:1.5;
+}
+.alert-card.warn{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);}
+.alert-card.ok{background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);}
+.alert-card.info{background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);}
+
+/* TYPING */
+.typing{display:flex;gap:4px;padding:3px 0;align-items:center;}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:typing 1.2s infinite;}
+.typing span:nth-child(2){animation-delay:0.2s;}
+.typing span:nth-child(3){animation-delay:0.4s;}
+
+/* INPUT */
+.input-area{
+  flex-shrink:0;padding:8px 14px 18px;
+  background:rgba(8,8,16,0.9);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+}
+.input-wrap{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:20px;padding:8px 8px 8px 14px;
+  display:flex;align-items:flex-end;gap:6px;
+  transition:border-color 0.3s;
+}
+.input-wrap:focus-within{border-color:rgba(212,240,74,0.3);}
+.input-field{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:15px;line-height:1.4;resize:none;
+  max-height:90px;min-height:22px;
+}
+.input-field::placeholder{color:var(--muted);}
+.input-btns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
+.icon-btn{
+  width:34px;height:34px;border-radius:10px;
+  background:var(--s3);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.2s;font-size:15px;flex-shrink:0;
+}
+.icon-btn:hover{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);}
+.icon-btn.recording{background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4);animation:recPulse 1s infinite;}
+.send-btn{
+  width:34px;height:34px;border-radius:10px;
+  background:var(--accent);border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.2s;flex-shrink:0;
+}
+.send-btn:hover{transform:scale(1.05);box-shadow:0 4px 14px var(--accent-glow);}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.hint{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+@keyframes typing{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
+@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.4);}50%{box-shadow:0 0 0 5px rgba(255,107,107,0);}}
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">Macro<em>AI</em></div>
+    <div class="day-pill">
+      <div class="pdot"></div>
+      <span id="dayType">Día de entreno</span>
+    </div>
+  </div>
+
+  <div class="macro-bar">
+    <div class="mc kcal">
+      <div class="mc-label">Kcal</div>
+      <div class="mc-val" id="kcalVal">2.000</div>
+      <div class="mc-sub" id="kcalSub">0 consumidas</div>
+      <div class="mc-track"><div class="mc-fill" id="kcalFill" style="background:var(--accent)"></div></div>
+    </div>
+    <div class="mc">
+      <div class="mc-label">Prot</div>
+      <div class="mc-val" id="protVal" style="color:var(--red)">100g</div>
+      <div class="mc-sub" id="protSub">0g</div>
+      <div class="mc-track"><div class="mc-fill" id="protFill" style="background:var(--red)"></div></div>
+    </div>
+    <div class="mc">
+      <div class="mc-label">CH</div>
+      <div class="mc-val" id="chVal" style="color:var(--yellow)">250g</div>
+      <div class="mc-sub" id="chSub">0g</div>
+      <div class="mc-track"><div class="mc-fill" id="chFill" style="background:var(--yellow)"></div></div>
+    </div>
+    <div class="mc">
+      <div class="mc-label">Grasa</div>
+      <div class="mc-val" id="grasaVal" style="color:var(--blue)">44g</div>
+      <div class="mc-sub" id="grasaSub">0g</div>
+      <div class="mc-track"><div class="mc-fill" id="grasaFill" style="background:var(--blue)"></div></div>
+    </div>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea class="input-field" id="inputField"
+        placeholder="Responde o escribe lo que quieras..."
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"></textarea>
+      <div class="input-btns">
+        <div class="icon-btn" id="micBtn" onclick="toggleMic()">🎤</div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="hint" id="hint">🎤 Habla · ✍️ Escribe · o pulsa una opción arriba</div>
+  </div>
+
+</div>
+<script>
+// ── STATE ──
+const S = {
+  kcalObj:2000, prot:100, ch:250, grasa:44,
+  kcalC:0, protC:0, chC:0, grasaC:0,
+  comidas:[], historial:[],
+  fase:'inicio', // inicio | distribucion | comida_x
+  planDia:null
+};
+
+// ── SYSTEM PROMPT ──
+function sysPrompt() {
+  const resta = {
+    kcal: S.kcalObj - S.kcalC,
+    prot: S.prot - S.protC,
+    ch:   S.ch   - S.chC,
+    grasa:S.grasa - S.grasaC
+  };
+  return `Eres MacroAI, asistente de nutrición dentro de una app para clientes de entrenador personal.
+
+PERFIL HOY:
+- Objetivo: ${S.kcalObj} kcal | Prot ${S.prot}g | CH ${S.ch}g | Grasa ${S.grasa}g
+- Consumido: ${S.kcalC} kcal | Prot ${S.protC}g | CH ${S.chC}g | Grasa ${S.grasaC}g
+- Quedan: ${resta.kcal} kcal | Prot ${resta.prot}g | CH ${resta.ch}g | Grasa ${resta.grasa}g
+- Comidas registradas: ${S.comidas.length}
+${S.planDia ? `- Plan del día: ${JSON.stringify(S.planDia)}` : ''}
+
+COMPORTAMIENTO:
+Guía al cliente paso a paso. Siempre termina con una pregunta o acción concreta.
+Cuando distribuyas el día, muestra las comidas con sus kcal y macros claramente.
+Cuando calcules ingredientes, da gramos exactos. Si falta algún macro, sugiere qué añadir.
+Si el cliente va corto de algún macro a mitad del día, avísale proactivamente.
+Responde siempre en español, tono cercano y motivador.
+Sé conciso: máximo 2-3 frases + datos.
+
+FORMATOS ESPECIALES que debes usar cuando corresponda:
+
+Para distribuir el día usa este formato exacto:
+[PLAN_DIA]
+desayuno:kcal=XXX,prot=XX,ch=XX,grasa=XX
+comida:kcal=XXX,prot=XX,ch=XX,grasa=XX
+merienda:kcal=XXX,prot=XX,ch=XX,grasa=XX
+cena:kcal=XXX,prot=XX,ch=XX,grasa=XX
+[/PLAN_DIA]
+
+Para calcular ingredientes de una comida usa:
+[INGREDIENTES]
+emoji Nombre del alimento:XXXg:XXXkcal:notabreve
+emoji Nombre del alimento:XXXg:XXXkcal:notabreve
+TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
+[/INGREDIENTES]
+
+Para registrar macros consumidos usa al final:
+[REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
+
+Para avisos usa:
+[AVISO_WARN]texto del aviso[/AVISO_WARN]
+[AVISO_OK]texto positivo[/AVISO_OK]
+
+Para sugerir opciones rápidas al usuario usa:
+[OPCIONES]opcion1|opcion2|opcion3[/OPCIONES]`;
+}
+
+// ── PARSE & RENDER AI ──
+function parseAI(raw) {
+  let text = raw;
+  const elements = [];
+
+  // PLAN_DIA
+  const planMatch = text.match(/\[PLAN_DIA\]([\s\S]*?)\[\/PLAN_DIA\]/);
+  if (planMatch) {
+    const lines = planMatch[1].trim().split('\n');
+    const plan = {};
+    const items = [];
+    const emojis = {desayuno:'🌅',comida:'☀️',merienda:'🍎',cena:'🌙'};
+    lines.forEach(l => {
+      const [name, vals] = l.split(':');
+      if (!name || !vals) return;
+      const kv = {};
+      vals.split(',').forEach(p => { const [k,v]=p.split('='); kv[k]=parseInt(v); });
+      plan[name.trim()] = kv;
+      items.push({name:name.trim(), ...kv});
+    });
+    S.planDia = plan;
+
+    let html = '<div class="day-plan-card">';
+    items.forEach(i => {
+      const em = emojis[i.name] || '🍽️';
+      const label = i.name.charAt(0).toUpperCase()+i.name.slice(1);
+      html += `<div class="dp-item">
+        <div class="dp-left">
+          <div class="dp-emoji">${em}</div>
+          <div class="dp-name">${label}</div>
+        </div>
+        <div>
+          <div class="dp-kcal">${i.kcal} kcal</div>
+          <div class="dp-macros">P${i.prot}g · CH${i.ch}g · G${i.grasa}g</div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    elements.push({type:'html', content:html});
+    text = text.replace(planMatch[0], '').trim();
+  }
+
+  // INGREDIENTES
+  const ingMatch = text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
+  if (ingMatch) {
+    const lines = ingMatch[1].trim().split('\n');
+    let totalLine = null;
+    const items = [];
+    lines.forEach(l => {
+      if (l.startsWith('TOTAL:')) { totalLine = l; return; }
+      const parts = l.split(':');
+      if (parts.length >= 3) {
+        items.push({full:parts[0], grams:parts[1], kcal:parts[2], note:parts[3]||''});
+      }
+    });
+    let html = '<div class="plan-card"><div class="plan-header">📋 Ingredientes y cantidades</div>';
+    items.forEach(i => {
+      html += `<div class="plan-item">
+        <div class="pi-left">
+          <div class="pi-name">${i.full}</div>
+          ${i.note ? `<div class="pi-note">${i.note}</div>` : ''}
+        </div>
+        <div class="pi-right">
+          <div class="pi-grams">${i.grams}</div>
+          <div class="pi-kcal">${i.kcal}</div>
+        </div>
+      </div>`;
+    });
+    if (totalLine) {
+      const tv = {};
+      totalLine.replace('TOTAL:','').split(',').forEach(p=>{const[k,v]=p.split('=');tv[k]=v;});
+      html += `<div class="plan-total">
+        <div class="pt-label">Total</div>
+        <div class="pt-macros">
+          <span class="ptm" style="color:var(--red)">P ${tv.prot||'?'}g</span>
+          <span class="ptm" style="color:var(--yellow)">CH ${tv.ch||'?'}g</span>
+          <span class="ptm" style="color:var(--blue)">G ${tv.grasa||'?'}g</span>
+          <span class="ptm" style="color:var(--accent)">${tv.kcal||'?'} kcal ✓</span>
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+    elements.push({type:'html', content:html});
+    text = text.replace(ingMatch[0], '').trim();
+  }
+
+  // REGISTRAR
+  const regMatch = text.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+  if (regMatch) {
+    S.kcalC   += parseInt(regMatch[1]);
+    S.protC   += parseInt(regMatch[2]);
+    S.chC     += parseInt(regMatch[3]);
+    S.grasaC  += parseInt(regMatch[4]);
+    S.comidas.push({kcal:parseInt(regMatch[1])});
+    updateBars();
+    text = text.replace(regMatch[0], '').trim();
+  }
+
+  // AVISOS
+  const warnMatch = text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
+  if (warnMatch) {
+    elements.push({type:'html', content:`<div class="alert-card warn">⚠️ <span>${warnMatch[1]}</span></div>`});
+    text = text.replace(warnMatch[0], '').trim();
+  }
+  const okMatch = text.match(/\[AVISO_OK\]([\s\S]*?)\[\/AVISO_OK\]/);
+  if (okMatch) {
+    elements.push({type:'html', content:`<div class="alert-card ok">✅ <span>${okMatch[1]}</span></div>`});
+    text = text.replace(okMatch[0], '').trim();
+  }
+
+  // OPCIONES → quick replies
+  const opMatch = text.match(/\[OPCIONES\](.*?)\[\/OPCIONES\]/);
+  let opciones = [];
+  if (opMatch) {
+    opciones = opMatch[1].split('|').map(o=>o.trim()).filter(Boolean);
+    text = text.replace(opMatch[0], '').trim();
+  }
+
+  return {text: text.trim(), elements, opciones};
+}
+
+// ── ADD MESSAGE ──
+function addMsg(role, text, extraElements=[], opciones=[]) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const av = document.createElement('div');
+  av.className = 'av';
+  av.textContent = role === 'ai' ? 'IA' : '👤';
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+
+  let html = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+
+  extraElements.forEach(el => { if(el.type==='html') html += el.content; });
+
+  bub.innerHTML = html;
+  div.appendChild(av);
+  div.appendChild(bub);
+  msgs.appendChild(div);
+
+  if (opciones.length) {
+    const qr = document.createElement('div');
+    qr.className = 'quick-replies';
+    opciones.forEach(op => {
+      const btn = document.createElement('div');
+      btn.className = 'qr';
+      btn.textContent = op;
+      btn.onclick = () => { removeQuickReplies(); sendDirect(op); };
+      qr.appendChild(btn);
+    });
+    msgs.appendChild(qr);
+  }
+
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeQuickReplies() {
+  document.querySelectorAll('.quick-replies').forEach(el => el.remove());
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai'; div.id = 'typingMsg';
+  const av = document.createElement('div'); av.className='av'; av.textContent='IA';
+  const bub = document.createElement('div'); bub.className='bubble';
+  bub.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+  div.appendChild(av); div.appendChild(bub);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function removeTyping(){ const t=document.getElementById('typingMsg'); if(t)t.remove(); }
+
+// ── CALL AI ──
+async function callAI(userMsg) {
+  S.historial.push({role:'user', content:userMsg});
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      system:sysPrompt(),
+      messages:S.historial
+    })
+  });
+  const data = await res.json();
+  const raw = data.content?.[0]?.text || 'Error de conexión, inténtalo de nuevo.';
+  S.historial.push({role:'assistant', content:raw});
+  return raw;
+}
+
+// ── SEND ──
+async function sendMessage() {
+  const field = document.getElementById('inputField');
+  const text = field.value.trim();
+  if (!text) return;
+  field.value=''; field.style.height='auto';
+  await sendDirect(text);
+}
+
+async function sendDirect(text) {
+  removeQuickReplies();
+  document.getElementById('sendBtn').disabled = true;
+  addMsg('user', text);
+  addTyping();
+  try {
+    const raw = await callAI(text);
+    removeTyping();
+    const {text:t, elements, opciones} = parseAI(raw);
+    addMsg('ai', t, elements, opciones);
+  } catch(e) {
+    removeTyping();
+    addMsg('ai','Error de conexión. Comprueba tu internet e inténtalo.',[]
+    ,['Reintentar']);
+  }
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function handleKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+}
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,90)+'px';
+}
+
+// ── BARS ──
+function updateBars(){
+  const p=(v,t)=>Math.min(100,(v/t)*100)+'%';
+  document.getElementById('kcalFill').style.width = p(S.kcalC,S.kcalObj);
+  document.getElementById('protFill').style.width = p(S.protC,S.prot);
+  document.getElementById('chFill').style.width   = p(S.chC,S.ch);
+  document.getElementById('grasaFill').style.width= p(S.grasaC,S.grasa);
+  document.getElementById('kcalSub').textContent  = `${S.kcalC} consumidas`;
+  document.getElementById('protSub').textContent  = `${S.protC}g`;
+  document.getElementById('chSub').textContent    = `${S.chC}g`;
+  document.getElementById('grasaSub').textContent = `${S.grasaC}g`;
+}
+
+// ── VOICE ──
+let isRec=false, recog=null;
+function toggleMic(){
+  const btn=document.getElementById('micBtn');
+  const hint=document.getElementById('hint');
+  if(!isRec){
+    isRec=true; btn.classList.add('recording'); btn.textContent='⏹️';
+    hint.textContent='🔴 Escuchando... pulsa para parar';
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(SR){
+      recog=new SR(); recog.lang='es-ES'; recog.continuous=false; recog.interimResults=true;
+      recog.onresult=e=>{
+        const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+        document.getElementById('inputField').value=t;
+        autoResize(document.getElementById('inputField'));
+        if(e.results[0].isFinal) stopMic(true);
+      };
+      recog.onerror=()=>stopMic(false);
+      recog.onend=()=>stopMic(false);
+      recog.start();
+    } else {
+      hint.textContent='⚠️ Navegador sin soporte de voz. Escribe tu mensaje.';
+      setTimeout(()=>stopMic(false),2000);
+    }
+  } else stopMic(false);
+}
+function stopMic(send){
+  isRec=false;
+  document.getElementById('micBtn').classList.remove('recording');
+  document.getElementById('micBtn').textContent='🎤';
+  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · o pulsa una opción arriba';
+  if(recog){try{recog.stop();}catch(e){} recog=null;}
+  if(send) setTimeout(sendMessage,300);
+}
+
+// ── INIT: IA arranca la conversación ──
+window.addEventListener('load', async () => {
+  updateBars();
+  addTyping();
+  try {
+    const raw = await callAI('Saluda al cliente, dile cuántas calorías tiene hoy y pregúntale cuántas comidas quiere hacer. Sé breve y amigable. Usa [OPCIONES] para sugerir: 2 comidas|3 comidas|4 comidas|5 comidas');
+    removeTyping();
+    const {text:t, elements, opciones} = parseAI(raw);
+    addMsg('ai', t, elements, opciones);
+  } catch(e) {
+    removeTyping();
+    addMsg('ai','¡Hola! Hoy tienes 2.000 kcal. ¿Cuántas comidas quieres hacer?',[],
+      ['2 comidas','3 comidas','4 comidas','5 comidas']);
+  }
+});
+</script>
+</body>
+</html>
