@@ -159,7 +159,34 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;line-height:1;color:var(--text);}
 .scrollable{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
 
-/* CONFIG */
+/* CONFIG V2 — layout compacto 2 columnas */
+.cfg-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
+.cfg2-sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cfg2-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.cfg2-daytoggle{display:flex;gap:10px;padding:12px 14px;}
+.cfg2-daybtn{flex:1;padding:12px 8px;border-radius:11px;border:1px solid var(--border);background:var(--s3);
+  display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all 0.2s;}
+.cfg2-daybtn.active{background:var(--accent-dim);border-color:rgba(212,240,74,0.4);}
+.cfg2-dayicon{font-size:22px;}
+.cfg2-daylbl{font-size:13px;font-weight:600;color:var(--muted);}
+.cfg2-daybtn.active .cfg2-daylbl{color:var(--accent);}
+.cfg2-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cfg2-col{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cfg2-col-hdr{padding:9px 12px;border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-align:center;}
+.entreno-hdr{background:rgba(212,240,74,0.07);color:var(--accent);}
+.descanso-hdr{background:rgba(107,184,246,0.07);color:var(--blue);}
+.cfg2-field{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;}
+.cfg2-field:last-child{border-bottom:none;}
+.cfg2-field-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:600;}
+.cfg2-inp{background:var(--s3);border:1px solid var(--border);border-radius:7px;
+  padding:5px 8px;width:100%;text-align:right;color:var(--text);font-family:'Syne',sans-serif;
+  font-size:16px;font-weight:700;outline:none;}
+.cfg2-inp:focus{border-color:rgba(212,240,74,0.4);}
+.cfg2-unit{font-size:10px;color:var(--muted);text-align:right;}
+
+/* CONFIG V1 — mantener save-btn */
 .cfg-sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .cfg-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
   font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
@@ -387,31 +414,75 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
     <h2>Configuración ⚙️</h2>
   </div>
-  <div class="scrollable" style="padding-bottom:80px">
-    <div class="cfg-sec">
-      <div class="cfg-title">Tipo de día hoy</div>
-      <div class="cfg-row">
-        <div><div class="cfg-lbl">Día activo</div><div class="cfg-sub">Afecta a los macros</div></div>
-        <div class="day-toggle">
-          <div class="day-btn active" id="btnEntreno" onclick="setDayType('entreno')">💪 Entreno</div>
-          <div class="day-btn" id="btnDescanso" onclick="setDayType('descanso')">😴 Descanso</div>
+  <div class="cfg-body">
+
+    <!-- Tipo de día -->
+    <div class="cfg2-sec">
+      <div class="cfg2-title">Tipo de día hoy</div>
+      <div class="cfg2-daytoggle">
+        <div class="cfg2-daybtn active" id="btnEntreno" onclick="setDayType('entreno')">
+          <div class="cfg2-dayicon">💪</div>
+          <div class="cfg2-daylbl">Entreno</div>
+        </div>
+        <div class="cfg2-daybtn" id="btnDescanso" onclick="setDayType('descanso')">
+          <div class="cfg2-dayicon">😴</div>
+          <div class="cfg2-daylbl">Descanso</div>
         </div>
       </div>
     </div>
-    <div class="cfg-sec">
-      <div class="cfg-title">Macros — Día de entreno</div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Calorías</div><div class="cfg-sub">kcal objetivo</div></div><input class="cfg-inp" id="cfgKcalE" type="number" value="2000"></div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Proteína</div><div class="cfg-sub">gramos</div></div><input class="cfg-inp" id="cfgProtE" type="number" value="100"></div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Carbohidratos</div><div class="cfg-sub">gramos</div></div><input class="cfg-inp" id="cfgChE" type="number" value="250"></div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Grasa</div><div class="cfg-sub">gramos</div></div><input class="cfg-inp" id="cfgGrasaE" type="number" value="44"></div>
+
+    <!-- Macros en 2 columnas -->
+    <div class="cfg2-cols">
+      <!-- Entreno -->
+      <div class="cfg2-col">
+        <div class="cfg2-col-hdr entreno-hdr">💪 Entreno</div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl">Calorías</div>
+          <input class="cfg2-inp" id="cfgKcalE" type="number" value="2000">
+          <div class="cfg2-unit">kcal</div>
+        </div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl" style="color:var(--red)">Proteína</div>
+          <input class="cfg2-inp" id="cfgProtE" type="number" value="100">
+          <div class="cfg2-unit">g</div>
+        </div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl" style="color:var(--yellow)">Carbos</div>
+          <input class="cfg2-inp" id="cfgChE" type="number" value="250">
+          <div class="cfg2-unit">g</div>
+        </div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl" style="color:var(--blue)">Grasa</div>
+          <input class="cfg2-inp" id="cfgGrasaE" type="number" value="44">
+          <div class="cfg2-unit">g</div>
+        </div>
+      </div>
+      <!-- Descanso -->
+      <div class="cfg2-col">
+        <div class="cfg2-col-hdr descanso-hdr">😴 Descanso</div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl">Calorías</div>
+          <input class="cfg2-inp" id="cfgKcalD" type="number" value="1700">
+          <div class="cfg2-unit">kcal</div>
+        </div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl" style="color:var(--red)">Proteína</div>
+          <input class="cfg2-inp" id="cfgProtD" type="number" value="100">
+          <div class="cfg2-unit">g</div>
+        </div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl" style="color:var(--yellow)">Carbos</div>
+          <input class="cfg2-inp" id="cfgChD" type="number" value="180">
+          <div class="cfg2-unit">g</div>
+        </div>
+        <div class="cfg2-field">
+          <div class="cfg2-field-lbl" style="color:var(--blue)">Grasa</div>
+          <input class="cfg2-inp" id="cfgGrasaD" type="number" value="55">
+          <div class="cfg2-unit">g</div>
+        </div>
+      </div>
     </div>
-    <div class="cfg-sec">
-      <div class="cfg-title">Macros — Día de descanso</div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Calorías</div><div class="cfg-sub">kcal objetivo</div></div><input class="cfg-inp" id="cfgKcalD" type="number" value="1700"></div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Proteína</div><div class="cfg-sub">gramos</div></div><input class="cfg-inp" id="cfgProtD" type="number" value="100"></div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Carbohidratos</div><div class="cfg-sub">gramos</div></div><input class="cfg-inp" id="cfgChD" type="number" value="180"></div>
-      <div class="cfg-row"><div><div class="cfg-lbl">Grasa</div><div class="cfg-sub">gramos</div></div><input class="cfg-inp" id="cfgGrasaD" type="number" value="55"></div>
-    </div>
+
     <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
   </div>
 </div>
