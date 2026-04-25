@@ -136,6 +136,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 
 /* INPUT */
 .input-area{flex-shrink:0;padding:8px 12px 16px;background:rgba(8,8,16,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);}
+.photo-btns{display:flex;gap:8px;margin-bottom:8px;}
+.photo-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+  font-size:13px;cursor:pointer;color:var(--muted);}
+.photo-btn:active{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);color:var(--text);}
+.photo-btn span{font-size:12px;font-weight:500;}
 .input-wrap{background:var(--s2);border:1px solid var(--border);border-radius:22px;padding:8px 8px 8px 14px;
   display:flex;align-items:flex-end;gap:6px;transition:border-color 0.3s;}
 .input-wrap:focus-within{border-color:rgba(212,240,74,0.35);}
@@ -352,6 +358,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   <div class="messages" id="messages"></div>
 
   <div class="input-area">
+    <div class="photo-btns">
+      <label class="photo-btn" title="Foto a un plato">
+        🍽️ <span>Foto plato</span>
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoPlato(event)">
+      </label>
+      <label class="photo-btn" title="Foto a una etiqueta nutricional">
+        🏷️ <span>Foto etiqueta</span>
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoEtiqueta(event)">
+      </label>
+    </div>
     <div class="input-wrap">
       <textarea class="input-field" id="inputField" placeholder="Responde o escribe..." rows="1"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -364,7 +380,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
         </button>
       </div>
     </div>
-    <div class="hint" id="hint">🎤 Habla · ✍️ Escribe · o pulsa una opción</div>
+    <div class="hint" id="hint">🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta</div>
   </div>
 </div>
 </div>
@@ -613,6 +629,60 @@ function handlePhoto(e){
 function loadToday(){
   try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+TODAY)||'null');
     if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}}catch(e){}
+}
+
+// ── FOTO PLATO ──
+async function handleFotoPlato(e){
+  const file=e.target.files[0];if(!file)return;
+  e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];
+    addMsg('user','🍽️ Analizando este plato...');
+    addTyping();
+    try{
+      S.historial.push({role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+        {type:'text',text:`Analiza este plato de comida. Estima los macronutrientes (kcal, proteínas, carbohidratos, grasas) de forma aproximada. Avisa que es una estimación visual. Luego pregunta si quiero registrarlo. Mis macros restantes: ${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g. Usa [OPCIONES]Sí, registrar|Ajustar cantidad|No registrar`}
+      ]});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const data=await res.json();
+      const raw=data.content?.[0]?.text||'No pude analizar el plato.';
+      S.historial.push({role:'assistant',content:raw});
+      removeTyping();
+      const{text:t,elements,opciones}=parseAI(raw);
+      addMsg('ai',t,elements,opciones);
+    }catch(err){removeTyping();addMsg('ai','Error al analizar el plato. Inténtalo de nuevo.');}
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── FOTO ETIQUETA ──
+async function handleFotoEtiqueta(e){
+  const file=e.target.files[0];if(!file)return;
+  e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];
+    addMsg('user','🏷️ Leyendo etiqueta nutricional...');
+    addTyping();
+    try{
+      S.historial.push({role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+        {type:'text',text:`Lee la información nutricional de esta etiqueta. Extrae: nombre del producto, kcal por 100g/porción, proteínas, carbohidratos (azúcares), grasas (saturadas) y fibra. Luego dime si encaja con mis macros restantes de hoy (${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g). Si tiene mucha azúcar o grasa saturada, avísame. Pregunta qué cantidad voy a comer para calcular exacto. Usa [OPCIONES] para sugerir cantidades típicas.`}
+      ]});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const data=await res.json();
+      const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
+      S.historial.push({role:'assistant',content:raw});
+      removeTyping();
+      const{text:t,elements,opciones}=parseAI(raw);
+      addMsg('ai',t,elements,opciones);
+    }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta. Inténtalo de nuevo.');}
+  };
+  reader.readAsDataURL(file);
 }
 function saveToday(){
   const d={fecha:TODAY,tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
