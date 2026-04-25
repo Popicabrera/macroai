@@ -15,66 +15,41 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #080810;
-  --s1: #111118;
-  --s2: #18181f;
-  --s3: #22222c;
-  --border: rgba(255,255,255,0.07);
-  --accent: #d4f04a;
-  --accent-dim: rgba(212,240,74,0.1);
-  --accent-glow: rgba(212,240,74,0.25);
-  --red: #ff6b6b;
-  --yellow: #ffd93d;
-  --blue: #6bb8f6;
-  --teal: #3ff0c0;
-  --text: #eeeff5;
-  --muted: #5a5a70;
-  --muted2: #3a3a50;
+  --bg: #080810; --s1: #111118; --s2: #18181f; --s3: #22222c;
+  --border: rgba(255,255,255,0.07); --accent: #d4f04a;
+  --accent-dim: rgba(212,240,74,0.1); --accent-glow: rgba(212,240,74,0.25);
+  --red: #ff6b6b; --yellow: #ffd93d; --blue: #6bb8f6; --teal: #3ff0c0;
+  --text: #eeeff5; --muted: #5a5a70; --muted2: #3a3a50;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+.ambient{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 60% 40% at 15% 5%,rgba(212,240,74,0.05) 0%,transparent 65%),
+    radial-gradient(ellipse 50% 50% at 90% 90%,rgba(63,240,192,0.04) 0%,transparent 65%);}
 
-.ambient{
-  position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(ellipse 60% 40% at 15% 5%, rgba(212,240,74,0.05) 0%,transparent 65%),
-    radial-gradient(ellipse 50% 50% at 90% 90%, rgba(63,240,192,0.04) 0%,transparent 65%);
-}
-
-.app{
-  position:relative;z-index:1;
-  max-width:430px;margin:0 auto;
-  height:100vh;display:flex;flex-direction:column;
-}
+/* VIEWS */
+.view{display:none;flex-direction:column;height:100vh;position:absolute;inset:0;z-index:1;}
+.view.active{display:flex;}
+.app-wrap{max-width:430px;margin:0 auto;width:100%;height:100%;display:flex;flex-direction:column;}
 
 /* HEADER */
-.header{
-  flex-shrink:0;
-  padding:14px 18px 12px;
-  display:flex;justify-content:space-between;align-items:center;
-  border-bottom:1px solid var(--border);
-  background:rgba(8,8,16,0.85);backdrop-filter:blur(20px);
-}
+.header{flex-shrink:0;padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--border);background:rgba(8,8,16,0.85);backdrop-filter:blur(20px);}
 .logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;}
 .logo em{color:var(--accent);font-style:normal;}
-.day-pill{
-  display:flex;align-items:center;gap:5px;
-  background:var(--s2);border:1px solid var(--border);
-  border-radius:20px;padding:5px 10px;font-size:11px;
-}
+.header-btns{display:flex;gap:8px;align-items:center;}
+.day-pill{display:flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 10px;font-size:11px;cursor:pointer;transition:all 0.2s;}
+.day-pill:active{transform:scale(0.96);}
 .pdot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 2s infinite;}
+.icon-nav{width:32px;height:32px;border-radius:9px;background:var(--s2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:all 0.2s;}
+.icon-nav:active{background:var(--accent-dim);}
 
 /* MACRO BAR */
-.macro-bar{
-  flex-shrink:0;padding:10px 16px;
-  background:var(--s1);border-bottom:1px solid var(--border);
-  display:flex;gap:6px;
-}
-.mc{
-  flex:1;background:var(--s2);border:1px solid var(--border);
-  border-radius:10px;padding:7px 8px;
-}
+.macro-bar{flex-shrink:0;padding:10px 16px;background:var(--s1);border-bottom:1px solid var(--border);display:flex;gap:6px;}
+.mc{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:7px 8px;}
 .mc-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
 .mc-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;line-height:1.2;margin-top:1px;}
 .mc-sub{font-size:9px;color:var(--muted);margin-top:1px;}
@@ -84,71 +59,30 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .mc.kcal .mc-val{color:var(--accent);}
 
 /* MESSAGES */
-.messages{
-  flex:1;overflow-y:auto;
-  padding:14px 14px 6px;
-  display:flex;flex-direction:column;gap:10px;
-  scroll-behavior:smooth;
-}
+.messages{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
 .messages::-webkit-scrollbar{width:0;}
-
-/* BUBBLES */
 .msg{display:flex;gap:7px;animation:fadeUp 0.3s ease both;}
 .msg.user{flex-direction:row-reverse;}
-
-.av{
-  width:26px;height:26px;border-radius:8px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;align-self:flex-end;
-  background:var(--s2);border:1px solid var(--border);
-}
-.msg.ai .av{
-  background:var(--accent-dim);border-color:rgba(212,240,74,0.2);
-  font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);
-}
-
-.bubble{
-  max-width:80%;background:var(--s2);border:1px solid var(--border);
-  border-radius:16px;padding:10px 13px;
-  font-size:14px;line-height:1.55;
-}
-.msg.user .bubble{
-  background:var(--accent-dim);border-color:rgba(212,240,74,0.2);
-  border-bottom-right-radius:4px;
-}
+.av{width:26px;height:26px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;align-self:flex-end;background:var(--s2);border:1px solid var(--border);}
+.msg.ai .av{background:var(--accent-dim);border-color:rgba(212,240,74,0.2);
+  font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);}
+.bubble{max-width:80%;background:var(--s2);border:1px solid var(--border);
+  border-radius:16px;padding:10px 13px;font-size:14px;line-height:1.55;}
+.msg.user .bubble{background:var(--accent-dim);border-color:rgba(212,240,74,0.2);border-bottom-right-radius:4px;}
 .msg.ai .bubble{border-bottom-left-radius:4px;}
 
 /* QUICK REPLIES */
-.quick-replies{
-  display:flex;flex-wrap:wrap;gap:6px;
-  padding:0 14px 4px;
-  animation:fadeUp 0.3s ease both;
-}
-.qr{
-  background:var(--s2);border:1px solid rgba(212,240,74,0.25);
-  border-radius:20px;padding:7px 13px;
-  font-size:13px;color:var(--text);cursor:pointer;
-  transition:all 0.2s;white-space:nowrap;
-}
-.qr:hover{background:var(--accent-dim);border-color:rgba(212,240,74,0.5);transform:scale(1.02);}
-.qr:active{transform:scale(0.97);}
+.quick-replies{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 4px;animation:fadeUp 0.3s ease both;}
+.qr{background:var(--s2);border:1px solid rgba(212,240,74,0.25);border-radius:20px;padding:7px 13px;
+  font-size:13px;color:var(--text);cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.qr:active{transform:scale(0.97);background:var(--accent-dim);}
 
-/* PLAN CARD */
-.plan-card{
-  background:var(--s1);border:1px solid var(--border);
-  border-radius:12px;overflow:hidden;margin-top:6px;
-}
-.plan-header{
-  padding:8px 12px;background:rgba(212,240,74,0.07);
-  border-bottom:1px solid var(--border);
-  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;
-  text-transform:uppercase;letter-spacing:1px;color:var(--accent);
-}
-.plan-item{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:9px 12px;border-bottom:1px solid var(--border);
-  font-size:13px;
-}
+/* CARDS */
+.plan-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:6px;}
+.plan-header{padding:8px 12px;background:rgba(212,240,74,0.07);border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.plan-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;}
 .plan-item:last-child{border-bottom:none;}
 .pi-left{display:flex;flex-direction:column;gap:2px;}
 .pi-name{font-weight:500;}
@@ -156,42 +90,23 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .pi-right{text-align:right;}
 .pi-grams{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--accent);}
 .pi-kcal{font-size:10px;color:var(--muted);}
-
-.plan-total{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:8px 12px;background:rgba(255,255,255,0.02);
-  border-top:1px solid var(--border);
-}
+.plan-total{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+  background:rgba(255,255,255,0.02);border-top:1px solid var(--border);}
 .pt-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
 .pt-macros{display:flex;gap:8px;}
 .ptm{font-size:12px;font-weight:500;}
-
-/* DAY PLAN */
-.day-plan-card{
-  background:var(--s1);border:1px solid var(--border);
-  border-radius:12px;overflow:hidden;margin-top:6px;
-}
-.dp-item{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px 12px;border-bottom:1px solid var(--border);
-  font-size:14px;cursor:pointer;transition:background 0.2s;
-}
+.day-plan-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:6px;}
+.dp-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;
+  border-bottom:1px solid var(--border);font-size:14px;}
 .dp-item:last-child{border-bottom:none;}
-.dp-item:hover{background:rgba(255,255,255,0.02);}
 .dp-left{display:flex;align-items:center;gap:8px;}
 .dp-emoji{font-size:18px;}
 .dp-name{font-weight:500;}
 .dp-kcal{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);}
 .dp-macros{font-size:11px;color:var(--muted);text-align:right;margin-top:1px;}
-
-/* WARN / OK */
-.alert-card{
-  border-radius:10px;padding:9px 12px;margin-top:6px;
-  font-size:13px;display:flex;gap:8px;align-items:flex-start;line-height:1.5;
-}
+.alert-card{border-radius:10px;padding:9px 12px;margin-top:6px;font-size:13px;display:flex;gap:8px;align-items:flex-start;line-height:1.5;}
 .alert-card.warn{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);}
 .alert-card.ok{background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);}
-.alert-card.info{background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);}
 
 /* TYPING */
 .typing{display:flex;gap:4px;padding:3px 0;align-items:center;}
@@ -200,43 +115,66 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .typing span:nth-child(3){animation-delay:0.4s;}
 
 /* INPUT */
-.input-area{
-  flex-shrink:0;padding:8px 14px 18px;
-  background:rgba(8,8,16,0.9);backdrop-filter:blur(20px);
-  border-top:1px solid var(--border);
-}
-.input-wrap{
-  background:var(--s2);border:1px solid var(--border);
-  border-radius:20px;padding:8px 8px 8px 14px;
-  display:flex;align-items:flex-end;gap:6px;
-  transition:border-color 0.3s;
-}
+.input-area{flex-shrink:0;padding:8px 14px 18px;background:rgba(8,8,16,0.9);backdrop-filter:blur(20px);border-top:1px solid var(--border);}
+.input-wrap{background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:8px 8px 8px 14px;
+  display:flex;align-items:flex-end;gap:6px;transition:border-color 0.3s;}
 .input-wrap:focus-within{border-color:rgba(212,240,74,0.3);}
-.input-field{
-  flex:1;background:none;border:none;outline:none;
-  color:var(--text);font-family:'DM Sans',sans-serif;
-  font-size:15px;line-height:1.4;resize:none;
-  max-height:90px;min-height:22px;
-}
+.input-field{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:15px;line-height:1.4;resize:none;max-height:90px;min-height:22px;}
 .input-field::placeholder{color:var(--muted);}
 .input-btns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
-.icon-btn{
-  width:34px;height:34px;border-radius:10px;
-  background:var(--s3);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:all 0.2s;font-size:15px;flex-shrink:0;
-}
-.icon-btn:hover{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);}
+.icon-btn{width:34px;height:34px;border-radius:10px;background:var(--s3);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:15px;flex-shrink:0;}
 .icon-btn.recording{background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4);animation:recPulse 1s infinite;}
-.send-btn{
-  width:34px;height:34px;border-radius:10px;
-  background:var(--accent);border:none;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:all 0.2s;flex-shrink:0;
-}
-.send-btn:hover{transform:scale(1.05);box-shadow:0 4px 14px var(--accent-glow);}
-.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.send-btn{width:34px;height:34px;border-radius:10px;background:var(--accent);border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;}
+
+/* CONFIG VIEW */
+.sub-header{flex-shrink:0;padding:14px 18px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--border);background:rgba(8,8,16,0.85);backdrop-filter:blur(20px);}
+.sub-header h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+.back-btn{width:32px;height:32px;border-radius:9px;background:var(--s2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;line-height:1;}
+.scrollable{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;}
+.cfg-section{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cfg-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.cfg-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);}
+.cfg-row:last-child{border-bottom:none;}
+.cfg-label{font-size:14px;font-weight:500;}
+.cfg-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.cfg-input{background:var(--s3);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;width:82px;text-align:right;color:var(--text);font-family:'Syne',sans-serif;
+  font-size:15px;font-weight:700;outline:none;}
+.cfg-input:focus{border-color:rgba(212,240,74,0.4);}
+.day-toggle{display:flex;gap:6px;}
+.day-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s3);
+  font-size:12px;cursor:pointer;color:var(--muted);transition:all 0.2s;}
+.day-btn.active{background:var(--accent-dim);border-color:rgba(212,240,74,0.4);color:var(--accent);font-weight:600;}
+.save-btn{margin:0 14px 20px;padding:14px;background:var(--accent);border:none;border-radius:12px;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#080810;cursor:pointer;width:calc(100% - 28px);}
+
+/* HISTORIAL */
+.hist-empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.hist-empty .big{font-size:44px;margin-bottom:14px;}
+.hist-day{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;}
+.hist-day-hdr{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.hist-date{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.hist-tipo{font-size:10px;padding:3px 8px;border-radius:10px;}
+.hist-tipo.entreno{background:rgba(212,240,74,0.1);color:var(--accent);}
+.hist-tipo.descanso{background:rgba(107,184,246,0.1);color:var(--blue);}
+.hist-macros{display:flex;padding:10px 14px 4px;}
+.hm{flex:1;text-align:center;}
+.hm-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.hm-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+.hist-bars{padding:4px 14px 12px;display:flex;flex-direction:column;gap:5px;}
+.hbr{display:flex;align-items:center;gap:8px;font-size:11px;}
+.hbr-lbl{width:30px;color:var(--muted);}
+.hbr-track{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;}
+.hbr-fill{height:100%;border-radius:3px;}
+.hbr-pct{width:30px;text-align:right;color:var(--muted);}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
@@ -246,16 +184,21 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 </head>
 <body>
 <div class="ambient"></div>
-<div class="app">
 
+<!-- VISTA PRINCIPAL -->
+<div class="view active" id="viewMain">
+<div class="app-wrap">
   <div class="header">
     <div class="logo">Macro<em>AI</em></div>
-    <div class="day-pill">
-      <div class="pdot"></div>
-      <span id="dayType">Día de entreno</span>
+    <div class="header-btns">
+      <div class="day-pill" onclick="toggleDayType()">
+        <div class="pdot"></div>
+        <span id="dayType">Día de entreno</span>
+      </div>
+      <div class="icon-nav" onclick="showView('viewHistorial')">📅</div>
+      <div class="icon-nav" onclick="showView('viewConfig')">⚙️</div>
     </div>
   </div>
-
   <div class="macro-bar">
     <div class="mc kcal">
       <div class="mc-label">Kcal</div>
@@ -282,16 +225,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       <div class="mc-track"><div class="mc-fill" id="grasaFill" style="background:var(--blue)"></div></div>
     </div>
   </div>
-
   <div class="messages" id="messages"></div>
-
   <div class="input-area">
     <div class="input-wrap">
-      <textarea class="input-field" id="inputField"
-        placeholder="Responde o escribe lo que quieras..."
-        rows="1"
-        onkeydown="handleKey(event)"
-        oninput="autoResize(this)"></textarea>
+      <textarea class="input-field" id="inputField" placeholder="Responde o escribe lo que quieras..." rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <div class="input-btns">
         <div class="icon-btn" id="micBtn" onclick="toggleMic()">🎤</div>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">
@@ -303,119 +241,209 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
     </div>
     <div class="hint" id="hint">🎤 Habla · ✍️ Escribe · o pulsa una opción arriba</div>
   </div>
-
 </div>
+</div>
+
+<!-- VISTA CONFIG -->
+<div class="view" id="viewConfig">
+<div class="app-wrap">
+  <div class="sub-header">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <h2>Configuración</h2>
+  </div>
+  <div class="scrollable">
+    <div class="cfg-section">
+      <div class="cfg-title">Tipo de día hoy</div>
+      <div class="cfg-row">
+        <div><div class="cfg-label">Día activo</div><div class="cfg-sub">Pulsa también en la pantalla principal</div></div>
+        <div class="day-toggle">
+          <div class="day-btn active" id="btnEntreno" onclick="setDayType('entreno')">💪 Entreno</div>
+          <div class="day-btn" id="btnDescanso" onclick="setDayType('descanso')">😴 Descanso</div>
+        </div>
+      </div>
+    </div>
+    <div class="cfg-section">
+      <div class="cfg-title">Macros — Día de entreno</div>
+      <div class="cfg-row"><div><div class="cfg-label">Calorías</div><div class="cfg-sub">kcal objetivo</div></div><input class="cfg-input" id="cfgKcalE" type="number" value="2000"></div>
+      <div class="cfg-row"><div><div class="cfg-label">Proteína</div><div class="cfg-sub">gramos</div></div><input class="cfg-input" id="cfgProtE" type="number" value="100"></div>
+      <div class="cfg-row"><div><div class="cfg-label">Carbohidratos</div><div class="cfg-sub">gramos</div></div><input class="cfg-input" id="cfgChE" type="number" value="250"></div>
+      <div class="cfg-row"><div><div class="cfg-label">Grasa</div><div class="cfg-sub">gramos</div></div><input class="cfg-input" id="cfgGrasaE" type="number" value="44"></div>
+    </div>
+    <div class="cfg-section">
+      <div class="cfg-title">Macros — Día de descanso</div>
+      <div class="cfg-row"><div><div class="cfg-label">Calorías</div><div class="cfg-sub">kcal objetivo</div></div><input class="cfg-input" id="cfgKcalD" type="number" value="1700"></div>
+      <div class="cfg-row"><div><div class="cfg-label">Proteína</div><div class="cfg-sub">gramos</div></div><input class="cfg-input" id="cfgProtD" type="number" value="100"></div>
+      <div class="cfg-row"><div><div class="cfg-label">Carbohidratos</div><div class="cfg-sub">gramos</div></div><input class="cfg-input" id="cfgChD" type="number" value="180"></div>
+      <div class="cfg-row"><div><div class="cfg-label">Grasa</div><div class="cfg-sub">gramos</div></div><input class="cfg-input" id="cfgGrasaD" type="number" value="55"></div>
+    </div>
+  </div>
+  <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
+</div>
+</div>
+
+<!-- VISTA HISTORIAL -->
+<div class="view" id="viewHistorial">
+<div class="app-wrap">
+  <div class="sub-header">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <h2>Historial</h2>
+  </div>
+  <div class="scrollable" id="histBody"></div>
+</div>
+</div>
+
 <script>
-// ── PWA: MANIFEST + SERVICE WORKER ──
-(function() {
-  // Generar icono "M" en canvas
-  const canvas = document.createElement('canvas');
-  canvas.width = 192; canvas.height = 192;
-  const ctx = canvas.getContext('2d');
-  // Fondo
-  ctx.fillStyle = '#080810';
-  ctx.fillRect(0, 0, 192, 192);
-  // Círculo accent
-  ctx.fillStyle = '#d4f04a';
-  ctx.beginPath();
-  ctx.arc(96, 96, 88, 0, Math.PI * 2);
-  ctx.fill();
-  // Letra M
-  ctx.fillStyle = '#080810';
-  ctx.font = 'bold 110px Syne, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('M', 96, 100);
-  const iconUrl = canvas.toDataURL('image/png');
-
-  // Apple touch icon
-  const appleIcon = document.getElementById('appleIcon');
-  appleIcon.href = iconUrl;
-
-  // Manifest inline
-  const manifest = {
-    name: 'MacroAI',
-    short_name: 'MacroAI',
-    description: 'Tu asistente de nutrición inteligente',
-    start_url: '.',
-    display: 'standalone',
-    background_color: '#080810',
-    theme_color: '#080810',
-    orientation: 'portrait',
-    icons: [
-      { src: iconUrl, sizes: '192x192', type: 'image/png' },
-      { src: iconUrl, sizes: '512x512', type: 'image/png' }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-  const manifestUrl = URL.createObjectURL(blob);
-  document.getElementById('manifestLink').href = manifestUrl;
-
-  // Service Worker inline
-  const swCode = `
-    const CACHE = 'macroai-v1';
-    self.addEventListener('install', e => {
-      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/macroai/', '/macroai/index.html'])));
-      self.skipWaiting();
-    });
-    self.addEventListener('activate', e => {
-      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-      self.clients.claim();
-    });
-    self.addEventListener('fetch', e => {
-      if (e.request.url.includes('workers.dev') || e.request.url.includes('anthropic.com')) return;
-      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    });
-  `;
-  const swBlob = new Blob([swCode], {type: 'application/javascript'});
-  const swUrl = URL.createObjectURL(swBlob);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(swUrl, {scope: '/macroai/'}).catch(() => {
-      // En desarrollo puede fallar por scope, ignorar
-    });
-  }
+// ── PWA ──
+(function(){
+  const c=document.createElement('canvas'); c.width=192; c.height=192;
+  const x=c.getContext('2d');
+  x.fillStyle='#080810'; x.fillRect(0,0,192,192);
+  x.fillStyle='#d4f04a'; x.beginPath(); x.arc(96,96,88,0,Math.PI*2); x.fill();
+  x.fillStyle='#080810'; x.font='bold 110px Syne,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('M',96,100);
+  const icon=c.toDataURL('image/png');
+  document.getElementById('appleIcon').href=icon;
+  const m={name:'MacroAI',short_name:'MacroAI',description:'Tu asistente de nutrición inteligente',
+    start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',
+    icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
+  document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
+  const sw=`const CACHE='macroai-v3';
+    self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/macroai/','/macroai/index.html'])));self.skipWaiting();});
+    self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim();});
+    self.addEventListener('fetch',e=>{if(e.request.url.includes('workers.dev')||e.request.url.includes('anthropic.com'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});`;
+  if('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),{scope:'/macroai/'}).catch(()=>{});
 })();
 
-// ── WORKER URL ──
-const WORKER_URL = 'https://macroai.joseju-popi.workers.dev';
+// ── WORKER ──
+const WORKER_URL='https://macroai.joseju-popi.workers.dev';
+
+// ── CONFIG ──
+function loadCFG(){
+  const def={entreno:{kcal:2000,prot:100,ch:250,grasa:44},descanso:{kcal:1700,prot:100,ch:180,grasa:55},tipoDia:'entreno'};
+  try{return Object.assign(def,JSON.parse(localStorage.getItem('macroai_cfg')||'{}'));}catch(e){return def;}
+}
+function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));}
+let CFG=loadCFG();
 
 // ── STATE ──
-const S = {
-  kcalObj:2000, prot:100, ch:250, grasa:44,
-  kcalC:0, protC:0, chC:0, grasaC:0,
-  comidas:[], historial:[],
-  fase:'inicio',
-  planDia:null
+const TODAY=new Date().toISOString().split('T')[0];
+const S={
+  kcalObj:CFG[CFG.tipoDia].kcal, prot:CFG[CFG.tipoDia].prot,
+  ch:CFG[CFG.tipoDia].ch, grasa:CFG[CFG.tipoDia].grasa,
+  kcalC:0,protC:0,chC:0,grasaC:0,
+  comidas:[],historial:[],tipoDia:CFG.tipoDia,planDia:null
 };
 
-// ── SYSTEM PROMPT ──
-function sysPrompt() {
-  const resta = {
-    kcal: S.kcalObj - S.kcalC,
-    prot: S.prot - S.protC,
-    ch:   S.ch   - S.chC,
-    grasa:S.grasa - S.grasaC
-  };
-  return `Eres MacroAI, asistente de nutrición dentro de una app para clientes de entrenador personal.
+function loadToday(){
+  try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+TODAY)||'null');
+    if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}}catch(e){}
+}
+function saveToday(){
+  const d={fecha:TODAY,tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
+    kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
+  localStorage.setItem('macroai_dia_'+TODAY,JSON.stringify(d));
+  const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
+  if(!idx.includes(TODAY)){idx.push(TODAY);localStorage.setItem('macroai_dias',JSON.stringify(idx));}
+}
 
-PERFIL HOY:
+// ── VISTAS ──
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='viewConfig')loadCfgUI();
+  if(id==='viewHistorial')renderHistorial();
+}
+
+// ── CONFIG UI ──
+function loadCfgUI(){
+  CFG=loadCFG();
+  document.getElementById('cfgKcalE').value=CFG.entreno.kcal;
+  document.getElementById('cfgProtE').value=CFG.entreno.prot;
+  document.getElementById('cfgChE').value=CFG.entreno.ch;
+  document.getElementById('cfgGrasaE').value=CFG.entreno.grasa;
+  document.getElementById('cfgKcalD').value=CFG.descanso.kcal;
+  document.getElementById('cfgProtD').value=CFG.descanso.prot;
+  document.getElementById('cfgChD').value=CFG.descanso.ch;
+  document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
+  setDayType(CFG.tipoDia,false);
+}
+function setDayType(tipo,update=true){
+  document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
+  document.getElementById('btnDescanso').classList.toggle('active',tipo==='descanso');
+  if(update)CFG.tipoDia=tipo;
+}
+function saveConfig(){
+  CFG.entreno={kcal:+document.getElementById('cfgKcalE').value||2000,prot:+document.getElementById('cfgProtE').value||100,
+    ch:+document.getElementById('cfgChE').value||250,grasa:+document.getElementById('cfgGrasaE').value||44};
+  CFG.descanso={kcal:+document.getElementById('cfgKcalD').value||1700,prot:+document.getElementById('cfgProtD').value||100,
+    ch:+document.getElementById('cfgChD').value||180,grasa:+document.getElementById('cfgGrasaD').value||55};
+  saveCFG(CFG);
+  applyMacros(CFG.tipoDia);
+  showView('viewMain');
+}
+function applyMacros(tipo){
+  const m=CFG[tipo];
+  S.kcalObj=m.kcal;S.prot=m.prot;S.ch=m.ch;S.grasa=m.grasa;S.tipoDia=tipo;
+  document.getElementById('dayType').textContent=tipo==='entreno'?'Día de entreno':'Día de descanso';
+  document.getElementById('kcalVal').textContent=m.kcal.toLocaleString('es');
+  document.getElementById('protVal').textContent=m.prot+'g';
+  document.getElementById('chVal').textContent=m.ch+'g';
+  document.getElementById('grasaVal').textContent=m.grasa+'g';
+  updateBars();
+}
+function toggleDayType(){
+  const nuevo=S.tipoDia==='entreno'?'descanso':'entreno';
+  CFG.tipoDia=nuevo; saveCFG(CFG); applyMacros(nuevo);
+}
+
+// ── HISTORIAL ──
+function renderHistorial(){
+  const body=document.getElementById('histBody');
+  const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]').sort().reverse();
+  if(!idx.length){body.innerHTML='<div class="hist-empty"><div class="big">📅</div><div>Todavía no hay días registrados.<br>Las comidas que registres hoy aparecerán aquí mañana.</div></div>';return;}
+  body.innerHTML='';
+  idx.forEach(fecha=>{
+    try{
+      const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null'); if(!d)return;
+      const pK=Math.round(Math.min(100,(d.kcalC/d.kcalObj)*100));
+      const pP=Math.round(Math.min(100,(d.protC/d.protObj)*100));
+      const pC=Math.round(Math.min(100,(d.chC/d.chObj)*100));
+      const pG=Math.round(Math.min(100,(d.grasaC/d.grasaObj)*100));
+      const fmtFecha=new Date(fecha+'T12:00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
+      body.innerHTML+=`<div class="hist-day">
+        <div class="hist-day-hdr"><div class="hist-date">${fmtFecha}</div><div class="hist-tipo ${d.tipoDia}">${d.tipoDia==='entreno'?'💪 Entreno':'😴 Descanso'}</div></div>
+        <div class="hist-macros">
+          <div class="hm"><div class="hm-val" style="color:var(--accent)">${d.kcalC}</div><div class="hm-lbl">kcal</div></div>
+          <div class="hm"><div class="hm-val" style="color:var(--red)">${d.protC}g</div><div class="hm-lbl">prot</div></div>
+          <div class="hm"><div class="hm-val" style="color:var(--yellow)">${d.chC}g</div><div class="hm-lbl">ch</div></div>
+          <div class="hm"><div class="hm-val" style="color:var(--blue)">${d.grasaC}g</div><div class="hm-lbl">grasa</div></div>
+        </div>
+        <div class="hist-bars">
+          <div class="hbr"><span class="hbr-lbl">Kcal</span><div class="hbr-track"><div class="hbr-fill" style="width:${pK}%;background:var(--accent)"></div></div><span class="hbr-pct">${pK}%</span></div>
+          <div class="hbr"><span class="hbr-lbl">Prot</span><div class="hbr-track"><div class="hbr-fill" style="width:${pP}%;background:var(--red)"></div></div><span class="hbr-pct">${pP}%</span></div>
+          <div class="hbr"><span class="hbr-lbl">CH</span><div class="hbr-track"><div class="hbr-fill" style="width:${pC}%;background:var(--yellow)"></div></div><span class="hbr-pct">${pC}%</span></div>
+          <div class="hbr"><span class="hbr-lbl">Grasa</span><div class="hbr-track"><div class="hbr-fill" style="width:${pG}%;background:var(--blue)"></div></div><span class="hbr-pct">${pG}%</span></div>
+        </div>
+      </div>`;
+    }catch(e){}
+  });
+}
+
+// ── SYSTEM PROMPT ──
+function sysPrompt(){
+  const r={kcal:S.kcalObj-S.kcalC,prot:S.prot-S.protC,ch:S.ch-S.chC,grasa:S.grasa-S.grasaC};
+  return `Eres MacroAI, asistente de nutrición para clientes de entrenador personal.
+
+PERFIL HOY (${S.tipoDia==='entreno'?'DÍA DE ENTRENO':'DÍA DE DESCANSO'}):
 - Objetivo: ${S.kcalObj} kcal | Prot ${S.prot}g | CH ${S.ch}g | Grasa ${S.grasa}g
 - Consumido: ${S.kcalC} kcal | Prot ${S.protC}g | CH ${S.chC}g | Grasa ${S.grasaC}g
-- Quedan: ${resta.kcal} kcal | Prot ${resta.prot}g | CH ${resta.ch}g | Grasa ${resta.grasa}g
-- Comidas registradas: ${S.comidas.length}
-${S.planDia ? `- Plan del día: ${JSON.stringify(S.planDia)}` : ''}
+- Quedan: ${r.kcal} kcal | Prot ${r.prot}g | CH ${r.ch}g | Grasa ${r.grasa}g
+- Comidas registradas hoy: ${S.comidas.length}
+${S.planDia?`- Plan del día: ${JSON.stringify(S.planDia)}`:''}
 
-COMPORTAMIENTO:
-Guía al cliente paso a paso. Siempre termina con una pregunta o acción concreta.
-Cuando distribuyas el día, muestra las comidas con sus kcal y macros claramente.
-Cuando calcules ingredientes, da gramos exactos. Si falta algún macro, sugiere qué añadir.
-Si el cliente va corto de algún macro a mitad del día, avísale proactivamente.
-Responde siempre en español, tono cercano y motivador.
-Sé conciso: máximo 2-3 frases + datos.
+COMPORTAMIENTO: Guía paso a paso. Termina siempre con pregunta o acción concreta.
+Da gramos exactos. Avisa si va corto de algún macro. Español, tono cercano y motivador. Máximo 2-3 frases + datos.
 
-FORMATOS ESPECIALES que debes usar cuando corresponda:
-
-Para distribuir el día usa este formato exacto:
+FORMATOS:
 [PLAN_DIA]
 desayuno:kcal=XXX,prot=XX,ch=XX,grasa=XX
 comida:kcal=XXX,prot=XX,ch=XX,grasa=XX
@@ -423,313 +451,152 @@ merienda:kcal=XXX,prot=XX,ch=XX,grasa=XX
 cena:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/PLAN_DIA]
 
-Para calcular ingredientes de una comida usa:
 [INGREDIENTES]
-emoji Nombre del alimento:XXXg:XXXkcal:notabreve
-emoji Nombre del alimento:XXXg:XXXkcal:notabreve
+emoji Nombre:XXXg:XXXkcal:nota
 TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/INGREDIENTES]
 
-Para registrar macros consumidos usa al final:
 [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
-
-Para avisos usa:
-[AVISO_WARN]texto del aviso[/AVISO_WARN]
-[AVISO_OK]texto positivo[/AVISO_OK]
-
-Para sugerir opciones rápidas al usuario usa:
-[OPCIONES]opcion1|opcion2|opcion3[/OPCIONES]`;
+[AVISO_WARN]texto[/AVISO_WARN]
+[AVISO_OK]texto[/AVISO_OK]
+[OPCIONES]op1|op2|op3[/OPCIONES]`;
 }
 
-// ── PARSE & RENDER AI ──
-function parseAI(raw) {
-  let text = raw;
-  const elements = [];
-
-  // PLAN_DIA
-  const planMatch = text.match(/\[PLAN_DIA\]([\s\S]*?)\[\/PLAN_DIA\]/);
-  if (planMatch) {
-    const lines = planMatch[1].trim().split('\n');
-    const plan = {};
-    const items = [];
-    const emojis = {desayuno:'🌅',comida:'☀️',merienda:'🍎',cena:'🌙'};
-    lines.forEach(l => {
-      const [name, vals] = l.split(':');
-      if (!name || !vals) return;
-      const kv = {};
-      vals.split(',').forEach(p => { const [k,v]=p.split('='); kv[k]=parseInt(v); });
-      plan[name.trim()] = kv;
-      items.push({name:name.trim(), ...kv});
-    });
-    S.planDia = plan;
-
-    let html = '<div class="day-plan-card">';
-    items.forEach(i => {
-      const em = emojis[i.name] || '🍽️';
-      const label = i.name.charAt(0).toUpperCase()+i.name.slice(1);
-      html += `<div class="dp-item">
-        <div class="dp-left">
-          <div class="dp-emoji">${em}</div>
-          <div class="dp-name">${label}</div>
-        </div>
-        <div>
-          <div class="dp-kcal">${i.kcal} kcal</div>
-          <div class="dp-macros">P${i.prot}g · CH${i.ch}g · G${i.grasa}g</div>
-        </div>
-      </div>`;
-    });
-    html += '</div>';
-    elements.push({type:'html', content:html});
-    text = text.replace(planMatch[0], '').trim();
+// ── PARSE AI ──
+function parseAI(raw){
+  let text=raw; const elements=[];
+  const planMatch=text.match(/\[PLAN_DIA\]([\s\S]*?)\[\/PLAN_DIA\]/);
+  if(planMatch){
+    const lines=planMatch[1].trim().split('\n'); const plan={}; const items=[];
+    const emojis={desayuno:'🌅',comida:'☀️',merienda:'🍎',cena:'🌙'};
+    lines.forEach(l=>{const[name,vals]=l.split(':');if(!name||!vals)return;const kv={};vals.split(',').forEach(p=>{const[k,v]=p.split('=');kv[k]=parseInt(v);});plan[name.trim()]=kv;items.push({name:name.trim(),...kv});});
+    S.planDia=plan;
+    let h='<div class="day-plan-card">';
+    items.forEach(i=>{const em=emojis[i.name]||'🍽️';const lbl=i.name.charAt(0).toUpperCase()+i.name.slice(1);h+=`<div class="dp-item"><div class="dp-left"><div class="dp-emoji">${em}</div><div class="dp-name">${lbl}</div></div><div><div class="dp-kcal">${i.kcal} kcal</div><div class="dp-macros">P${i.prot}g · CH${i.ch}g · G${i.grasa}g</div></div></div>`;});
+    h+='</div>'; elements.push({type:'html',content:h}); text=text.replace(planMatch[0],'').trim();
   }
-
-  // INGREDIENTES
-  const ingMatch = text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
-  if (ingMatch) {
-    const lines = ingMatch[1].trim().split('\n');
-    let totalLine = null;
-    const items = [];
-    lines.forEach(l => {
-      if (l.startsWith('TOTAL:')) { totalLine = l; return; }
-      const parts = l.split(':');
-      if (parts.length >= 3) {
-        items.push({full:parts[0], grams:parts[1], kcal:parts[2], note:parts[3]||''});
-      }
-    });
-    let html = '<div class="plan-card"><div class="plan-header">📋 Ingredientes y cantidades</div>';
-    items.forEach(i => {
-      html += `<div class="plan-item">
-        <div class="pi-left">
-          <div class="pi-name">${i.full}</div>
-          ${i.note ? `<div class="pi-note">${i.note}</div>` : ''}
-        </div>
-        <div class="pi-right">
-          <div class="pi-grams">${i.grams}</div>
-          <div class="pi-kcal">${i.kcal}</div>
-        </div>
-      </div>`;
-    });
-    if (totalLine) {
-      const tv = {};
-      totalLine.replace('TOTAL:','').split(',').forEach(p=>{const[k,v]=p.split('=');tv[k]=v;});
-      html += `<div class="plan-total">
-        <div class="pt-label">Total</div>
-        <div class="pt-macros">
-          <span class="ptm" style="color:var(--red)">P ${tv.prot||'?'}g</span>
-          <span class="ptm" style="color:var(--yellow)">CH ${tv.ch||'?'}g</span>
-          <span class="ptm" style="color:var(--blue)">G ${tv.grasa||'?'}g</span>
-          <span class="ptm" style="color:var(--accent)">${tv.kcal||'?'} kcal ✓</span>
-        </div>
-      </div>`;
-    }
-    html += '</div>';
-    elements.push({type:'html', content:html});
-    text = text.replace(ingMatch[0], '').trim();
+  const ingMatch=text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
+  if(ingMatch){
+    const lines=ingMatch[1].trim().split('\n'); let tot=null; const items=[];
+    lines.forEach(l=>{if(l.startsWith('TOTAL:')){tot=l;return;}const p=l.split(':');if(p.length>=3)items.push({full:p[0],grams:p[1],kcal:p[2],note:p[3]||''});});
+    let h='<div class="plan-card"><div class="plan-header">📋 Ingredientes y cantidades</div>';
+    items.forEach(i=>{h+=`<div class="plan-item"><div class="pi-left"><div class="pi-name">${i.full}</div>${i.note?`<div class="pi-note">${i.note}</div>`:''}</div><div class="pi-right"><div class="pi-grams">${i.grams}</div><div class="pi-kcal">${i.kcal}</div></div></div>`;});
+    if(tot){const tv={};tot.replace('TOTAL:','').split(',').forEach(p=>{const[k,v]=p.split('=');tv[k]=v;});h+=`<div class="plan-total"><div class="pt-label">Total</div><div class="pt-macros"><span class="ptm" style="color:var(--red)">P ${tv.prot||'?'}g</span><span class="ptm" style="color:var(--yellow)">CH ${tv.ch||'?'}g</span><span class="ptm" style="color:var(--blue)">G ${tv.grasa||'?'}g</span><span class="ptm" style="color:var(--accent)">${tv.kcal||'?'} kcal ✓</span></div></div>`;}
+    h+='</div>'; elements.push({type:'html',content:h}); text=text.replace(ingMatch[0],'').trim();
   }
-
-  // REGISTRAR
-  const regMatch = text.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
-  if (regMatch) {
-    S.kcalC   += parseInt(regMatch[1]);
-    S.protC   += parseInt(regMatch[2]);
-    S.chC     += parseInt(regMatch[3]);
-    S.grasaC  += parseInt(regMatch[4]);
-    S.comidas.push({kcal:parseInt(regMatch[1])});
-    updateBars();
-    text = text.replace(regMatch[0], '').trim();
+  const regMatch=text.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+  if(regMatch){
+    S.kcalC+=parseInt(regMatch[1]);S.protC+=parseInt(regMatch[2]);S.chC+=parseInt(regMatch[3]);S.grasaC+=parseInt(regMatch[4]);
+    S.comidas.push({kcal:parseInt(regMatch[1])});updateBars();saveToday();text=text.replace(regMatch[0],'').trim();
   }
-
-  // AVISOS
-  const warnMatch = text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
-  if (warnMatch) {
-    elements.push({type:'html', content:`<div class="alert-card warn">⚠️ <span>${warnMatch[1]}</span></div>`});
-    text = text.replace(warnMatch[0], '').trim();
-  }
-  const okMatch = text.match(/\[AVISO_OK\]([\s\S]*?)\[\/AVISO_OK\]/);
-  if (okMatch) {
-    elements.push({type:'html', content:`<div class="alert-card ok">✅ <span>${okMatch[1]}</span></div>`});
-    text = text.replace(okMatch[0], '').trim();
-  }
-
-  // OPCIONES → quick replies
-  const opMatch = text.match(/\[OPCIONES\](.*?)\[\/OPCIONES\]/);
-  let opciones = [];
-  if (opMatch) {
-    opciones = opMatch[1].split('|').map(o=>o.trim()).filter(Boolean);
-    text = text.replace(opMatch[0], '').trim();
-  }
-
-  return {text: text.trim(), elements, opciones};
+  const wM=text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
+  if(wM){elements.push({type:'html',content:`<div class="alert-card warn">⚠️ <span>${wM[1]}</span></div>`});text=text.replace(wM[0],'').trim();}
+  const oM=text.match(/\[AVISO_OK\]([\s\S]*?)\[\/AVISO_OK\]/);
+  if(oM){elements.push({type:'html',content:`<div class="alert-card ok">✅ <span>${oM[1]}</span></div>`});text=text.replace(oM[0],'').trim();}
+  const opM=text.match(/\[OPCIONES\](.*?)\[\/OPCIONES\]/);
+  let opciones=[];
+  if(opM){opciones=opM[1].split('|').map(o=>o.trim()).filter(Boolean);text=text.replace(opM[0],'').trim();}
+  return{text:text.trim(),elements,opciones};
 }
 
-// ── ADD MESSAGE ──
-function addMsg(role, text, extraElements=[], opciones=[]) {
-  const msgs = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-
-  const av = document.createElement('div');
-  av.className = 'av';
-  av.textContent = role === 'ai' ? 'IA' : '👤';
-
-  const bub = document.createElement('div');
-  bub.className = 'bubble';
-
-  let html = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-
-  extraElements.forEach(el => { if(el.type==='html') html += el.content; });
-
-  bub.innerHTML = html;
-  div.appendChild(av);
-  div.appendChild(bub);
-  msgs.appendChild(div);
-
-  if (opciones.length) {
-    const qr = document.createElement('div');
-    qr.className = 'quick-replies';
-    opciones.forEach(op => {
-      const btn = document.createElement('div');
-      btn.className = 'qr';
-      btn.textContent = op;
-      btn.onclick = () => { removeQuickReplies(); sendDirect(op); };
-      qr.appendChild(btn);
-    });
+// ── MESSAGES ──
+function addMsg(role,text,extraElements=[],opciones=[]){
+  const msgs=document.getElementById('messages');
+  const div=document.createElement('div'); div.className=`msg ${role}`;
+  const av=document.createElement('div'); av.className='av'; av.textContent=role==='ai'?'IA':'👤';
+  const bub=document.createElement('div'); bub.className='bubble';
+  let h=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  extraElements.forEach(el=>{if(el.type==='html')h+=el.content;});
+  bub.innerHTML=h; div.appendChild(av); div.appendChild(bub); msgs.appendChild(div);
+  if(opciones.length){
+    const qr=document.createElement('div'); qr.className='quick-replies';
+    opciones.forEach(op=>{const btn=document.createElement('div');btn.className='qr';btn.textContent=op;btn.onclick=()=>{removeQR();sendDirect(op);};qr.appendChild(btn);});
     msgs.appendChild(qr);
   }
-
-  msgs.scrollTop = msgs.scrollHeight;
+  msgs.scrollTop=msgs.scrollHeight;
 }
-
-function removeQuickReplies() {
-  document.querySelectorAll('.quick-replies').forEach(el => el.remove());
-}
-
-function addTyping() {
-  const msgs = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = 'msg ai'; div.id = 'typingMsg';
-  const av = document.createElement('div'); av.className='av'; av.textContent='IA';
-  const bub = document.createElement('div'); bub.className='bubble';
+function removeQR(){document.querySelectorAll('.quick-replies').forEach(el=>el.remove());}
+function addTyping(){
+  const msgs=document.getElementById('messages');
+  const div=document.createElement('div'); div.className='msg ai'; div.id='typingMsg';
+  const av=document.createElement('div'); av.className='av'; av.textContent='IA';
+  const bub=document.createElement('div'); bub.className='bubble';
   bub.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
-  div.appendChild(av); div.appendChild(bub);
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  div.appendChild(av); div.appendChild(bub); msgs.appendChild(div); msgs.scrollTop=msgs.scrollHeight;
 }
-function removeTyping(){ const t=document.getElementById('typingMsg'); if(t)t.remove(); }
+function removeTyping(){const t=document.getElementById('typingMsg');if(t)t.remove();}
 
-// ── CALL AI → Worker ──
-async function callAI(userMsg) {
-  S.historial.push({role:'user', content:userMsg});
-  const res = await fetch(WORKER_URL, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      system: sysPrompt(),
-      messages: S.historial
-    })
-  });
-  const data = await res.json();
-  const raw = data.content?.[0]?.text || 'Error de conexión, inténtalo de nuevo.';
-  S.historial.push({role:'assistant', content:raw});
+// ── CALL AI ──
+async function callAI(userMsg){
+  S.historial.push({role:'user',content:userMsg});
+  const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+  const data=await res.json();
+  const raw=data.content?.[0]?.text||'Error de conexión.';
+  S.historial.push({role:'assistant',content:raw});
   return raw;
 }
 
 // ── SEND ──
-async function sendMessage() {
-  const field = document.getElementById('inputField');
-  const text = field.value.trim();
-  if (!text) return;
-  field.value=''; field.style.height='auto';
-  await sendDirect(text);
+async function sendMessage(){
+  const field=document.getElementById('inputField'); const text=field.value.trim(); if(!text)return;
+  field.value=''; field.style.height='auto'; await sendDirect(text);
 }
-
-async function sendDirect(text) {
-  removeQuickReplies();
-  document.getElementById('sendBtn').disabled = true;
-  addMsg('user', text);
-  addTyping();
-  try {
-    const raw = await callAI(text);
-    removeTyping();
-    const {text:t, elements, opciones} = parseAI(raw);
-    addMsg('ai', t, elements, opciones);
-  } catch(e) {
-    removeTyping();
-    addMsg('ai','Error de conexión. Comprueba tu internet e inténtalo.',[],['Reintentar']);
-  }
-  document.getElementById('sendBtn').disabled = false;
+async function sendDirect(text){
+  removeQR(); document.getElementById('sendBtn').disabled=true;
+  addMsg('user',text); addTyping();
+  try{const raw=await callAI(text);removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);}
+  catch(e){removeTyping();addMsg('ai','Error de conexión. Comprueba tu internet.',[],['Reintentar']);}
+  document.getElementById('sendBtn').disabled=false;
 }
-
-function handleKey(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
-}
-function autoResize(el){
-  el.style.height='auto';
-  el.style.height=Math.min(el.scrollHeight,90)+'px';
-}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px';}
 
 // ── BARS ──
 function updateBars(){
   const p=(v,t)=>Math.min(100,(v/t)*100)+'%';
-  document.getElementById('kcalFill').style.width = p(S.kcalC,S.kcalObj);
-  document.getElementById('protFill').style.width = p(S.protC,S.prot);
-  document.getElementById('chFill').style.width   = p(S.chC,S.ch);
-  document.getElementById('grasaFill').style.width= p(S.grasaC,S.grasa);
-  document.getElementById('kcalSub').textContent  = `${S.kcalC} consumidas`;
-  document.getElementById('protSub').textContent  = `${S.protC}g`;
-  document.getElementById('chSub').textContent    = `${S.chC}g`;
-  document.getElementById('grasaSub').textContent = `${S.grasaC}g`;
+  document.getElementById('kcalFill').style.width=p(S.kcalC,S.kcalObj);
+  document.getElementById('protFill').style.width=p(S.protC,S.prot);
+  document.getElementById('chFill').style.width=p(S.chC,S.ch);
+  document.getElementById('grasaFill').style.width=p(S.grasaC,S.grasa);
+  document.getElementById('kcalSub').textContent=`${S.kcalC} consumidas`;
+  document.getElementById('protSub').textContent=`${S.protC}g`;
+  document.getElementById('chSub').textContent=`${S.chC}g`;
+  document.getElementById('grasaSub').textContent=`${S.grasaC}g`;
 }
 
 // ── VOICE ──
-let isRec=false, recog=null;
+let isRec=false,recog=null;
 function toggleMic(){
-  const btn=document.getElementById('micBtn');
-  const hint=document.getElementById('hint');
+  const btn=document.getElementById('micBtn'); const hint=document.getElementById('hint');
   if(!isRec){
-    isRec=true; btn.classList.add('recording'); btn.textContent='⏹️';
-    hint.textContent='🔴 Escuchando... pulsa para parar';
+    isRec=true; btn.classList.add('recording'); btn.textContent='⏹️'; hint.textContent='🔴 Escuchando...';
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(SR){
-      recog=new SR(); recog.lang='es-ES'; recog.continuous=false; recog.interimResults=true;
-      recog.onresult=e=>{
-        const t=Array.from(e.results).map(r=>r[0].transcript).join('');
-        document.getElementById('inputField').value=t;
-        autoResize(document.getElementById('inputField'));
-        if(e.results[0].isFinal) stopMic(true);
-      };
-      recog.onerror=()=>stopMic(false);
-      recog.onend=()=>stopMic(false);
-      recog.start();
-    } else {
-      hint.textContent='⚠️ Navegador sin soporte de voz. Escribe tu mensaje.';
-      setTimeout(()=>stopMic(false),2000);
-    }
-  } else stopMic(false);
+    if(SR){recog=new SR();recog.lang='es-ES';recog.continuous=false;recog.interimResults=true;
+      recog.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join('');document.getElementById('inputField').value=t;autoResize(document.getElementById('inputField'));if(e.results[0].isFinal)stopMic(true);};
+      recog.onerror=()=>stopMic(false);recog.onend=()=>stopMic(false);recog.start();}
+    else{hint.textContent='⚠️ Sin soporte de voz.';setTimeout(()=>stopMic(false),2000);}
+  }else stopMic(false);
 }
 function stopMic(send){
-  isRec=false;
-  document.getElementById('micBtn').classList.remove('recording');
-  document.getElementById('micBtn').textContent='🎤';
+  isRec=false; document.getElementById('micBtn').classList.remove('recording'); document.getElementById('micBtn').textContent='🎤';
   document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · o pulsa una opción arriba';
-  if(recog){try{recog.stop();}catch(e){} recog=null;}
-  if(send) setTimeout(sendMessage,300);
+  if(recog){try{recog.stop();}catch(e){}recog=null;}
+  if(send)setTimeout(sendMessage,300);
 }
 
 // ── INIT ──
-window.addEventListener('load', async () => {
-  updateBars();
+window.addEventListener('load',async()=>{
+  loadToday(); applyMacros(S.tipoDia); updateBars();
   addTyping();
-  try {
-    const raw = await callAI('Saluda al cliente, dile cuántas calorías tiene hoy y pregúntale cuántas comidas quiere hacer. Sé breve y amigable. Usa [OPCIONES] para sugerir: 2 comidas|3 comidas|4 comidas|5 comidas');
+  try{
+    const ctx=S.comidas.length>0
+      ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale brevemente y muéstrale cuánto le queda. Usa [OPCIONES] para sugerir qué hacer.`
+      :`Saluda al cliente, dile que hoy tiene ${S.kcalObj} kcal (${S.tipoDia}) y pregúntale cuántas comidas quiere hacer. Sé breve. Usa [OPCIONES]: 2 comidas|3 comidas|4 comidas|5 comidas`;
+    const raw=await callAI(ctx); removeTyping();
+    const{text:t,elements,opciones}=parseAI(raw); addMsg('ai',t,elements,opciones);
+  }catch(e){
     removeTyping();
-    const {text:t, elements, opciones} = parseAI(raw);
-    addMsg('ai', t, elements, opciones);
-  } catch(e) {
-    removeTyping();
-    addMsg('ai','¡Hola! Hoy tienes 2.000 kcal. ¿Cuántas comidas quieres hacer?',[],
-      ['2 comidas','3 comidas','4 comidas','5 comidas']);
+    addMsg('ai',`¡Hola! Hoy tienes ${S.kcalObj} kcal. ¿Cuántas comidas quieres hacer?`,[],['2 comidas','3 comidas','4 comidas','5 comidas']);
   }
 });
 </script>
