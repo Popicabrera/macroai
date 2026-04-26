@@ -941,11 +941,65 @@ function enterApp(){
   document.getElementById('appleIcon').href=icon;
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
-  const sw=`const CACHE='macroai-v5';
-    self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/macroai/','/macroai/index.html'])));self.skipWaiting();});
-    self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim();});
-    self.addEventListener('fetch',e=>{if(e.request.url.includes('workers.dev')||e.request.url.includes('anthropic.com')||e.request.url.includes('supabase.co'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});`;
-  if('serviceWorker' in navigator)navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),{scope:'/macroai/'}).catch(()=>{});
+  // Versión basada en timestamp de build — cambia automáticamente cada deploy
+  const BUILD_VERSION='macroai-1777212568';
+  const sw=`
+    const CACHE='${BUILD_VERSION}';
+    // Al instalar: cachear recursos y activar inmediatamente
+    self.addEventListener('install',e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/macroai/','/macroai/index.html'])));
+      self.skipWaiting();
+    });
+    // Al activar: borrar cachés viejas y reclamar todos los clientes
+    self.addEventListener('activate',e=>{
+      e.waitUntil(
+        caches.keys().then(keys=>Promise.all(
+          keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
+        )).then(()=>self.clients.claim())
+      );
+    });
+    // Fetch: network-first para el HTML propio, cache-fallback para el resto
+    self.addEventListener('fetch',e=>{
+      if(e.request.url.includes('workers.dev')||e.request.url.includes('anthropic.com')||e.request.url.includes('supabase.co'))return;
+      // Para el propio index.html: siempre intentar red primero
+      if(e.request.mode==='navigate'){
+        e.respondWith(
+          fetch(e.request).then(res=>{
+            const clone=res.clone();
+            caches.open(CACHE).then(c=>c.put(e.request,clone));
+            return res;
+          }).catch(()=>caches.match(e.request))
+        );
+        return;
+      }
+      e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+    });
+    // Notificar a la página cuando hay nueva versión activa
+    self.addEventListener('message',e=>{
+      if(e.data==='skipWaiting')self.skipWaiting();
+    });
+  `;
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register(
+      URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),
+      {scope:'/macroai/'}
+    ).then(reg=>{
+      // Cuando hay un nuevo SW esperando, notificar al usuario
+      reg.addEventListener('updatefound',()=>{
+        const newSW=reg.installing;
+        newSW.addEventListener('statechange',()=>{
+          if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+            // Hay nueva versión — activar y recargar automáticamente
+            newSW.postMessage('skipWaiting');
+          }
+        });
+      });
+      // Cuando el SW nuevo toma el control, recargar la página
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        window.location.reload();
+      });
+    }).catch(()=>{});
+  }
 })();
 
 // ── CONFIG ──
