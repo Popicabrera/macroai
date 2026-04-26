@@ -1452,9 +1452,22 @@ function toggleMic(){
   else if(micState==='paused')resumeMic();
 }
 
+// Suprimir beep del sistema: reproducir silencio antes de arrancar SpeechRecognition
+let _audioCtx=null;
+function silenciarBeep(){
+  try{
+    if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(_audioCtx.state==='suspended')_audioCtx.resume();
+    const buf=_audioCtx.createBuffer(1,1,22050);
+    const src=_audioCtx.createBufferSource();
+    src.buffer=buf;src.connect(_audioCtx.destination);src.start(0);
+  }catch(e){}
+}
+
 function startMic(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){setHint('⚠️ Sin soporte de voz en este navegador.');return;}
+  silenciarBeep();
   // Recuperar texto ya escrito en el campo como base
   voiceFinalText=document.getElementById('inputField').value||'';
   voiceInterim='';
@@ -1514,6 +1527,7 @@ function startMicFresh(){
   if(recog){try{recog.abort();}catch(e){}}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return;
+  silenciarBeep();
   recog=new SR();
   recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
   // Reasignar handlers
@@ -1549,6 +1563,7 @@ function pauseMic(){
 
 function resumeMic(){
   micState='recording';
+  silenciarBeep();
   // Reiniciar recog con nueva instancia para evitar estados corruptos
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return;
