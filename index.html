@@ -328,12 +328,13 @@ body{
 .desp-hero-icon{font-size:36px;margin-bottom:8px;}
 .desp-hero-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px;}
 .desp-hero-sub{font-size:13px;color:var(--muted);line-height:1.5;}
-.desp-actions{display:flex;gap:8px;}
-.desp-btn{flex:1;padding:12px 8px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
+.desp-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.desp-btn{padding:12px 6px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
   display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:all 0.2s;}
 .desp-btn:active{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);}
-.desp-btn-icon{font-size:22px;}
-.desp-btn-lbl{font-size:12px;color:var(--muted);font-weight:500;}
+.desp-btn.recording{background:rgba(255,107,107,0.12);border-color:rgba(255,107,107,0.4);}
+.desp-btn-icon{font-size:20px;}
+.desp-btn-lbl{font-size:11px;color:var(--muted);font-weight:500;text-align:center;}
 .desp-input-wrap{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .desp-input-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
 .desp-input-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;}
@@ -505,9 +506,9 @@ body{
       <div style="position:relative;">
         <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu()">☰</div>
         <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:6px;z-index:500;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-          <div class="nav-menu-item" onclick="showView('viewDespensa');closeNavMenu()">🧺 Despensa</div>
-          <div class="nav-menu-item" onclick="showView('viewFavoritos');closeNavMenu()">⭐ Favoritos</div>
-          <div class="nav-menu-item" onclick="showView('viewHistorial');closeNavMenu()">📅 Historial</div>
+          <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewDespensa'),50)">🧺 Despensa</div>
+          <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
+          <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
           <div style="height:1px;background:var(--border);margin:4px 0;"></div>
           <div class="nav-menu-item" style="color:var(--red);" onclick="borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
         </div>
@@ -625,15 +626,31 @@ body{
         <div class="desp-btn-icon">✍️</div>
         <div class="desp-btn-lbl">Escribir</div>
       </div>
-      <div class="desp-btn" onclick="document.getElementById('photoInput').click()">
+      <div class="desp-btn" id="despVozBtn" onclick="startDespVoz()">
+        <div class="desp-btn-icon">🎙️</div>
+        <div class="desp-btn-lbl">Voz</div>
+      </div>
+      <div class="desp-btn" onclick="document.getElementById('photoDespInput').click()">
         <div class="desp-btn-icon">📷</div>
         <div class="desp-btn-lbl">Foto nevera</div>
       </div>
       <label class="desp-btn">
         <div class="desp-btn-icon">🧾</div>
         <div class="desp-btn-lbl">Ticket compra</div>
-        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicket(event)">
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicketDesp(event)">
       </label>
+    </div>
+    <input type="file" id="photoDespInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoDespensa(event)">
+    <!-- Banner de voz para Despensa -->
+    <div id="despVozBanner" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.3);border-radius:14px;padding:10px 14px;margin:8px 0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div id="despVozLbl" style="font-size:12px;color:var(--accent);font-weight:600;">🔴 Grabando...</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="confirmDespVoz()" style="padding:5px 12px;background:var(--accent);border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#080810;cursor:pointer;">✅ Añadir</button>
+          <button onclick="cancelDespVoz()" style="padding:5px 12px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;font-size:11px;color:var(--red);cursor:pointer;">✕ Descartar</button>
+        </div>
+      </div>
+      <div id="despVozText" style="font-size:13px;color:var(--muted);min-height:18px;">Habla los alimentos que tienes...</div>
     </div>
     <div class="desp-input-wrap">
       <div class="desp-input-hdr">
@@ -1980,6 +1997,97 @@ async function handleFotoEtiqueta(e){
       const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
     }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta.');}
   };reader.readAsDataURL(file);
+}
+
+// ── FOTO NEVERA DESDE DESPENSA (sin salir de viewDespensa) ──
+async function handlePhotoDespensa(e){
+  const file=e.target.files[0];if(!file)return;e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];
+    showToast('📷 Analizando imagen...');
+    try{
+      const tempHist=[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+        {type:'text',text:'Analiza esta imagen de nevera o armario. Extrae todos los alimentos visibles. Responde SOLO con [DESPENSA]alimento1,alimento2,...[/DESPENSA] seguido de una lista legible de lo detectado.'}
+      ]}];
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:tempHist})});
+      const data=await res.json();const raw=data.content?.[0]?.text||'';
+      const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
+      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);const n=addToDesp(nuevos);showToast(`📷 ${n} alimentos añadidos`);renderDespChips();}
+      else{showToast('No detecté alimentos en la imagen');}
+    }catch(err){showToast('Error analizando la imagen');}
+  };reader.readAsDataURL(file);
+}
+
+// ── FOTO TICKET DESDE DESPENSA (sin salir de viewDespensa) ──
+async function handleFotoTicketDesp(e){
+  const file=e.target.files[0];if(!file)return;e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];
+    showToast('🧾 Leyendo ticket...');
+    try{
+      const tempHist=[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+        {type:'text',text:'Analiza este ticket de compra. Extrae SOLO productos alimenticios (ignora limpieza, higiene). Responde con [DESPENSA]alimento1,alimento2,...[/DESPENSA] y luego lista los detectados.'}
+      ]}];
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:tempHist})});
+      const data=await res.json();const raw=data.content?.[0]?.text||'';
+      const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
+      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);const n=addToDesp(nuevos);showToast(`🧾 ${n} productos añadidos`);renderDespChips();}
+      else{showToast('No detecté productos en el ticket');}
+    }catch(err){showToast('Error leyendo el ticket');}
+  };reader.readAsDataURL(file);
+}
+
+// ── VOZ EN DESPENSA ──
+let despRecog=null,despVozFinal='',despVozInterim='',despMicState='idle';
+
+function startDespVoz(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('⚠️ Sin soporte de voz');return;}
+  if(despMicState==='recording'){stopDespVoz();return;}
+  despVozFinal=document.getElementById('despTextarea').value||'';
+  despVozInterim='';despMicState='recording';
+  silenciarBeep();
+  despRecog=new SR();despRecog.lang='es-ES';despRecog.continuous=true;despRecog.interimResults=true;
+  despRecog.onresult=function(e){
+    let nF='',nI='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)nF+=e.results[i][0].transcript;
+      else nI+=e.results[i][0].transcript;
+    }
+    if(nF)despVozFinal+=(despVozFinal&&!despVozFinal.endsWith(' ')?' ':'')+nF;
+    despVozInterim=nI;
+    const combined=(despVozFinal+(despVozInterim?' '+despVozInterim:'')).trim();
+    document.getElementById('despTextarea').value=combined;
+    document.getElementById('despVozText').textContent=combined||'Habla los alimentos que tienes...';
+  };
+  despRecog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopDespVoz();};
+  despRecog.onend=function(){if(despMicState==='recording')setTimeout(()=>{if(despMicState==='recording'){try{despRecog.start();}catch(ex){}}},50);};
+  try{despRecog.start();}catch(e){showToast('No se pudo iniciar el micrófono');return;}
+  document.getElementById('despVozBanner').style.display='block';
+  document.getElementById('despVozLbl').textContent='🔴 Grabando...';
+  document.getElementById('despVozBtn').classList.add('recording');
+}
+
+function stopDespVoz(){
+  despMicState='idle';despVozInterim='';
+  if(despRecog){try{despRecog.abort();}catch(e){}despRecog=null;}
+  document.getElementById('despVozBanner').style.display='none';
+  document.getElementById('despVozBtn').classList.remove('recording');
+}
+
+function confirmDespVoz(){
+  stopDespVoz();
+  saveDespensa();
+}
+
+function cancelDespVoz(){
+  stopDespVoz();
+  document.getElementById('despTextarea').value='';
+  despVozFinal='';
 }
 
 async function handleFotoTicket(e){
