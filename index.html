@@ -419,7 +419,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 <div class="view" id="viewMain">
 <div class="aw">
   <div class="header">
-    <div class="logo">Macro<em>AI</em></div>
+    <div class="logo" >Macro<em>AI</em></div>
     <div class="hbtns">
       <div class="day-pill" onclick="toggleDayType()">
         <div class="pdot" id="pillDot"></div>
@@ -627,6 +627,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       </div>
     </div>
     <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
+    <div id="adminBtnWrap" style="display:none;padding:0 14px 4px;">
+      <button class="save-btn" style="background:var(--s2);border:1px solid rgba(212,240,74,0.3);color:var(--accent);" onclick="showView('viewAdmin');loadAdminUsers()">⚡ Panel Admin</button>
+    </div>
 
   </div>
 </div>
@@ -700,8 +703,18 @@ async function doLogin(){
     if(!res.ok){showMsg('loginMsg',data.error_description||data.message||'Email o contraseña incorrectos.');return;}
     SUPA_TOKEN=data.access_token;
     CURRENT_USER={id:data.user.id,email:data.user.email};
-    localStorage.setItem('macroai_token',SUPA_TOKEN);
-    localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
+    // Verificar si está activo (excepto admin)
+    if(data.user.email!==ADMIN_EMAIL){
+      const chk=await supaFetch("/rest/v1/usuarios_macroai?select=activo&id=eq."+data.user.id);
+      const chkData=await chk.json();
+      if(chkData&&chkData[0]&&chkData[0].activo===false){
+        SUPA_TOKEN=null;CURRENT_USER=null;
+        showMsg("loginMsg","Tu cuenta está desactivada. Contacta con tu entrenador.");
+        return;
+      }
+    }
+    localStorage.setItem("macroai_token",SUPA_TOKEN);
+    localStorage.setItem("macroai_user",JSON.stringify(CURRENT_USER));
     enterApp();
   }catch(e){showMsg('loginMsg','Error de conexión. Inténtalo de nuevo.');}
   finally{setAuthLoading('loginBtn','loginBtnText',false,'ENTRAR');}
@@ -1005,6 +1018,7 @@ function loadCfgUI(){
   document.getElementById('cfgChD').value=CFG.descanso.ch;
   document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
   setDayType(CFG.tipoDia,false);
+  document.getElementById("adminBtnWrap").style.display=CURRENT_USER?.email===ADMIN_EMAIL?"block":"none";
 }
 function setDayType(tipo,update=true){
   document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
@@ -1338,3 +1352,105 @@ window.addEventListener('load',()=>{
 </script>
 </body>
 </html>
+
+<!-- ══ VISTA ADMIN ══ -->
+<div class="view" id="viewAdmin">
+<div class="aw">
+  <div class="sub-hdr" style="background:rgba(212,240,74,0.06);border-bottom:1px solid rgba(212,240,74,0.2);">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <h2 style="color:var(--accent)">⚡ Admin</h2>
+  </div>
+  <div class="scrollable" id="adminBody"></div>
+</div>
+</div>
+
+<style>
+.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.admin-card-top{display:flex;justify-content:space-between;align-items:center;}
+.admin-card-info{display:flex;flex-direction:column;gap:3px;}
+.admin-card-nombre{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.admin-card-email{font-size:12px;color:var(--muted);}
+.admin-card-fecha{font-size:11px;color:var(--muted2);}
+.admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;}
+.admin-card-status.active{background:rgba(212,240,74,0.08);color:var(--accent);}
+.admin-card-status.inactive{background:rgba(255,107,107,0.08);color:var(--red);}
+.admin-toggle{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
+.admin-toggle.on{background:var(--accent);}
+.admin-toggle.off{background:var(--muted2);}
+.admin-toggle-dot{width:20px;height:20px;border-radius:50%;background:#080810;position:absolute;top:3px;transition:left 0.3s;}
+.admin-toggle.on .admin-toggle-dot{left:25px;}
+.admin-toggle.off .admin-toggle-dot{left:3px;}
+</style>
+
+<script>
+const ADMIN_EMAIL='joseju.popi@hotmail.es';
+let adminTaps=0,adminTimer=null;
+
+function logoTap(){
+  adminTaps++;
+  clearTimeout(adminTimer);
+  adminTimer=setTimeout(()=>adminTaps=0,2000);
+  if(adminTaps>=5){
+    adminTaps=0;
+    if(CURRENT_USER?.email===ADMIN_EMAIL){
+      showView('viewAdmin');
+      loadAdminUsers();
+    }
+  }
+}
+
+async function loadAdminUsers(){
+  const body=document.getElementById('adminBody');
+  body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;">Cargando...</div>';
+  try{
+    const res=await supaFetch('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
+    const users=await res.json();
+    if(!Array.isArray(users)||!users.length){body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';return;}
+    body.innerHTML='';
+    users.forEach(u=>{
+      const card=document.createElement('div');
+      card.className='admin-card';
+      const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+      card.innerHTML=`
+        <div class="admin-card-top">
+          <div class="admin-card-info">
+            <div class="admin-card-nombre">${u.nombre||'Sin nombre'}</div>
+            <div class="admin-card-email">${u.email}</div>
+            <div class="admin-card-fecha">Alta: ${fecha}</div>
+          </div>
+          <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo})">
+            <div class="admin-toggle-dot"></div>
+          </div>
+        </div>
+        <div class="admin-card-status ${u.activo?'active':'inactive'}" id="status-${u.id}">
+          ${u.activo?'✅ Activo':'❌ Desactivado'}
+        </div>`;
+      body.appendChild(card);
+    });
+  }catch(e){
+    body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';
+  }
+}
+
+async function toggleUsuario(id,activo){
+  const nuevoEstado=!activo;
+  const toggle=document.getElementById('toggle-'+id);
+  const status=document.getElementById('status-'+id);
+  toggle.className='admin-toggle '+(nuevoEstado?'on':'off');
+  status.className='admin-card-status '+(nuevoEstado?'active':'inactive');
+  status.textContent=nuevoEstado?'✅ Activo':'❌ Desactivado';
+  toggle.onclick=()=>toggleUsuario(id,nuevoEstado);
+  try{
+    await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{
+      method:'PATCH',
+      headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({activo:nuevoEstado})
+    });
+  }catch(e){
+    toggle.className='admin-toggle '+(activo?'on':'off');
+    status.className='admin-card-status '+(activo?'active':'inactive');
+    status.textContent=activo?'✅ Activo':'❌ Desactivado';
+    toggle.onclick=()=>toggleUsuario(id,activo);
+  }
+}
+</script>
