@@ -898,30 +898,29 @@ async function doRecuperar(){
   finally{setAuthLoading('recuperarBtn','recuperarBtnText',false,'ENVIAR ENLACE');}
 }
 
-async function doLogout(){
-  stopMic(false);
-  // Primero limpiar estado local y mostrar login (no esperar a Supabase)
+function doLogout(){
+  // Parar micrófono sin errores
+  try{micState='idle';if(recog){recog.abort();recog=null;}updateMicBtn();hideBanner();}catch(e){}
+  // Limpiar sesión
   SUPA_TOKEN=null;CURRENT_USER=null;
   localStorage.removeItem('macroai_token');
   localStorage.removeItem('macroai_user');
-  // Ocultar todas las views y auth-screens
-  document.querySelectorAll('.view').forEach(v=>{v.classList.remove('active');v.style.display='none';});
-  document.querySelectorAll('.auth-screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
-  // Mostrar login
-  const loginScreen=document.getElementById('screenLogin');
-  loginScreen.style.display='flex';
-  loginScreen.classList.add('active');
-  // Limpiar campos
-  ['loginEmail','loginPw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('loginMsg').className='auth-msg';
-  document.getElementById('loginMsg').textContent='';
-  // Llamar logout de Supabase en background (no bloquea UI)
-  setTimeout(()=>{
-    try{fetch(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY}});}catch(e){}
-    // Restaurar display de views para próximo login
-    document.querySelectorAll('.view').forEach(v=>v.style.display='');
-    document.querySelectorAll('.auth-screen').forEach(s=>s.style.display='');
-  },100);
+  // Supabase logout en background
+  try{fetch(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY}});}catch(e){}
+  // Resetear estado de la app
+  S.historial=[];S.comidas=[];S.kcalC=0;S.protC=0;S.chC=0;S.grasaC=0;
+  try{document.getElementById('messages').innerHTML='';}catch(e){}
+  // Mostrar pantalla login directamente
+  document.querySelectorAll('.view,.auth-screen').forEach(el=>{
+    el.classList.remove('active');
+    el.style.display='';
+  });
+  const login=document.getElementById('screenLogin');
+  login.style.display='flex';
+  login.classList.add('active');
+  // Limpiar campos login
+  try{document.getElementById('loginEmail').value='';document.getElementById('loginPw').value='';
+  document.getElementById('loginMsg').className='auth-msg';document.getElementById('loginMsg').textContent='';}catch(e){}
 }
 
 function enterApp(){
@@ -941,7 +940,7 @@ function enterApp(){
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
-  const BUILD_VERSION='macroai-1777212568';
+  const BUILD_VERSION='macroai-1777214847';
   const sw=`
     const CACHE='${BUILD_VERSION}';
     // Al instalar: cachear recursos y activar inmediatamente
@@ -1731,22 +1730,19 @@ function startMic(){
     setHint('⚠️ Error de micrófono: '+e.error);
   };
 
-  // Auto-restart para mantener continuo (Chrome corta cada ~60s)
+  // Auto-restart: SIEMPRE nueva instancia para evitar duplicados en Android
   recog.onend=function(){
     if(micState==='recording'){
-      try{recog.start();}catch(err){
-        // Si falla el restart, reiniciar con nueva instancia
-        setTimeout(()=>{if(micState==='recording')startMicFresh();},200);
-      }
+      setTimeout(()=>{if(micState==='recording')startMicFresh();},50);
     }
   };
 
-  recog.start();
+  try{recog.start();}catch(e){setHint('⚠️ No se pudo iniciar el micrófono.');return;}
   micState='recording';
   updateMicBtn();
   updateVoiceBanner();
   setHint('');
-  mantenerAudioActivo(); // mantener canal audio ocupado → evita beep en restart
+  mantenerAudioActivo();
 }
 
 function startMicFresh(){
@@ -1760,7 +1756,9 @@ function startMicFresh(){
   // Reasignar handlers
   recog.onresult=recog_onresult_handler;
   recog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopMic(false);};
-  recog.onend=function(){if(micState==='recording'){try{recog.start();}catch(err){setTimeout(()=>{if(micState==='recording')startMicFresh();},200);}}};
+  recog.onend=function(){
+    if(micState==='recording'){setTimeout(()=>{if(micState==='recording')startMicFresh();},50);}
+  };
   try{recog.start();}catch(e){}
 }
 
@@ -1798,7 +1796,9 @@ function resumeMic(){
   recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
   recog.onresult=recog_onresult_handler;
   recog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopMic(false);};
-  recog.onend=function(){if(micState==='recording'){try{recog.start();}catch(err){setTimeout(()=>{if(micState==='recording')startMicFresh();},200);}}};
+  recog.onend=function(){
+    if(micState==='recording'){setTimeout(()=>{if(micState==='recording')startMicFresh();},50);}
+  };
   try{recog.start();}catch(e){micState='idle';updateMicBtn();return;}
   updateMicBtn();
   updateVoiceBanner();
@@ -1833,7 +1833,7 @@ function updateVoiceBanner(){
   const bannerText=document.getElementById('voiceBannerText');
   if(micState==='idle'){hideBanner();return;}
   banner.classList.add('visible');
-  banner.querySelector('.voice-banner-lbl').textContent=micState==='paused'?'⏸ En pausa':'🔴 Grabando...';
+  document.getElementById('voiceBannerLbl').textContent=micState==='paused'?'⏸ EN PAUSA':'🔴 Grabando...';
   const finalPart=voiceFinalText.trim();
   const interimPart=voiceInterim.trim();
   if(!finalPart&&!interimPart){bannerText.innerHTML='<span style="color:var(--muted)">Habla ahora...</span>';return;}
@@ -2085,7 +2085,7 @@ function toggleNavMenu(){
 function closeNavMenu(){document.getElementById('navMenu').style.display='none';}
 
 function borrarConversacion(){
-  if(!confirm('¿Borrar la conversación de hoy? Los macros registrados se mantienen.'))return;
+
   S.historial=[];
   document.getElementById('messages').innerHTML='';
   document.querySelectorAll('.quick-replies').forEach(el=>el.remove());
@@ -2100,7 +2100,7 @@ function borrarConversacion(){
 function initApp(){
   loadToday();applyMacros(S.tipoDia);updateBars();
   showView('viewMain');addTyping();
-  const despStr=DESP.length?` Tengo en mi despensa: ${DESP.join(', ')}.`:'';
+  const despStr=DESP.length?` Tengo en mi despensa: ${despNombres().join(', ')}.`:'';
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
   const ctx=S.comidas.length>0
     ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
