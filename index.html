@@ -949,7 +949,7 @@ function enterApp(){
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
-  const BUILD_VERSION='macroai-1777215248';
+  const BUILD_VERSION='macroai-1777215957';
   const sw=`
     const CACHE='${BUILD_VERSION}';
     // Al instalar: cachear recursos y activar inmediatamente
@@ -1360,7 +1360,7 @@ REGLAS:
 - Usa siempre los alimentos de la despensa si están disponibles
 - Usa la memoria semanal para sugerir alimentos/menús que ya conoce el cliente
 - Cuando generes un menú completo, usa el formato PLAN_DIA
-- Cuando calcules ingredientes de una comida, usa INGREDIENTES y luego REGISTRAR y COMIDA juntos
+- Cuando calcules ingredientes de una comida, usa SIEMPRE los tres tags juntos en este orden exacto: [INGREDIENTES]...[/INGREDIENTES] luego [COMIDA]...[/COMIDA] luego [REGISTRAR]...[/REGISTRAR]. NUNCA omitas [REGISTRAR] si has calculado ingredientes.
 - Actúa como consejera: si falta proteína sugiere añadir, si sobra grasa avisa
 - Máximo 2-3 frases de texto + datos. Termina con pregunta o acción.
 - Español siempre.
@@ -1379,12 +1379,13 @@ cena:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/PLAN_DIA]
 
 [INGREDIENTES]
-emoji Nombre:XXXg:XXXkcal:nota
+emoji Nombre:XXXg:XXXkcal
 TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/INGREDIENTES]
-
 [COMIDA]Nombre descriptivo de la comida[/COMIDA]
 [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
+
+IMPORTANTE: El tag [REGISTRAR] con los totales exactos es OBLIGATORIO siempre que calcules una comida. Sin él los macros no se registran.
 [AVISO_WARN]texto[/AVISO_WARN]
 [AVISO_OK]texto[/AVISO_OK]
 [OPCIONES]op1|op2|op3[/OPCIONES]
@@ -1394,6 +1395,8 @@ TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 // ── PARSE AI ──
 function parseAI(raw){
   let text=raw;const elements=[];
+  // Guardar raw original para buscar REGISTRAR/COMIDA aunque text sea modificado
+  const rawOrig=raw;
   // Detectar [AÑADIR_DESPENSA] — alimentos mencionados desde el chat
   const addDespMatch=text.match(/\[AÑADIR_DESPENSA\]([\s\S]*?)\[\/AÑADIR_DESPENSA\]/);
   if(addDespMatch){
@@ -1419,26 +1422,58 @@ function parseAI(raw){
   const ingMatch=text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
   if(ingMatch){
     const lines=ingMatch[1].trim().split('\n');let tot=null;const items=[];
-    lines.forEach(l=>{if(l.startsWith('TOTAL:')){tot=l;return;}const p=l.split(':');if(p.length>=3)items.push({full:p[0],grams:p[1],kcal:p[2],note:p[3]||''});});
+    lines.forEach(l=>{
+      const lt=l.trim();if(!lt)return;
+      if(lt.startsWith('TOTAL:')){tot=lt;return;}
+      // Formato: "emoji Nombre:XXXg:XXXkcal:nota" — dividir solo las primeras 3 partes
+      const firstColon=lt.indexOf(':');
+      if(firstColon<0)return;
+      const namePart=lt.substring(0,firstColon).trim();
+      const rest=lt.substring(firstColon+1);
+      // Extraer cantidad (hasta siguiente ':' o espacio+unidad)
+      const secondColon=rest.indexOf(':');
+      let grams,kcalNote;
+      if(secondColon>=0){grams=rest.substring(0,secondColon).trim();kcalNote=rest.substring(secondColon+1).trim();}
+      else{grams=rest.trim();kcalNote='';}
+      // Separar kcal de nota
+      const thirdColon=kcalNote.indexOf(':');
+      let kcalPart,notePart;
+      if(thirdColon>=0){kcalPart=kcalNote.substring(0,thirdColon).trim();notePart=kcalNote.substring(thirdColon+1).trim();}
+      else{kcalPart=kcalNote;notePart='';}
+      if(namePart)items.push({full:namePart,grams:grams||'',kcal:kcalPart||'',note:notePart});
+    });
     let h='<div class="plan-card"><div class="plan-hdr">📋 Ingredientes y cantidades</div>';
     items.forEach(i=>{h+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${i.full}</div>${i.note?`<div class="pi-note">${i.note}</div>`:''}</div><div class="pi-r"><div class="pi-g">${i.grams}</div><div class="pi-k">${i.kcal}</div></div></div>`;});
-    if(tot){const tv={};tot.replace('TOTAL:','').split(',').forEach(p=>{const[k,v]=p.split('=');tv[k]=v;});
-      h+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${tv.prot||'?'}g</span><span class="ptm" style="color:var(--yellow)">CH ${tv.ch||'?'}g</span><span class="ptm" style="color:var(--blue)">G ${tv.grasa||'?'}g</span><span class="ptm" style="color:var(--accent)">${tv.kcal||'?'} kcal ✓</span></div></div>`;}
+    if(tot){
+      // Parser robusto del TOTAL: acepta espacios, mayúsculas, orden variable
+      const tv={};
+      tot.replace(/^TOTAL:\s*/i,'').split(',').forEach(p=>{
+        const eq=p.indexOf('=');if(eq<0)return;
+        const k=p.substring(0,eq).trim().toLowerCase();
+        const v=p.substring(eq+1).trim().replace(/[^\d.]/g,'');
+        tv[k]=v;
+      });
+      const kcalVal=tv.kcal||tv.calorias||tv.cal||'?';
+      const protVal=tv.prot||tv.proteina||tv.proteinas||'?';
+      const chVal=tv.ch||tv.carb||tv.carbos||tv.carbohidratos||'?';
+      const grasaVal=tv.grasa||tv.grasas||'?';
+      h+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protVal}g</span><span class="ptm" style="color:var(--yellow)">CH ${chVal}g</span><span class="ptm" style="color:var(--blue)">G ${grasaVal}g</span><span class="ptm" style="color:var(--accent)">${kcalVal} kcal ✓</span></div></div>`;
+    }
     h+='</div>';elements.push({type:'html',content:h});text=text.replace(ingMatch[0],'').trim();
   }
-  const regMatch=text.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+  const regMatch=rawOrig.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
   if(regMatch){
     S.kcalC+=parseInt(regMatch[1]);S.protC+=parseInt(regMatch[2]);S.chC+=parseInt(regMatch[3]);S.grasaC+=parseInt(regMatch[4]);
-    const nombreMatch=text.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
-    const ingTextMatch=text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
+    const nombreMatch=rawOrig.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
+    const ingTextMatch=rawOrig.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
     const nombre=nombreMatch?nombreMatch[1].trim():`Comida ${S.comidas.length+1}`;
     const ingredientesTexto=ingTextMatch?ingTextMatch[1].trim():'';
     S.comidas.push({nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
     updateBars();saveToday();
     actualizarFrecuenciaDesp(ingredientesTexto+' '+nombre);
     saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
-    text=text.replace(regMatch[0],'').trim();
-    if(nombreMatch)text=text.replace(nombreMatch[0],'').trim();
+    text=text.replace(/\[REGISTRAR\]kcal=\d+,prot=\d+,ch=\d+,grasa=\d+\[\/REGISTRAR\]/,'').trim();
+    text=text.replace(/\[COMIDA\].*?\[\/COMIDA\]/,'').trim();
   }
   const wM=text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
   if(wM){elements.push({type:'html',content:`<div class="alert-card warn">⚠️ <span>${wM[1]}</span></div>`});text=text.replace(wM[0],'').trim();}
