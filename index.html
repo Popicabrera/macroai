@@ -328,13 +328,12 @@ body{
 .desp-hero-icon{font-size:36px;margin-bottom:8px;}
 .desp-hero-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px;}
 .desp-hero-sub{font-size:13px;color:var(--muted);line-height:1.5;}
-.desp-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-.desp-btn{padding:12px 6px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
+.desp-actions{display:flex;gap:8px;}
+.desp-btn{flex:1;padding:12px 8px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
   display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:all 0.2s;}
 .desp-btn:active{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);}
-.desp-btn.recording{background:rgba(255,107,107,0.12);border-color:rgba(255,107,107,0.4);}
-.desp-btn-icon{font-size:20px;}
-.desp-btn-lbl{font-size:11px;color:var(--muted);font-weight:500;text-align:center;}
+.desp-btn-icon{font-size:22px;}
+.desp-btn-lbl{font-size:12px;color:var(--muted);font-weight:500;}
 .desp-input-wrap{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .desp-input-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
 .desp-input-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;}
@@ -370,6 +369,63 @@ body{
 .fav-del-btn{padding:9px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);
   border-radius:9px;font-size:14px;cursor:pointer;}
 .fav-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.8;}
+
+/* ── DIARIO — MEAL BLOCKS ── */
+.meal-block{border-bottom:1px solid var(--border);background:var(--bg);}
+.meal-hdr{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;cursor:pointer;transition:background 0.15s;user-select:none;}
+.meal-hdr:active{background:var(--s2);}
+.meal-hdr-left{display:flex;align-items:center;gap:10px;}
+.meal-em{font-size:18px;flex-shrink:0;}
+.meal-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.meal-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.meal-hdr-right{display:flex;align-items:center;gap:8px;}
+.meal-kcal-badge{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent);}
+.meal-kcal-badge.empty{color:var(--muted);}
+.meal-chevron{font-size:11px;color:var(--muted);transition:transform 0.22s;display:inline-block;}
+.meal-chevron.open{transform:rotate(180deg);}
+.meal-body{display:none;border-top:1px solid var(--border);}
+.meal-body.open{display:block;}
+.food-row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px 9px 44px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.food-row:last-of-type{border-bottom:none;}
+.food-name-txt{font-size:13px;font-weight:500;}
+.food-detail-txt{font-size:10px;color:var(--muted);margin-top:1px;}
+.food-right-col{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.food-kcal-txt{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;text-align:right;}
+.food-macro-txt{font-size:9px;color:var(--muted);text-align:right;margin-top:1px;}
+.food-del-btn{width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);flex-shrink:0;}
+.meal-add-row{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 44px;}
+.meal-add-input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;}
+.meal-add-input::placeholder{color:var(--muted);}
+.meal-add-input:focus{border-color:rgba(212,240,74,0.35);}
+.meal-add-btn{width:34px;height:34px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#080810;cursor:pointer;flex-shrink:0;border:none;}
+.meal-ia-btn{padding:7px 14px 10px 44px;font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px;}
+
+/* ── QUICK ADD MODAL ── */
+.qam-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;}
+.qam-overlay.open{display:block;}
+.qam-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--s1);border-top:1px solid rgba(212,240,74,0.25);border-radius:20px 20px 0 0;padding:16px 16px 32px;z-index:801;animation:sheetUp 0.22s ease;}
+@keyframes sheetUp{from{transform:translateX(-50%) translateY(100%);}to{transform:translateX(-50%) translateY(0);}}
+.qam-handle{width:36px;height:4px;background:var(--muted2);border-radius:4px;margin:0 auto 14px;}
+.qam-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;}
+.qam-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;margin-bottom:8px;}
+.qam-input:focus{border-color:rgba(212,240,74,0.35);}
+.qam-hint{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+.qam-hint strong{color:var(--text);}
+.qam-btns{display:flex;gap:8px;}
+.qam-cancel{flex:1;padding:11px;background:var(--s3);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;text-align:center;}
+.qam-confirm{flex:2;padding:11px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.qam-confirm:disabled{opacity:0.5;cursor:not-allowed;}
+.qam-result{margin-top:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:12px;line-height:1.6;display:none;}
+
+/* ── NUM COMIDAS MODAL ── */
+.ncm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;align-items:center;justify-content:center;}
+.ncm-overlay.open{display:flex;}
+.ncm-box{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:20px;width:280px;max-width:90vw;}
+.ncm-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px;text-align:center;}
+.ncm-opts{display:flex;gap:8px;justify-content:center;margin-bottom:16px;}
+.ncm-opt{width:44px;height:44px;border-radius:12px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.ncm-opt.sel{background:var(--accent-dim);border-color:rgba(212,240,74,0.5);color:var(--accent);}
+.ncm-close{width:100%;padding:11px;background:var(--s3);border:1px solid var(--border);border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
 
 #photoInput{display:none;}
 
@@ -505,12 +561,14 @@ body{
       </div>
       <div style="position:relative;">
         <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu()">☰</div>
-        <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:6px;z-index:500;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+        <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
           <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewDespensa'),50)">🧺 Despensa</div>
           <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
           <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
+          <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
           <div style="height:1px;background:var(--border);margin:4px 0;"></div>
           <div class="nav-menu-item" style="color:var(--red);" onclick="borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
+          <div class="nav-menu-item" style="color:var(--muted);" onclick="closeNavMenu();doLogout()">🚪 Cerrar sesión</div>
         </div>
       </div>
       <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
@@ -560,6 +618,24 @@ body{
       <div class="mstat"><div class="mstat-val" id="grasaResta" style="color:var(--blue)">44g</div><div class="mstat-lbl">grasa<br>restante</div></div>
     </div>
   </div>
+
+  <!-- ── MODE TOGGLE ── -->
+  <div style="flex-shrink:0;display:flex;background:var(--s1);border-bottom:1px solid var(--border);padding:0 14px;">
+    <div id="modeBtnDiario" onclick="setMainMode('diario')" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;">📋 Diario</div>
+    <div id="modeBtnChat" onclick="setMainMode('chat')" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;">💬 Chat IA</div>
+  </div>
+
+  <!-- ── DIARIO VIEW ── -->
+  <div id="diarioView" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;display:flex;flex-direction:column;">
+    <div id="mealBlocks"></div>
+    <div style="padding:10px 14px 6px;">
+      <button onclick="openNumComidasModal()" style="width:100%;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">⚙️ Cambiar número de comidas</button>
+    </div>
+    <div style="height:10px;flex-shrink:0;"></div>
+  </div>
+
+  <!-- ── CHAT VIEW ── -->
+  <div id="chatViewWrap" style="flex:1;overflow:hidden;display:none;flex-direction:column;min-height:0;">
   <div class="messages" id="messages"></div>
   <div class="input-area">
     <div class="input-wrap">
@@ -592,7 +668,6 @@ body{
         <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicket(event);document.getElementById('attachMenu').classList.remove('open')">
       </label>
     </div>
-    <!-- Voice banner: muestra transcripción + acciones -->
     <div class="voice-banner" id="voiceBanner">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div class="voice-banner-lbl" id="voiceBannerLbl">🔴 Grabando...</div>
@@ -605,6 +680,7 @@ body{
     </div>
     <div class="hint" id="hint"></div>
   </div>
+  </div><!-- /chatViewWrap -->
 </div>
 </div>
 
@@ -626,31 +702,15 @@ body{
         <div class="desp-btn-icon">✍️</div>
         <div class="desp-btn-lbl">Escribir</div>
       </div>
-      <div class="desp-btn" id="despVozBtn" onclick="startDespVoz()">
-        <div class="desp-btn-icon">🎙️</div>
-        <div class="desp-btn-lbl">Voz</div>
-      </div>
-      <div class="desp-btn" onclick="document.getElementById('photoDespInput').click()">
+      <div class="desp-btn" onclick="document.getElementById('photoInput').click()">
         <div class="desp-btn-icon">📷</div>
         <div class="desp-btn-lbl">Foto nevera</div>
       </div>
       <label class="desp-btn">
         <div class="desp-btn-icon">🧾</div>
         <div class="desp-btn-lbl">Ticket compra</div>
-        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicketDesp(event)">
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicket(event)">
       </label>
-    </div>
-    <input type="file" id="photoDespInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoDespensa(event)">
-    <!-- Banner de voz para Despensa -->
-    <div id="despVozBanner" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.3);border-radius:14px;padding:10px 14px;margin:8px 0;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <div id="despVozLbl" style="font-size:12px;color:var(--accent);font-weight:600;">🔴 Grabando...</div>
-        <div style="display:flex;gap:6px;">
-          <button onclick="confirmDespVoz()" style="padding:5px 12px;background:var(--accent);border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#080810;cursor:pointer;">✅ Añadir</button>
-          <button onclick="cancelDespVoz()" style="padding:5px 12px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;font-size:11px;color:var(--red);cursor:pointer;">✕ Descartar</button>
-        </div>
-      </div>
-      <div id="despVozText" style="font-size:13px;color:var(--muted);min-height:18px;">Habla los alimentos que tienes...</div>
     </div>
     <div class="desp-input-wrap">
       <div class="desp-input-hdr">
@@ -1727,6 +1787,10 @@ function updateBars(){
   document.getElementById('protResta').textContent=Math.max(0,S.prot-S.protC)+'g';
   document.getElementById('chResta').textContent=Math.max(0,S.ch-S.chC)+'g';
   document.getElementById('grasaResta').textContent=Math.max(0,S.grasa-S.grasaC)+'g';
+  // Refrescar diario si está visible
+  if(document.getElementById('diarioView')&&document.getElementById('diarioView').style.display!=='none'){
+    renderDiario();
+  }
 }
 
 // ══════════════════════════════════════════
@@ -1999,97 +2063,6 @@ async function handleFotoEtiqueta(e){
   };reader.readAsDataURL(file);
 }
 
-// ── FOTO NEVERA DESDE DESPENSA (sin salir de viewDespensa) ──
-async function handlePhotoDespensa(e){
-  const file=e.target.files[0];if(!file)return;e.target.value='';
-  const reader=new FileReader();
-  reader.onload=async function(ev){
-    const b64=ev.target.result.split(',')[1];
-    showToast('📷 Analizando imagen...');
-    try{
-      const tempHist=[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:'Analiza esta imagen de nevera o armario. Extrae todos los alimentos visibles. Responde SOLO con [DESPENSA]alimento1,alimento2,...[/DESPENSA] seguido de una lista legible de lo detectado.'}
-      ]}];
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:tempHist})});
-      const data=await res.json();const raw=data.content?.[0]?.text||'';
-      const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
-      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);const n=addToDesp(nuevos);showToast(`📷 ${n} alimentos añadidos`);renderDespChips();}
-      else{showToast('No detecté alimentos en la imagen');}
-    }catch(err){showToast('Error analizando la imagen');}
-  };reader.readAsDataURL(file);
-}
-
-// ── FOTO TICKET DESDE DESPENSA (sin salir de viewDespensa) ──
-async function handleFotoTicketDesp(e){
-  const file=e.target.files[0];if(!file)return;e.target.value='';
-  const reader=new FileReader();
-  reader.onload=async function(ev){
-    const b64=ev.target.result.split(',')[1];
-    showToast('🧾 Leyendo ticket...');
-    try{
-      const tempHist=[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:'Analiza este ticket de compra. Extrae SOLO productos alimenticios (ignora limpieza, higiene). Responde con [DESPENSA]alimento1,alimento2,...[/DESPENSA] y luego lista los detectados.'}
-      ]}];
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:tempHist})});
-      const data=await res.json();const raw=data.content?.[0]?.text||'';
-      const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
-      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);const n=addToDesp(nuevos);showToast(`🧾 ${n} productos añadidos`);renderDespChips();}
-      else{showToast('No detecté productos en el ticket');}
-    }catch(err){showToast('Error leyendo el ticket');}
-  };reader.readAsDataURL(file);
-}
-
-// ── VOZ EN DESPENSA ──
-let despRecog=null,despVozFinal='',despVozInterim='',despMicState='idle';
-
-function startDespVoz(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){showToast('⚠️ Sin soporte de voz');return;}
-  if(despMicState==='recording'){stopDespVoz();return;}
-  despVozFinal=document.getElementById('despTextarea').value||'';
-  despVozInterim='';despMicState='recording';
-  silenciarBeep();
-  despRecog=new SR();despRecog.lang='es-ES';despRecog.continuous=true;despRecog.interimResults=true;
-  despRecog.onresult=function(e){
-    let nF='',nI='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)nF+=e.results[i][0].transcript;
-      else nI+=e.results[i][0].transcript;
-    }
-    if(nF)despVozFinal+=(despVozFinal&&!despVozFinal.endsWith(' ')?' ':'')+nF;
-    despVozInterim=nI;
-    const combined=(despVozFinal+(despVozInterim?' '+despVozInterim:'')).trim();
-    document.getElementById('despTextarea').value=combined;
-    document.getElementById('despVozText').textContent=combined||'Habla los alimentos que tienes...';
-  };
-  despRecog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopDespVoz();};
-  despRecog.onend=function(){if(despMicState==='recording')setTimeout(()=>{if(despMicState==='recording'){try{despRecog.start();}catch(ex){}}},50);};
-  try{despRecog.start();}catch(e){showToast('No se pudo iniciar el micrófono');return;}
-  document.getElementById('despVozBanner').style.display='block';
-  document.getElementById('despVozLbl').textContent='🔴 Grabando...';
-  document.getElementById('despVozBtn').classList.add('recording');
-}
-
-function stopDespVoz(){
-  despMicState='idle';despVozInterim='';
-  if(despRecog){try{despRecog.abort();}catch(e){}despRecog=null;}
-  document.getElementById('despVozBanner').style.display='none';
-  document.getElementById('despVozBtn').classList.remove('recording');
-}
-
-function confirmDespVoz(){
-  stopDespVoz();
-  saveDespensa();
-}
-
-function cancelDespVoz(){
-  stopDespVoz();
-  document.getElementById('despTextarea').value='';
-  despVozFinal='';
-}
-
 async function handleFotoTicket(e){
   const file=e.target.files[0];if(!file)return;e.target.value='';
   const reader=new FileReader();
@@ -2275,15 +2248,262 @@ function borrarConversacion(){
 // ── INIT ──
 function initApp(){
   loadToday();applyMacros(S.tipoDia);updateBars();
-  showView('viewMain');addTyping();
+  showView('viewMain');
+  // Mostrar Admin en menú si es admin
+  const adminItem=document.getElementById('navAdminItem');
+  if(adminItem)adminItem.style.display=CURRENT_USER?.email===ADMIN_EMAIL?'block':'none';
+  // Renderizar diario con comidas del día
+  renderDiario();
+  // Modo por defecto: Diario
+  setMainMode(localStorage.getItem('macroai_mode')||'diario');
+  // Iniciar chat en background
+  addTyping();
   const despStr=DESP.length?` Tengo en mi despensa: ${despNombres().join(', ')}.`:'';
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
   const ctx=S.comidas.length>0
     ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
-    :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Pregúntale cuántas comidas quiere hacer. Usa [OPCIONES]: 2 comidas|3 comidas|4 comidas|5 comidas`;
+    :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Dile que puede anotar comidas en el Diario o preguntarle a la IA. Usa [OPCIONES]: Ver mi diario|¿Qué como hoy?|Generar menú completo`;
   callAI(ctx)
     .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
-    .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Cuántas comidas quieres hacer?`,[],['2 comidas','3 comidas','4 comidas','5 comidas']);});
+    .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. Usa el Diario para anotar o pregúntame lo que necesites.`,[],[]);});
+}
+
+// ── MODE TOGGLE ──
+function setMainMode(mode){
+  localStorage.setItem('macroai_mode',mode);
+  const diario=document.getElementById('diarioView');
+  const chat=document.getElementById('chatViewWrap');
+  const btnD=document.getElementById('modeBtnDiario');
+  const btnC=document.getElementById('modeBtnChat');
+  if(mode==='diario'){
+    diario.style.display='flex';chat.style.display='none';
+    btnD.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
+    btnC.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
+  }else{
+    diario.style.display='none';chat.style.display='flex';
+    btnC.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
+    btnD.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
+    // Scroll al fondo del chat
+    setTimeout(()=>{const m=document.getElementById('messages');if(m)m.scrollTop=m.scrollHeight;},50);
+  }
+}
+
+// ── DIARIO — CONFIGURACIÓN COMIDAS ──
+const MEAL_CONFIG=[
+  {id:'desayuno',name:'Desayuno',emoji:'🌅'},
+  {id:'media_manana',name:'Media mañana',emoji:'☕'},
+  {id:'comida',name:'Comida',emoji:'☀️'},
+  {id:'merienda',name:'Merienda',emoji:'🍎'},
+  {id:'cena',name:'Cena',emoji:'🌙'},
+];
+
+function loadNumComidas(){
+  return parseInt(localStorage.getItem('macroai_numcomidas')||'4');
+}
+function saveNumComidas(n){localStorage.setItem('macroai_numcomidas',n);}
+
+function getMealsForToday(){
+  const n=loadNumComidas();
+  // Seleccionar las n comidas más lógicas
+  const sets={
+    2:[MEAL_CONFIG[0],MEAL_CONFIG[2]],
+    3:[MEAL_CONFIG[0],MEAL_CONFIG[2],MEAL_CONFIG[4]],
+    4:[MEAL_CONFIG[0],MEAL_CONFIG[2],MEAL_CONFIG[3],MEAL_CONFIG[4]],
+    5:MEAL_CONFIG,
+  };
+  return sets[n]||sets[4];
+}
+
+// ── RENDER DIARIO ──
+function renderDiario(){
+  const container=document.getElementById('mealBlocks');
+  if(!container)return;
+  const meals=getMealsForToday();
+  container.innerHTML='';
+  meals.forEach(m=>{
+    // Agrupar comidas registradas por meal id
+    const items=S.comidas.filter(c=>c.mealId===m.id);
+    const totalKcal=items.reduce((a,c)=>a+c.kcal,0);
+    const totalProt=items.reduce((a,c)=>a+c.prot,0);
+    const totalCh=items.reduce((a,c)=>a+c.ch,0);
+    const totalGrasa=items.reduce((a,c)=>a+c.grasa,0);
+    const hasItems=items.length>0;
+    const block=document.createElement('div');
+    block.className='meal-block';
+    block.id='mealblock-'+m.id;
+    let foodRows=items.map((item,idx)=>`
+      <div class="food-row">
+        <div>
+          <div class="food-name-txt">${escapeHtml(item.nombre)}</div>
+          <div class="food-detail-txt">${item.ingredientes?escapeHtml(item.ingredientes.split('\n')[0].substring(0,50)):'Registrado'}</div>
+        </div>
+        <div class="food-right-col">
+          <div>
+            <div class="food-kcal-txt">${item.kcal}</div>
+            <div class="food-macro-txt">P${item.prot}·CH${item.ch}·G${item.grasa}</div>
+          </div>
+          <div class="food-del-btn" onclick="deleteMealItem('${m.id}',${S.comidas.indexOf(item)})">✕</div>
+        </div>
+      </div>`).join('');
+    block.innerHTML=`
+      <div class="meal-hdr" onclick="toggleMealBlock('${m.id}')">
+        <div class="meal-hdr-left">
+          <div class="meal-em">${m.emoji}</div>
+          <div>
+            <div class="meal-name">${m.name}</div>
+            <div class="meal-sub">${hasItems?`P${totalProt}g · CH${totalCh}g · G${totalGrasa}g`:'Sin registrar'}</div>
+          </div>
+        </div>
+        <div class="meal-hdr-right">
+          <div class="meal-kcal-badge ${hasItems?'':'empty'}">${hasItems?totalKcal+' kcal':'—'}</div>
+          <span class="meal-chevron" id="chev-${m.id}">▾</span>
+        </div>
+      </div>
+      <div class="meal-body" id="mbody-${m.id}">
+        ${foodRows}
+        <div class="meal-add-row">
+          <input class="meal-add-input" id="madd-${m.id}" placeholder="Ej: 200g pollo, 150g arroz..." onkeydown="if(event.key==='Enter'){event.preventDefault();openQAM('${m.id}','${m.name}',document.getElementById('madd-${m.id}').value);}">
+          <button class="meal-add-btn" onclick="openQAM('${m.id}','${m.name}',document.getElementById('madd-${m.id}').value)">＋</button>
+        </div>
+        <div class="meal-ia-btn" onclick="sugerirConIA('${m.id}','${m.name}')">✨ Sugerir con IA</div>
+      </div>`;
+    container.appendChild(block);
+  });
+}
+
+function toggleMealBlock(id){
+  const body=document.getElementById('mbody-'+id);
+  const chev=document.getElementById('chev-'+id);
+  if(!body)return;
+  const open=body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open',open);
+}
+
+function deleteMealItem(mealId,globalIdx){
+  if(globalIdx<0||globalIdx>=S.comidas.length)return;
+  const item=S.comidas[globalIdx];
+  S.kcalC=Math.max(0,S.kcalC-item.kcal);
+  S.protC=Math.max(0,S.protC-item.prot);
+  S.chC=Math.max(0,S.chC-item.ch);
+  S.grasaC=Math.max(0,S.grasaC-item.grasa);
+  S.comidas.splice(globalIdx,1);
+  updateBars();saveToday();renderDiario();
+  showToast('🗑️ Eliminado');
+}
+
+// ── QUICK ADD MODAL ──
+let _qamMealId='',_qamMealName='';
+
+function openQAM(mealId,mealName,prefill){
+  _qamMealId=mealId;_qamMealName=mealName;
+  document.getElementById('qamTitle').textContent='＋ Añadir a '+mealName;
+  document.getElementById('qamInput').value=prefill||'';
+  document.getElementById('qamResult').style.display='none';
+  document.getElementById('qamResult').textContent='';
+  document.getElementById('qamConfirmBtn').disabled=false;
+  document.getElementById('qamConfirmBtn').textContent='✨ Calcular y añadir';
+  document.getElementById('qamOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('qamInput').focus(),200);
+}
+
+function closeQAM(e){
+  if(e&&e.target!==document.getElementById('qamOverlay'))return;
+  closeQAMdirect();
+}
+function closeQAMdirect(){
+  document.getElementById('qamOverlay').classList.remove('open');
+  // Limpiar input de la comida
+  if(_qamMealId)document.getElementById('madd-'+_qamMealId) && (document.getElementById('madd-'+_qamMealId).value='');
+}
+
+async function qamCalcular(){
+  const txt=document.getElementById('qamInput').value.trim();
+  if(!txt)return;
+  const btn=document.getElementById('qamConfirmBtn');
+  const resultEl=document.getElementById('qamResult');
+  btn.disabled=true;btn.innerHTML='<span style="width:14px;height:14px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></span> Calculando...';
+  resultEl.style.display='none';
+  try{
+    const prompt=`El usuario quiere añadir a su ${_qamMealName}: "${txt}"
+Calcula los macros con precisión. Usa el formato obligatorio:
+[INGREDIENTES]
+emoji Nombre:XXXg:XXXkcal
+TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
+[/INGREDIENTES]
+[COMIDA]${_qamMealName} — ${txt.substring(0,30)}[/COMIDA]
+[REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
+Luego una línea con el resumen. Macros restantes hoy: ${S.kcalObj-S.kcalC}kcal, P${S.prot-S.protC}g, CH${S.ch-S.chC}g, G${S.grasa-S.grasaC}g.`;
+    const raw=await callAI(prompt);
+    // Extraer solo la parte de registro — parsear normalmente
+    const ingM=raw.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
+    const comidaM=raw.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
+    const regM=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+    if(regM){
+      const kcalN=parseInt(regM[1]),protN=parseInt(regM[2]),chN=parseInt(regM[3]),grasaN=parseInt(regM[4]);
+      const nombre=comidaM?comidaM[1].trim():(_qamMealName+' '+txt.substring(0,25));
+      const ingTexto=ingM?ingM[1].trim():txt;
+      // Añadir con mealId
+      S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
+      S.comidas.push({nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId:_qamMealId,fecha:TODAY});
+      updateBars();saveToday();
+      actualizarFrecuenciaDesp(ingTexto+' '+nombre);
+      saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+      // Mostrar resultado
+      resultEl.style.display='block';
+      resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:10px;font-size:12px;line-height:1.6;color:var(--text);';
+      resultEl.innerHTML=`✅ <strong>${kcalN} kcal</strong> · P${protN}g · CH${chN}g · G${grasaN}g<br><span style="color:var(--muted)">Añadido a ${_qamMealName}</span>`;
+      btn.innerHTML='✓ Añadir otro';btn.disabled=false;
+      btn.onclick=()=>{document.getElementById('qamInput').value='';resultEl.style.display='none';btn.onclick=qamCalcular;btn.innerHTML='✨ Calcular y añadir';document.getElementById('qamInput').focus();};
+      renderDiario();
+      // Reabrir el bloque de la comida
+      setTimeout(()=>{
+        const body=document.getElementById('mbody-'+_qamMealId);
+        const chev=document.getElementById('chev-'+_qamMealId);
+        if(body&&!body.classList.contains('open')){body.classList.add('open');if(chev)chev.classList.add('open');}
+      },100);
+      // También añadir al historial del chat para contexto
+      S.historial.push({role:'assistant',content:raw});
+    }else{
+      resultEl.style.display='block';
+      resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(255,107,107,0.07);border:1px solid rgba(255,107,107,0.2);border-radius:10px;font-size:12px;color:var(--red);';
+      resultEl.textContent='No pude calcular los macros. Intenta ser más específico (Ej: 140g copos de avena).';
+      btn.disabled=false;btn.innerHTML='✨ Reintentar';
+    }
+  }catch(e){
+    btn.disabled=false;btn.innerHTML='✨ Calcular y añadir';
+    resultEl.style.display='block';
+    resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(255,107,107,0.07);border:1px solid rgba(255,107,107,0.2);border-radius:10px;font-size:12px;color:var(--red);';
+    resultEl.textContent='Error de conexión.';
+  }
+}
+
+function sugerirConIA(mealId,mealName){
+  closeQAMdirect();
+  setMainMode('chat');
+  const restantes=`${S.kcalObj-S.kcalC}kcal, P${S.prot-S.protC}g, CH${S.ch-S.chC}g, G${S.grasa-S.grasaC}g`;
+  const desp=DESP.length?` Tengo en despensa: ${despNombres().slice(0,8).join(', ')}.`:'';
+  setTimeout(()=>sendDirect(`Sugiere algo para mi ${mealName}. Me quedan ${restantes}.${desp} Que encaje bien con lo que ya llevo hoy.`),100);
+}
+
+// ── NUM COMIDAS MODAL ──
+function openNumComidasModal(){
+  const n=loadNumComidas();
+  [2,3,4,5].forEach(i=>{
+    const el=document.getElementById('ncm'+i);
+    if(el)el.classList.toggle('sel',i===n);
+  });
+  document.getElementById('ncmOverlay').classList.add('open');
+}
+function setNumComidas(n){
+  saveNumComidas(n);
+  [2,3,4,5].forEach(i=>{
+    const el=document.getElementById('ncm'+i);
+    if(el)el.classList.toggle('sel',i===n);
+  });
+}
+function closeNCM(){
+  document.getElementById('ncmOverlay').classList.remove('open');
+  renderDiario();
 }
 
 // ── BOOT ──
@@ -2304,5 +2524,34 @@ window.addEventListener('resize',()=>{
   if(msgs){const atBottom=msgs.scrollHeight-msgs.scrollTop-msgs.clientHeight<50;if(atBottom)setTimeout(()=>msgs.scrollTop=msgs.scrollHeight,100);}
 });
 </script>
+<!-- ══ QUICK ADD MODAL ══ -->
+<div class="qam-overlay" id="qamOverlay" onclick="closeQAM(event)">
+  <div class="qam-sheet" id="qamSheet">
+    <div class="qam-handle"></div>
+    <div class="qam-title" id="qamTitle">＋ Añadir a Desayuno</div>
+    <input class="qam-input" id="qamInput" placeholder="Ej: 140g copos avena, 400ml leche desnatada, 20g nueces...">
+    <div class="qam-hint">Escribe en lenguaje natural. <strong>La IA calculará los macros al instante.</strong></div>
+    <div class="qam-result" id="qamResult"></div>
+    <div class="qam-btns">
+      <div class="qam-cancel" onclick="closeQAMdirect()">Cancelar</div>
+      <button class="qam-confirm" id="qamConfirmBtn" onclick="qamCalcular()">✨ Calcular y añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NUM COMIDAS MODAL ══ -->
+<div class="ncm-overlay" id="ncmOverlay">
+  <div class="ncm-box">
+    <div class="ncm-title">¿Cuántas comidas hoy?</div>
+    <div class="ncm-opts">
+      <div class="ncm-opt" id="ncm2" onclick="setNumComidas(2)">2</div>
+      <div class="ncm-opt" id="ncm3" onclick="setNumComidas(3)">3</div>
+      <div class="ncm-opt sel" id="ncm4" onclick="setNumComidas(4)">4</div>
+      <div class="ncm-opt" id="ncm5" onclick="setNumComidas(5)">5</div>
+    </div>
+    <button class="ncm-close" onclick="closeNCM()">✓ Aceptar</button>
+  </div>
+</div>
+
 </body>
 </html>
