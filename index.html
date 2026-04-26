@@ -1365,13 +1365,43 @@ window.addEventListener('load',()=>{
 </div>
 
 <style>
-.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
-.admin-card-top{display:flex;justify-content:space-between;align-items:center;}
-.admin-card-info{display:flex;flex-direction:column;gap:3px;}
-.admin-card-nombre{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
-.admin-card-email{font-size:12px;color:var(--muted);}
-.admin-card-fecha{font-size:11px;color:var(--muted2);}
-.admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;}
+/* ADMIN SECTIONS */
+.admin-section{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.admin-section-title{padding:11px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);
+  display:flex;align-items:center;}
+.admin-section-body{padding:14px;}
+
+/* ADMIN FORM */
+.admin-field{display:flex;flex-direction:column;gap:5px;}
+.admin-field-lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;}
+.admin-input{background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;width:100%;transition:border-color 0.2s;}
+.admin-input:focus{border-color:rgba(212,240,74,0.4);}
+.admin-input::placeholder{color:var(--muted);}
+.admin-create-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:11px;
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;transition:all 0.2s;}
+.admin-create-btn:active{transform:scale(0.98);}
+.admin-create-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ADMIN CLIENT CARDS */
+.admin-client-card{padding:13px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:9px;transition:opacity 0.3s;}
+.admin-client-card:last-child{border-bottom:none;}
+.acc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.acc-info{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;}
+.acc-nombre{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acc-email{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acc-fecha{font-size:11px;color:var(--muted2);}
+.acc-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.acc-delete{width:32px;height:32px;border-radius:9px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all 0.2s;}
+.acc-delete:active{background:rgba(255,107,107,0.2);}
+.acc-bottom{display:flex;gap:8px;align-items:center;}
+.acc-registros{background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);border-radius:8px;
+  padding:5px 10px;font-size:11px;color:var(--blue);font-weight:600;white-space:nowrap;}
+
+/* ADMIN LEGACY */
+.admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;flex:1;}
 .admin-card-status.active{background:rgba(212,240,74,0.08);color:var(--accent);}
 .admin-card-status.inactive{background:rgba(255,107,107,0.08);color:var(--red);}
 .admin-toggle{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
@@ -1405,89 +1435,79 @@ async function loadAdminUsers(){
   try{
     const res=await supaFetch('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
     const users=await res.json();
-
-    // Consumo API: contar mensajes del historial por usuario
     let apiCounts={};
     try{
       const apiRes=await supaFetch('/rest/v1/historial_macroai?select=usuario_id');
       const apiRows=await apiRes.json();
-      if(Array.isArray(apiRows)){
-        apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});
-      }
+      if(Array.isArray(apiRows)){apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});}
     }catch(e){}
 
-    // Botón crear nuevo cliente
+    // SECCIÓN 1: Crear nuevo cliente
     body.innerHTML=`
-      <div style="padding:0 0 12px;">
-        <button onclick="showCrearCliente()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;">＋ Crear nuevo cliente</button>
+      <div class="admin-section">
+        <div class="admin-section-title">＋ Nuevo cliente</div>
+        <div class="admin-section-body">
+          <div id="crearClienteForm" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="admin-field">
+              <div class="admin-field-lbl">Nombre</div>
+              <input id="newClientNombre" type="text" placeholder="Nombre del cliente" class="admin-input">
+            </div>
+            <div class="admin-field">
+              <div class="admin-field-lbl">Email</div>
+              <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" class="admin-input">
+            </div>
+            <div class="admin-field">
+              <div class="admin-field-lbl">Contraseña</div>
+              <input id="newClientPw" type="password" placeholder="Mínimo 6 caracteres" class="admin-input">
+            </div>
+            <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;"></div>
+            <button onclick="doCrearCliente()" id="crearClienteBtn" class="admin-create-btn">Crear cuenta</button>
+          </div>
+        </div>
       </div>
-      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.25);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;">
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);">Nuevo cliente</div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
-          <input id="newClientNombre" type="text" placeholder="Nombre del cliente" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
-          <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Contraseña</div>
-          <input id="newClientPw" type="password" placeholder="Mínimo 6 caracteres" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
-        </div>
-        <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;"></div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;">Crear cuenta</button>
-          <button onclick="document.getElementById('crearClienteForm').style.display='none'" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
-        </div>
+      <div class="admin-section">
+        <div class="admin-section-title">👥 Clientes <span id="clientCount" style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px;"></span></div>
+        <div id="clientesList"></div>
       </div>`;
 
+    const lista=document.getElementById('clientesList');
     if(!Array.isArray(users)||!users.length){
-      body.innerHTML+='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';
+      lista.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px 14px;font-size:13px;">No hay clientes aún.</div>';
       return;
     }
-
+    document.getElementById('clientCount').textContent='('+users.length+')';
     users.forEach(u=>{
       const card=document.createElement('div');
-      card.className='admin-card';
+      card.className='admin-client-card';
+      card.id='client-card-'+u.id;
       const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
       const apiCount=apiCounts[u.id]||0;
+      const nombreSafe=(u.nombre||u.email).replace(/'/g,"\\'");
       card.innerHTML=`
-        <div class="admin-card-top">
-          <div class="admin-card-info">
-            <div class="admin-card-nombre">${u.nombre||'Sin nombre'}</div>
-            <div class="admin-card-email">${u.email}</div>
-            <div class="admin-card-fecha">Alta: ${fecha}</div>
+        <div class="acc-top">
+          <div class="acc-info">
+            <div class="acc-nombre">${u.nombre||'Sin nombre'}</div>
+            <div class="acc-email">${u.email}</div>
+            <div class="acc-fecha">Alta: ${fecha}</div>
           </div>
-          <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo})">
-            <div class="admin-toggle-dot"></div>
+          <div class="acc-actions">
+            <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo})">
+              <div class="admin-toggle-dot"></div>
+            </div>
+            <div class="acc-delete" onclick="eliminarCliente('${u.id}','${nombreSafe}')">🗑️</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div class="admin-card-status ${u.activo?'active':'inactive'}" id="status-${u.id}" style="flex:1;">
-            ${u.activo?'✅ Activo':'❌ Desactivado'}
-          </div>
-          <div style="background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--blue);font-weight:600;white-space:nowrap;">
-            📊 ${apiCount} registros
-          </div>
+        <div class="acc-bottom">
+          <div class="admin-card-status ${u.activo?'active':'inactive'}" id="status-${u.id}">${u.activo?'✅ Activo':'❌ Desactivado'}</div>
+          <div class="acc-registros">📊 ${apiCount} registros</div>
         </div>`;
-      body.appendChild(card);
+      lista.appendChild(card);
     });
   }catch(e){
     body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';
   }
 }
 
-function showCrearCliente(){
-  const f=document.getElementById('crearClienteForm');
-  f.style.display=f.style.display==='none'?'flex':'none';
-  if(f.style.display==='flex'){
-    document.getElementById('newClientNombre').value='';
-    document.getElementById('newClientEmail').value='';
-    document.getElementById('newClientPw').value='';
-    document.getElementById('crearClienteMsg').style.display='none';
-  }
-}
 
 async function doCrearCliente(){
   const nombre=document.getElementById('newClientNombre').value.trim();
@@ -1522,7 +1542,13 @@ async function doCrearCliente(){
     });
     msg.style.display='block';msg.style.background='rgba(212,240,74,0.08)';msg.style.border='1px solid rgba(212,240,74,0.2)';msg.style.color='var(--accent)';
     msg.textContent='✅ Cliente creado correctamente.';
-    setTimeout(()=>{document.getElementById('crearClienteForm').style.display='none';loadAdminUsers();},1500);
+    setTimeout(()=>{
+      document.getElementById('newClientNombre').value='';
+      document.getElementById('newClientEmail').value='';
+      document.getElementById('newClientPw').value='';
+      document.getElementById('crearClienteMsg').style.display='none';
+      loadAdminUsers();
+    },1500);
   }catch(e){
     msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
     msg.textContent='Error de conexión.';
