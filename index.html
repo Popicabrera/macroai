@@ -1482,14 +1482,14 @@ async function loadAdminUsers(){
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
           <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Contraseña</div>
-          <input id="newClientPw" type="password" placeholder="Mínimo 6 caracteres" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+        <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;"></div>
+        <div id="whatsappBox" style="display:none;background:var(--s2);border:1px solid rgba(212,240,74,0.2);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;"></div>
+        <div id="copiarBtnWrap" style="display:none;">
+          <button onclick="copiarWhatsapp()" style="width:100%;padding:12px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#25d366;cursor:pointer;">📋 Copiar mensaje WhatsApp</button>
         </div>
-        <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;"></div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;">Crear cuenta</button>
-          <button onclick="document.getElementById('crearClienteForm').style.display='none'" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+        <div style="display:flex;gap:8px;" id="crearBtnRow">
+          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;">Crear cliente</button>
+          <button onclick="cerrarFormCliente()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
         </div>
       </div>`;
 
@@ -1540,44 +1540,96 @@ function showCrearCliente(){
   }
 }
 
+let _ultimoWhatsapp='';
+
+function cerrarFormCliente(){
+  document.getElementById('crearClienteForm').style.display='none';
+  document.getElementById('newClientNombre').value='';
+  document.getElementById('newClientEmail').value='';
+  document.getElementById('crearClienteMsg').style.display='none';
+  document.getElementById('whatsappBox').style.display='none';
+  document.getElementById('copiarBtnWrap').style.display='none';
+  document.getElementById('crearBtnRow').style.display='flex';
+  document.getElementById('crearClienteBtn').textContent='Crear cliente';
+}
+
+function copiarWhatsapp(){
+  navigator.clipboard.writeText(_ultimoWhatsapp).then(()=>{
+    const btn=document.querySelector('#copiarBtnWrap button');
+    btn.textContent='✅ Copiado';
+    setTimeout(()=>{btn.textContent='📋 Copiar mensaje WhatsApp';},2000);
+  }).catch(()=>{
+    // Fallback para móvil
+    const ta=document.createElement('textarea');ta.value=_ultimoWhatsapp;
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn=document.querySelector('#copiarBtnWrap button');
+    btn.textContent='✅ Copiado';
+    setTimeout(()=>{btn.textContent='📋 Copiar mensaje WhatsApp';},2000);
+  });
+}
+
 async function doCrearCliente(){
   const nombre=document.getElementById('newClientNombre').value.trim();
   const email=document.getElementById('newClientEmail').value.trim();
-  const pw=document.getElementById('newClientPw').value;
   const msg=document.getElementById('crearClienteMsg');
   const btn=document.getElementById('crearClienteBtn');
-  if(!nombre||!email||!pw){
-    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';msg.textContent='Rellena todos los campos.';return;}
-  if(pw.length<6){
-    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';msg.textContent='La contraseña debe tener mínimo 6 caracteres.';return;}
+  if(!nombre||!email){
+    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';msg.textContent='Rellena nombre y email.';return;}
   btn.disabled=true;btn.textContent='Creando...';
+  // Generar código único para este cliente
+  const codigo='POPI-'+Math.random().toString(36).substring(2,7).toUpperCase();
   try{
-    // Crear en Supabase Auth (signup admin)
+    // Crear en Supabase Auth con contraseña temporal
+    const pwTemp=codigo+'#'+Math.floor(Math.random()*9000+1000);
     const res=await fetch(SUPA_URL+'/auth/v1/signup',{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email,password:pw})
+      body:JSON.stringify({email,password:pwTemp})
     });
     const data=await res.json();
     if(!res.ok){
       msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
       msg.textContent=data.error_description||data.message||'Error al crear la cuenta.';
-      btn.disabled=false;btn.textContent='Crear cuenta';return;
+      btn.disabled=false;btn.textContent='Crear cliente';return;
     }
-    // Guardar en tabla usuarios_macroai
     const uid=data.user?.id||data.id;
+    // Guardar en tabla con código de invitación único
     await supaFetch('/rest/v1/usuarios_macroai',{
       method:'POST',
       headers:{'Prefer':'return=minimal'},
-      body:JSON.stringify({id:uid,email,nombre,codigo_invitacion:'ADMIN',activo:true})
+      body:JSON.stringify({id:uid,email,nombre,codigo_invitacion:codigo,activo:true})
     });
+    // Mostrar mensaje WhatsApp
+    _ultimoWhatsapp=`Hola ${nombre} 👋
+
+Te he dado acceso a MacroAI, tu asistente de nutrición personalizado.
+
+📲 Entra aquí:
+https://popicabrera.github.io/macroai/
+
+📧 Tu email: ${email}
+🔑 Tu código de acceso: ${codigo}
+
+Pasos:
+1. Abre el enlace
+2. Pulsa "Crear cuenta nueva"
+3. Pon tu email y elige tu contraseña
+4. Introduce el código cuando te lo pida
+
+¡Cualquier duda me dices! 💪`;
+    document.getElementById('whatsappBox').textContent=_ultimoWhatsapp;
+    document.getElementById('whatsappBox').style.display='block';
+    document.getElementById('copiarBtnWrap').style.display='block';
+    document.getElementById('crearBtnRow').style.display='none';
     msg.style.display='block';msg.style.background='rgba(212,240,74,0.08)';msg.style.border='1px solid rgba(212,240,74,0.2)';msg.style.color='var(--accent)';
-    msg.textContent='✅ Cliente creado correctamente.';
-    setTimeout(()=>{document.getElementById('crearClienteForm').style.display='none';loadAdminUsers();},1500);
+    msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
+    setTimeout(()=>loadAdminUsers(),2000);
   }catch(e){
     msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
     msg.textContent='Error de conexión.';
-  }finally{btn.disabled=false;btn.textContent='Crear cuenta';}
+    btn.disabled=false;btn.textContent='Crear cliente';
+  }
 }
 
 async function toggleUsuario(id,activo){
