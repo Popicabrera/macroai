@@ -949,7 +949,7 @@ function enterApp(){
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
-  const BUILD_VERSION='macroai-1777215957';
+  const BUILD_VERSION='macroai-1777218624';
   const sw=`
     const CACHE='${BUILD_VERSION}';
     // Al instalar: cachear recursos y activar inmediatamente
@@ -1047,15 +1047,17 @@ function incrementarUsoDesp(nombre){
   if(d){d.usos=(d.usos||0)+1;saveDesp(DESP);}
 }
 
-// Llamar cuando se registra una comida para actualizar frecuencia
+// Llamar cuando se registra una comida — SOLO incrementa usos, NO añade nuevos alimentos
 function actualizarFrecuenciaDesp(ingredientesTexto){
   if(!ingredientesTexto)return;
+  let changed=false;
   DESP.forEach(d=>{
-    if(ingredientesTexto.toLowerCase().includes(d.nombre)){
+    if(ingredientesTexto.toLowerCase().includes(d.nombre.toLowerCase())){
       d.usos=(d.usos||0)+1;
+      changed=true;
     }
   });
-  saveDesp(DESP);
+  if(changed)saveDesp(DESP);
 }
 
 function renderDespChips(){
@@ -1364,7 +1366,7 @@ REGLAS:
 - Actúa como consejera: si falta proteína sugiere añadir, si sobra grasa avisa
 - Máximo 2-3 frases de texto + datos. Termina con pregunta o acción.
 - Español siempre.
-- Si el cliente menciona alimentos que tiene en casa (frases como "tengo X", "acabo de comprar X", "en casa tengo X"), extrae los alimentos y usa el tag [AÑADIR_DESPENSA]. Solo úsalo cuando el cliente claramente está indicando disponibilidad de alimentos, no cuando habla de comer algo.
+- Si el cliente menciona alimentos que tiene en casa (frases como "tengo X", "acabo de comprar X", "en casa tengo X"), usa [AÑADIR_DESPENSA]. NUNCA uses [AÑADIR_DESPENSA] cuando estés calculando o registrando una comida — en ese caso usa solo [INGREDIENTES]+[COMIDA]+[REGISTRAR].
 
 Si el cliente manda una foto de nevera o ticket de compra, detecta todos los alimentos visibles y responde con:
 [DESPENSA]alimento1,alimento2,alimento3[/DESPENSA]
@@ -1397,14 +1399,19 @@ function parseAI(raw){
   let text=raw;const elements=[];
   // Guardar raw original para buscar REGISTRAR/COMIDA aunque text sea modificado
   const rawOrig=raw;
-  // Detectar [AÑADIR_DESPENSA] — alimentos mencionados desde el chat
+  // Detectar [AÑADIR_DESPENSA] — SOLO si NO hay [REGISTRAR] en el mismo mensaje
+  // (evitar confundir ingredientes de comida con alimentos de despensa)
   const addDespMatch=text.match(/\[AÑADIR_DESPENSA\]([\s\S]*?)\[\/AÑADIR_DESPENSA\]/);
-  if(addDespMatch){
+  const tieneRegistrar=text.includes('[REGISTRAR]');
+  if(addDespMatch&&!tieneRegistrar){
     const nombres=addDespMatch[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);
     const n=addToDesp(nombres);
     if(n>0){
       elements.push({type:'html',content:`<div class="alert-card ok">🧺 <span><strong>${n} alimento${n>1?'s':''} añadido${n>1?'s':''} a tu despensa:</strong> ${nombres.join(', ')}</span></div>`});
     }
+    text=text.replace(addDespMatch[0],'').trim();
+  } else if(addDespMatch){
+    // Hay REGISTRAR — ignorar AÑADIR_DESPENSA silenciosamente
     text=text.replace(addDespMatch[0],'').trim();
   }
   text=text.replace(/\[DESPENSA\][\s\S]*?\[\/DESPENSA\]/g,'').trim();
@@ -1921,7 +1928,7 @@ function handlePhoto(e){
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar la imagen.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
       const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
-      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);nuevos.forEach(a=>{if(!DESP.includes(a))DESP.push(a);});saveDesp(DESP);renderDespChips();}
+      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);addToDesp(nuevos);}
       const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
     }catch(err){removeTyping();addMsg('ai','Error analizando la imagen.');}
     e.target.value='';
