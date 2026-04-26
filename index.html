@@ -100,6 +100,8 @@ body{
 .icon-nav{width:30px;height:30px;border-radius:9px;background:var(--s2);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
 .icon-nav:active{background:var(--accent-dim);}
+.nav-menu-item{padding:10px 14px;border-radius:9px;font-size:14px;cursor:pointer;transition:background 0.15s;color:var(--text);white-space:nowrap;}
+.nav-menu-item:active{background:var(--s3);}
 
 /* MACRO PANEL */
 .macro-panel{flex-shrink:0;padding:14px 14px 12px;background:var(--s1);border-bottom:1px solid var(--border);}
@@ -499,9 +501,16 @@ body{
         <div class="pdot" id="pillDot"></div>
         <span id="dayType">Día de entreno</span>
       </div>
-      <div class="icon-nav" onclick="showView('viewDespensa')" title="Despensa">🧺</div>
-      <div class="icon-nav" onclick="showView('viewFavoritos')" title="Favoritos">⭐</div>
-      <div class="icon-nav" onclick="showView('viewHistorial')" title="Historial">📅</div>
+      <div style="position:relative;">
+        <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu()">☰</div>
+        <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:6px;z-index:500;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+          <div class="nav-menu-item" onclick="showView('viewDespensa');closeNavMenu()">🧺 Despensa</div>
+          <div class="nav-menu-item" onclick="showView('viewFavoritos');closeNavMenu()">⭐ Favoritos</div>
+          <div class="nav-menu-item" onclick="showView('viewHistorial');closeNavMenu()">📅 Historial</div>
+          <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+          <div class="nav-menu-item" style="color:var(--red);" onclick="borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
+        </div>
+      </div>
       <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
     </div>
   </div>
@@ -577,16 +586,18 @@ body{
         📷 <span>Foto nevera</span>
       </div>
     </div>
-    <!-- Voice banner: muestra transcripción en tiempo real -->
+    <!-- Voice banner: muestra transcripción + acciones -->
     <div class="voice-banner" id="voiceBanner">
-      <div class="voice-banner-lbl">🔴 Grabando...</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="voice-banner-lbl" id="voiceBannerLbl">🔴 Grabando...</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="confirmVoice()" style="padding:4px 10px;background:var(--accent);border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#080810;cursor:pointer;">✅ Enviar</button>
+          <button onclick="cancelVoice()" style="padding:4px 10px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;font-size:11px;color:var(--red);cursor:pointer;">✕ Descartar</button>
+        </div>
+      </div>
       <div class="voice-banner-text" id="voiceBannerText">Habla ahora...</div>
     </div>
     <div class="hint" id="hint"></div>
-    <div class="confirm-bar" id="confirmBar">
-      <button class="confirm-btn" onclick="confirmVoice()">✅ Enviar</button>
-      <button class="cancel-voice-btn" onclick="cancelVoice()">✕ Cancelar</button>
-    </div>
   </div>
 </div>
 </div>
@@ -1452,16 +1463,32 @@ function toggleMic(){
   else if(micState==='paused')resumeMic();
 }
 
-// Suprimir beep del sistema: reproducir silencio antes de arrancar SpeechRecognition
-let _audioCtx=null;
+// Suprimir beep del sistema: ocupar canal de audio con oscilador silencioso
+let _audioCtx=null,_gainNode=null,_oscNode=null;
 function silenciarBeep(){
   try{
-    if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(!_audioCtx){
+      _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+      _gainNode=_audioCtx.createGain();
+      _gainNode.gain.value=0.00001; // prácticamente inaudible
+      _gainNode.connect(_audioCtx.destination);
+    }
     if(_audioCtx.state==='suspended')_audioCtx.resume();
-    const buf=_audioCtx.createBuffer(1,1,22050);
-    const src=_audioCtx.createBufferSource();
-    src.buffer=buf;src.connect(_audioCtx.destination);src.start(0);
+    // Detener oscilador previo si lo hay
+    if(_oscNode){try{_oscNode.stop();_oscNode.disconnect();}catch(e){}}
+    // Crear oscilador silencioso de corta duración
+    _oscNode=_audioCtx.createOscillator();
+    _oscNode.frequency.value=1; // 1Hz, inaudible
+    _oscNode.connect(_gainNode);
+    _oscNode.start(0);
+    _oscNode.stop(_audioCtx.currentTime+0.5);
   }catch(e){}
+}
+function mantenerAudioActivo(){
+  // Mantener el AudioContext vivo mientras grabamos
+  if(!_audioCtx||micState==='idle')return;
+  silenciarBeep();
+  setTimeout(mantenerAudioActivo,400);
 }
 
 function startMic(){
@@ -1520,6 +1547,7 @@ function startMic(){
   updateMicBtn();
   updateVoiceBanner();
   setHint('');
+  mantenerAudioActivo(); // mantener canal audio ocupado → evita beep en restart
 }
 
 function startMicFresh(){
@@ -1811,6 +1839,32 @@ async function toggleUsuario(id,activo){
   toggle.onclick=()=>toggleUsuario(id,nuevoEstado);
   try{await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({activo:nuevoEstado})});}
   catch(e){toggle.className='admin-toggle '+(activo?'on':'off');status.className='admin-card-status '+(activo?'active':'inactive');status.textContent=activo?'✅ Activo':'❌ Desactivado';toggle.onclick=()=>toggleUsuario(id,activo);}
+}
+
+// ── NAV MENU ──
+function toggleNavMenu(){
+  const m=document.getElementById('navMenu');
+  const open=m.style.display==='block';
+  m.style.display=open?'none':'block';
+  if(!open){
+    setTimeout(()=>{
+      document.addEventListener('touchstart',closeNavMenu,{once:true,passive:true});
+      document.addEventListener('mousedown',closeNavMenu,{once:true});
+    },50);
+  }
+}
+function closeNavMenu(){document.getElementById('navMenu').style.display='none';}
+
+function borrarConversacion(){
+  if(!confirm('¿Borrar la conversación de hoy? Los macros registrados se mantienen.'))return;
+  S.historial=[];
+  document.getElementById('messages').innerHTML='';
+  document.querySelectorAll('.quick-replies').forEach(el=>el.remove());
+  addTyping();
+  const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
+  callAI('Nueva conversación. Saluda brevemente'+(nombreUsuario?' a '+nombreUsuario:'')+'. Recuérdame que hoy llevo '+S.kcalC+' kcal de '+S.kcalObj+'. Usa [OPCIONES] con sugerencias.')
+    .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
+    .catch(()=>{removeTyping();addMsg('ai','¡Conversación reiniciada! ¿En qué te ayudo?');});
 }
 
 // ── INIT ──
