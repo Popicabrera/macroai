@@ -207,6 +207,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
 .send-btn:disabled{opacity:0.35;cursor:not-allowed;}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;}
+.confirm-bar{display:none;gap:8px;margin-top:8px;}
+.confirm-bar.visible{display:flex;}
+.confirm-btn{flex:1;padding:11px;background:var(--accent);border:none;border-radius:12px;
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;}
+.confirm-btn:active{transform:scale(0.97);}
+.cancel-voice-btn{padding:11px 16px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
+  font-size:14px;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+.cancel-voice-btn:active{background:var(--s3);}
 
 /* SUB-HEADER */
 .sub-hdr{flex-shrink:0;padding:13px 16px;display:flex;align-items:center;gap:12px;
@@ -505,6 +514,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       </div>
     </div>
     <div class="hint" id="hint">🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta</div>
+    <div class="confirm-bar" id="confirmBar">
+      <button class="confirm-btn" onclick="confirmVoice()">✅ Enviar</button>
+      <button class="cancel-voice-btn" onclick="cancelVoice()">✕ Cancelar</button>
+    </div>
   </div>
 </div>
 </div>
@@ -1290,20 +1303,60 @@ let isRec=false,recog=null;
 function toggleMic(){
   const btn=document.getElementById('micBtn');const hint=document.getElementById('hint');
   if(!isRec){
-    isRec=true;btn.classList.add('recording');btn.textContent='⏹️';hint.textContent='🔴 Escuchando...';
+    isRec=true;btn.classList.add('recording');btn.textContent='⏹️';
+    hint.textContent='🔴 Escuchando... pulsa ⏹️ para parar';
+    document.getElementById('confirmBar').classList.remove('visible');
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(SR){recog=new SR();recog.lang='es-ES';recog.continuous=false;recog.interimResults=true;
-      recog.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join('');
-        document.getElementById('inputField').value=t;autoResize(document.getElementById('inputField'));
-        if(e.results[0].isFinal)stopMic(true);};
-      recog.onerror=()=>stopMic(false);recog.onend=()=>stopMic(false);recog.start();}
-    else{hint.textContent='⚠️ Sin soporte de voz.';setTimeout(()=>stopMic(false),2000);}
-  }else stopMic(false);
+    if(SR){
+      recog=new SR();recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
+      recog.onresult=e=>{
+        const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+        document.getElementById('inputField').value=t;
+        autoResize(document.getElementById('inputField'));
+      };
+      recog.onerror=()=>stopMic(false);
+      recog.onend=()=>{
+        // Si sigue grabando (pausa automática del sistema) — reinicia
+        if(isRec){try{recog.start();}catch(e){showConfirmBar();}}
+      };
+      recog.start();
+    }else{hint.textContent='⚠️ Sin soporte de voz.';setTimeout(()=>stopMic(false),2000);}
+  }else{
+    // Usuario pulsa ⏹️ — para y muestra botón confirmar
+    stopRecording();
+    showConfirmBar();
+  }
+}
+function stopRecording(){
+  isRec=false;
+  document.getElementById('micBtn').classList.remove('recording');
+  document.getElementById('micBtn').textContent='🎤';
+  if(recog){try{recog.stop();}catch(e){}recog=null;}
+}
+function showConfirmBar(){
+  const field=document.getElementById('inputField');
+  if(field.value.trim()){
+    document.getElementById('hint').textContent='¿Enviar este mensaje?';
+    document.getElementById('confirmBar').classList.add('visible');
+  }else{
+    document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
+  }
+}
+function confirmVoice(){
+  document.getElementById('confirmBar').classList.remove('visible');
+  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
+  sendMessage();
+}
+function cancelVoice(){
+  document.getElementById('confirmBar').classList.remove('visible');
+  document.getElementById('inputField').value='';
+  document.getElementById('inputField').style.height='auto';
+  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
 }
 function stopMic(send){
-  isRec=false;document.getElementById('micBtn').classList.remove('recording');document.getElementById('micBtn').textContent='🎤';
-  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · o pulsa una opción';
-  if(recog){try{recog.stop();}catch(e){}recog=null;}
+  stopRecording();
+  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
+  document.getElementById('confirmBar').classList.remove('visible');
   if(send)setTimeout(sendMessage,300);
 }
 
