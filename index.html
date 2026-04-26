@@ -628,14 +628,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
     </div>
     <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
 
-    <!-- Sesión activa -->
-    <div class="cfg2-sec">
-      <div class="cfg2-title">Mi cuenta</div>
-      <div class="cfg-logout-row">
-        <div class="cfg-user-info">Conectado como <strong id="cfgUserEmail">—</strong></div>
-        <button class="auth-btn danger" onclick="doLogout()">Cerrar sesión</button>
-      </div>
-    </div>
   </div>
 </div>
 </div>
@@ -774,7 +766,7 @@ async function doRecuperar(){
 
 // ── LOGOUT ──
 async function doLogout(){
-  if(!confirm('¿Cerrar sesión?'))return;
+  
   try{
     await fetch(SUPA_URL+'/auth/v1/logout',{
       method:'POST',
