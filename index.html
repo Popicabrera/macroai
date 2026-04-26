@@ -419,6 +419,15 @@ body{
 .meal-add-input:focus{border-color:rgba(212,240,74,0.35);}
 .meal-add-btn{width:34px;height:34px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#080810;cursor:pointer;flex-shrink:0;border:none;}
 .meal-ia-btn{padding:7px 14px 10px 44px;font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px;}
+.meal-calc-btn{
+  width:calc(100% - 28px);margin:6px 14px 2px;
+  padding:11px;background:var(--accent);border:none;border-radius:11px;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:opacity 0.2s;
+}
+.meal-calc-btn:active{opacity:0.85;transform:scale(0.98);}
+.meal-calc-btn:disabled{opacity:0.5;cursor:not-allowed;}
 
 /* ── QUICK ADD MODAL ── */
 .qam-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;}
@@ -2317,28 +2326,48 @@ function getMealsForToday(){
   return sets[n]||sets[4];
 }
 
+// ── PENDING ITEMS por comida (persiste entre renders) ──
+const _pending={};// { mealId: ['140g avena', '400ml leche', ...] }
+
+function getPending(mealId){
+  if(!_pending[mealId])_pending[mealId]=[];
+  return _pending[mealId];
+}
+
 // ── RENDER DIARIO ──
 function renderDiario(){
   const container=document.getElementById('mealBlocks');
   if(!container)return;
   const meals=getMealsForToday();
+  // Guardar qué comidas están abiertas antes de re-renderizar
+  const openStates={};
+  meals.forEach(m=>{
+    const body=document.getElementById('mbody-'+m.id);
+    openStates[m.id]=body?body.classList.contains('open'):false;
+  });
   container.innerHTML='';
   meals.forEach(m=>{
-    // Agrupar comidas registradas por meal id
     const items=S.comidas.filter(c=>c.mealId===m.id);
     const totalKcal=items.reduce((a,c)=>a+c.kcal,0);
     const totalProt=items.reduce((a,c)=>a+c.prot,0);
     const totalCh=items.reduce((a,c)=>a+c.ch,0);
     const totalGrasa=items.reduce((a,c)=>a+c.grasa,0);
     const hasItems=items.length>0;
+    const pending=getPending(m.id);
+    const hasPending=pending.length>0;
+    // Determinar si el body debe estar abierto
+    const shouldOpen=openStates[m.id]||(hasPending&&openStates[m.id]!==false);
+
     const block=document.createElement('div');
     block.className='meal-block';
     block.id='mealblock-'+m.id;
-    let foodRows=items.map((item,idx)=>`
+
+    // Filas de comidas ya registradas
+    let foodRows=items.map((item)=>`
       <div class="food-row">
         <div>
           <div class="food-name-txt">${escapeHtml(item.nombre)}</div>
-          <div class="food-detail-txt">${item.ingredientes?escapeHtml(item.ingredientes.split('\n')[0].substring(0,50)):'Registrado'}</div>
+          <div class="food-detail-txt">${item.ingredientes?escapeHtml(item.ingredientes.split('\n')[0].substring(0,55)):'Registrado'}</div>
         </div>
         <div class="food-right-col">
           <div>
@@ -2348,30 +2377,123 @@ function renderDiario(){
           <div class="food-del-btn" onclick="deleteMealItem('${m.id}',${S.comidas.indexOf(item)})">✕</div>
         </div>
       </div>`).join('');
+
+    // Lista pendiente (aún sin calcular)
+    let pendingRows=pending.map((txt,i)=>`
+      <div class="food-row" style="background:rgba(212,240,74,0.04);">
+        <div style="flex:1;">
+          <div class="food-name-txt" style="color:var(--muted);">🔸 ${escapeHtml(txt)}</div>
+        </div>
+        <div class="food-del-btn" onclick="removePending('${m.id}',${i})">✕</div>
+      </div>`).join('');
+
+    // Botón calcular — solo si hay pendientes
+    let calcBtn=hasPending?`
+      <button class="meal-calc-btn" id="calcBtn-${m.id}" onclick="calcularComida('${m.id}','${m.name}')">
+        ✨ Calcular todo (${pending.length} alimento${pending.length>1?'s':''})
+      </button>`:'';
+
     block.innerHTML=`
       <div class="meal-hdr" onclick="toggleMealBlock('${m.id}')">
         <div class="meal-hdr-left">
           <div class="meal-em">${m.emoji}</div>
           <div>
             <div class="meal-name">${m.name}</div>
-            <div class="meal-sub">${hasItems?`P${totalProt}g · CH${totalCh}g · G${totalGrasa}g`:'Sin registrar'}</div>
+            <div class="meal-sub">${hasItems?`P${totalProt}g · CH${totalCh}g · G${totalGrasa}g`:hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
           </div>
         </div>
         <div class="meal-hdr-right">
           <div class="meal-kcal-badge ${hasItems?'':'empty'}">${hasItems?totalKcal+' kcal':'—'}</div>
-          <span class="meal-chevron" id="chev-${m.id}">▾</span>
+          <span class="meal-chevron ${shouldOpen?'open':''}" id="chev-${m.id}">▾</span>
         </div>
       </div>
-      <div class="meal-body" id="mbody-${m.id}">
+      <div class="meal-body ${shouldOpen?'open':''}" id="mbody-${m.id}">
         ${foodRows}
+        ${pendingRows}
+        ${calcBtn}
         <div class="meal-add-row">
-          <input class="meal-add-input" id="madd-${m.id}" placeholder="Ej: 200g pollo, 150g arroz..." onkeydown="if(event.key==='Enter'){event.preventDefault();openQAM('${m.id}','${m.name}',document.getElementById('madd-${m.id}').value);}">
-          <button class="meal-add-btn" onclick="openQAM('${m.id}','${m.name}',document.getElementById('madd-${m.id}').value)">＋</button>
+          <input class="meal-add-input" id="madd-${m.id}"
+            placeholder="Ej: 140g copos avena..."
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addPending('${m.id}');}">
+          <button class="meal-add-btn" onclick="addPending('${m.id}')">＋</button>
         </div>
         <div class="meal-ia-btn" onclick="sugerirConIA('${m.id}','${m.name}')">✨ Sugerir con IA</div>
       </div>`;
     container.appendChild(block);
   });
+}
+
+function addPending(mealId){
+  const inp=document.getElementById('madd-'+mealId);
+  if(!inp)return;
+  const txt=inp.value.trim();
+  if(!txt)return;
+  getPending(mealId).push(txt);
+  inp.value='';
+  inp.focus();
+  // Re-render solo este bloque sin perder foco
+  renderDiario();
+  // Abrir el bloque si no estaba abierto
+  const body=document.getElementById('mbody-'+mealId);
+  const chev=document.getElementById('chev-'+mealId);
+  if(body&&!body.classList.contains('open')){body.classList.add('open');if(chev)chev.classList.add('open');}
+  // Devolver foco al input
+  setTimeout(()=>{const i=document.getElementById('madd-'+mealId);if(i)i.focus();},50);
+}
+
+function removePending(mealId,idx){
+  const p=getPending(mealId);
+  p.splice(idx,1);
+  renderDiario();
+}
+
+async function calcularComida(mealId,mealName){
+  const pending=getPending(mealId);
+  if(!pending.length)return;
+  const btn=document.getElementById('calcBtn-'+mealId);
+  if(btn){btn.disabled=true;btn.innerHTML='<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;"></span>Calculando...';}
+  const listaTexto=pending.map((it,i)=>`${i+1}. ${it}`).join('\n');
+  try{
+    const prompt=`El usuario añade a su ${mealName}:
+${listaTexto}
+
+Calcula macros de CADA alimento y el TOTAL. Formato obligatorio, sin texto extra:
+[INGREDIENTES]
+emoji Nombre:XXXg:XXXkcal
+TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
+[/INGREDIENTES]
+[COMIDA]${mealName}[/COMIDA]
+[REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]`;
+    const raw=await callAI(prompt);
+    const ingM=raw.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
+    const regM=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+    if(regM&&ingM){
+      const kcalN=parseInt(regM[1]),protN=parseInt(regM[2]),chN=parseInt(regM[3]),grasaN=parseInt(regM[4]);
+      const ingTexto=ingM[1].trim();
+      S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
+      S.comidas.push({nombre:mealName,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId,fecha:TODAY});
+      // Limpiar pendientes de esta comida
+      _pending[mealId]=[];
+      updateBars();saveToday();
+      actualizarFrecuenciaDesp(ingTexto+' '+mealName);
+      saveComidaSupabase({nombre:mealName,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+      S.historial.push({role:'assistant',content:raw});
+      showToast(`✅ ${mealName} registrado · ${kcalN} kcal`);
+      renderDiario();
+      // Mantener abierto
+      setTimeout(()=>{
+        const body=document.getElementById('mbody-'+mealId);
+        const chev=document.getElementById('chev-'+mealId);
+        if(body&&!body.classList.contains('open')){body.classList.add('open');if(chev)chev.classList.add('open');}
+      },50);
+    }else{
+      showToast('⚠️ No pude calcular. Intenta de nuevo.');
+      if(btn){btn.disabled=false;btn.innerHTML=`✨ Calcular todo (${pending.length} alimento${pending.length>1?'s':''})`;} 
+    }
+  }catch(e){
+    showToast('⚠️ Error de conexión.');
+    if(btn){btn.disabled=false;btn.innerHTML=`✨ Calcular todo (${pending.length} alimento${pending.length>1?'s':''})`;} 
+  }
 }
 
 function toggleMealBlock(id){
@@ -2541,7 +2663,6 @@ Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
 }
 
 function sugerirConIA(mealId,mealName){
-  closeQAMdirect();
   setMainMode('chat');
   const restantes=`${S.kcalObj-S.kcalC}kcal, P${S.prot-S.protC}g, CH${S.ch-S.chC}g, G${S.grasa-S.grasaC}g`;
   const desp=DESP.length?` Tengo en despensa: ${despNombres().slice(0,8).join(', ')}.`:'';
