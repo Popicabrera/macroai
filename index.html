@@ -2394,19 +2394,22 @@ function deleteMealItem(mealId,globalIdx){
   showToast('🗑️ Eliminado');
 }
 
-// ── QUICK ADD MODAL ──
-let _qamMealId='',_qamMealName='';
+// ── QUICK ADD MODAL — MULTI ITEM ──
+let _qamMealId='', _qamMealName='', _qamItems=[];
 
-function openQAM(mealId,mealName,prefill){
-  _qamMealId=mealId;_qamMealName=mealName;
+function openQAM(mealId, mealName, prefill){
+  _qamMealId=mealId; _qamMealName=mealName; _qamItems=[];
   document.getElementById('qamTitle').textContent='＋ Añadir a '+mealName;
   document.getElementById('qamInput').value=prefill||'';
   document.getElementById('qamResult').style.display='none';
-  document.getElementById('qamResult').textContent='';
-  document.getElementById('qamConfirmBtn').disabled=false;
-  document.getElementById('qamConfirmBtn').textContent='✨ Calcular y añadir';
+  document.getElementById('qamHint').style.display='block';
+  document.getElementById('qamConfirmBtn').disabled=true;
+  document.getElementById('qamConfirmBtn').style.opacity='0.4';
+  document.getElementById('qamConfirmBtn').textContent='✨ Calcular todo';
+  document.getElementById('qamConfirmBtn').onclick=qamCalcular;
+  renderQamList();
   document.getElementById('qamOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('qamInput').focus(),200);
+  setTimeout(()=>document.getElementById('qamInput').focus(), 200);
 }
 
 function closeQAM(e){
@@ -2415,65 +2418,122 @@ function closeQAM(e){
 }
 function closeQAMdirect(){
   document.getElementById('qamOverlay').classList.remove('open');
-  // Limpiar input de la comida
-  if(_qamMealId)document.getElementById('madd-'+_qamMealId) && (document.getElementById('madd-'+_qamMealId).value='');
+  _qamItems=[];
+  if(_qamMealId){const inp=document.getElementById('madd-'+_qamMealId);if(inp)inp.value='';}
+}
+
+function qamAddItem(){
+  const inp=document.getElementById('qamInput');
+  const txt=inp.value.trim();
+  if(!txt)return;
+  _qamItems.push(txt);
+  inp.value='';
+  inp.focus();
+  renderQamList();
+  // Habilitar botón calcular
+  document.getElementById('qamConfirmBtn').disabled=false;
+  document.getElementById('qamConfirmBtn').style.opacity='1';
+}
+
+function renderQamList(){
+  const list=document.getElementById('qamItemList');
+  if(!_qamItems.length){list.innerHTML='';return;}
+  list.innerHTML=_qamItems.map((item,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 10px;">
+      <div style="font-size:13px;flex:1;color:var(--text);">🔸 ${escapeHtml(item)}</div>
+      <div onclick="qamRemoveItem(${i})" style="font-size:12px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:5px;background:var(--s3);">✕</div>
+    </div>`).join('');
+}
+
+function qamRemoveItem(i){
+  _qamItems.splice(i,1);
+  renderQamList();
+  if(!_qamItems.length){
+    document.getElementById('qamConfirmBtn').disabled=true;
+    document.getElementById('qamConfirmBtn').style.opacity='0.4';
+  }
 }
 
 async function qamCalcular(){
-  const txt=document.getElementById('qamInput').value.trim();
-  if(!txt)return;
+  if(!_qamItems.length)return;
   const btn=document.getElementById('qamConfirmBtn');
   const resultEl=document.getElementById('qamResult');
-  btn.disabled=true;btn.innerHTML='<span style="width:14px;height:14px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></span> Calculando...';
+  btn.disabled=true;
+  btn.innerHTML='<span style="width:13px;height:13px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;"></span>Calculando...';
   resultEl.style.display='none';
+  document.getElementById('qamHint').style.display='none';
+  const listaTexto=_qamItems.map((it,i)=>`${i+1}. ${it}`).join('\n');
   try{
-    const prompt=`El usuario quiere añadir a su ${_qamMealName}: "${txt}"
-Calcula los macros con precisión. Usa el formato obligatorio:
+    const prompt=`El usuario quiere añadir a su ${_qamMealName} estos alimentos:
+${listaTexto}
+
+Calcula los macros de CADA alimento por separado y el TOTAL. Usa este formato exacto:
 [INGREDIENTES]
-emoji Nombre:XXXg:XXXkcal
+emoji NombreAlimento1:XXXg:XXXkcal
+emoji NombreAlimento2:XXXml:XXXkcal
 TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/INGREDIENTES]
-[COMIDA]${_qamMealName} — ${txt.substring(0,30)}[/COMIDA]
+[COMIDA]${_qamMealName}[/COMIDA]
 [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
-Luego una línea con el resumen. Macros restantes hoy: ${S.kcalObj-S.kcalC}kcal, P${S.prot-S.protC}g, CH${S.ch-S.chC}g, G${S.grasa-S.grasaC}g.`;
+Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
     const raw=await callAI(prompt);
-    // Extraer solo la parte de registro — parsear normalmente
     const ingM=raw.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
-    const comidaM=raw.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
     const regM=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
-    if(regM){
+    if(regM&&ingM){
       const kcalN=parseInt(regM[1]),protN=parseInt(regM[2]),chN=parseInt(regM[3]),grasaN=parseInt(regM[4]);
-      const nombre=comidaM?comidaM[1].trim():(_qamMealName+' '+txt.substring(0,25));
-      const ingTexto=ingM?ingM[1].trim():txt;
-      // Añadir con mealId
+      const ingTexto=ingM[1].trim();
+      const nombre=_qamMealName;
       S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
-      S.comidas.push({nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId:_qamMealId,fecha:TODAY});
+      S.comidas.push({nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId:_qamMealId,fecha:TODAY,items:_qamItems.slice()});
       updateBars();saveToday();
       actualizarFrecuenciaDesp(ingTexto+' '+nombre);
       saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+      S.historial.push({role:'assistant',content:raw});
       // Mostrar resultado
       resultEl.style.display='block';
-      resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:10px;font-size:12px;line-height:1.6;color:var(--text);';
-      resultEl.innerHTML=`✅ <strong>${kcalN} kcal</strong> · P${protN}g · CH${chN}g · G${grasaN}g<br><span style="color:var(--muted)">Añadido a ${_qamMealName}</span>`;
-      btn.innerHTML='✓ Añadir otro';btn.disabled=false;
-      btn.onclick=()=>{document.getElementById('qamInput').value='';resultEl.style.display='none';btn.onclick=qamCalcular;btn.innerHTML='✨ Calcular y añadir';document.getElementById('qamInput').focus();};
+      resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:10px;font-size:12px;line-height:1.7;color:var(--text);';
+      // Parsear ingredientes para mostrarlos bonito
+      const lines=ingTexto.split('\n').filter(l=>l.trim()&&!l.startsWith('TOTAL'));
+      const itemsHtml=lines.map(l=>{
+        const parts=l.split(':');
+        const nameP=parts[0]?.trim()||'';
+        const gramP=parts[1]?.trim()||'';
+        const kcalP=parts[2]?.trim()||'';
+        return `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span>${escapeHtml(nameP)} <span style="color:var(--muted)">${escapeHtml(gramP)}</span></span>
+          <span style="color:var(--accent);font-weight:700;">${escapeHtml(kcalP)}</span></div>`;
+      }).join('');
+      resultEl.innerHTML=`${itemsHtml}
+        <div style="display:flex;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid rgba(212,240,74,0.2);">
+          <span style="font-weight:700;">TOTAL</span>
+          <span style="color:var(--accent);font-weight:800;">${kcalN} kcal · P${protN}g · CH${chN}g · G${grasaN}g</span>
+        </div>`;
+      btn.textContent='✓ Añadir más';
+      btn.disabled=false;btn.style.opacity='1';
+      btn.onclick=()=>{
+        _qamItems=[];renderQamList();
+        resultEl.style.display='none';
+        document.getElementById('qamHint').style.display='block';
+        btn.textContent='✨ Calcular todo';
+        btn.disabled=true;btn.style.opacity='0.4';
+        btn.onclick=qamCalcular;
+        document.getElementById('qamInput').focus();
+      };
       renderDiario();
-      // Reabrir el bloque de la comida
+      // Abrir el bloque de la comida
       setTimeout(()=>{
         const body=document.getElementById('mbody-'+_qamMealId);
         const chev=document.getElementById('chev-'+_qamMealId);
         if(body&&!body.classList.contains('open')){body.classList.add('open');if(chev)chev.classList.add('open');}
       },100);
-      // También añadir al historial del chat para contexto
-      S.historial.push({role:'assistant',content:raw});
     }else{
       resultEl.style.display='block';
       resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(255,107,107,0.07);border:1px solid rgba(255,107,107,0.2);border-radius:10px;font-size:12px;color:var(--red);';
-      resultEl.textContent='No pude calcular los macros. Intenta ser más específico (Ej: 140g copos de avena).';
-      btn.disabled=false;btn.innerHTML='✨ Reintentar';
+      resultEl.textContent='No pude calcular. Intenta ser más específico (Ej: "140g copos de avena").';
+      btn.disabled=false;btn.style.opacity='1';btn.textContent='✨ Reintentar';btn.onclick=qamCalcular;
     }
-  }catch(e){
-    btn.disabled=false;btn.innerHTML='✨ Calcular y añadir';
+  }catch(err){
+    btn.disabled=false;btn.style.opacity='1';btn.textContent='✨ Calcular todo';btn.onclick=qamCalcular;
     resultEl.style.display='block';
     resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(255,107,107,0.07);border:1px solid rgba(255,107,107,0.2);border-radius:10px;font-size:12px;color:var(--red);';
     resultEl.textContent='Error de conexión.';
@@ -2527,17 +2587,29 @@ window.addEventListener('resize',()=>{
   if(msgs){const atBottom=msgs.scrollHeight-msgs.scrollTop-msgs.clientHeight<50;if(atBottom)setTimeout(()=>msgs.scrollTop=msgs.scrollHeight,100);}
 });
 </script>
-<!-- ══ QUICK ADD MODAL ══ -->
+<!-- ══ QUICK ADD MODAL — MULTI ITEM ══ -->
 <div class="qam-overlay" id="qamOverlay" onclick="closeQAM(event)">
   <div class="qam-sheet" id="qamSheet">
     <div class="qam-handle"></div>
     <div class="qam-title" id="qamTitle">＋ Añadir a Desayuno</div>
-    <input class="qam-input" id="qamInput" placeholder="Ej: 140g copos avena, 400ml leche desnatada, 20g nueces...">
-    <div class="qam-hint">Escribe en lenguaje natural. <strong>La IA calculará los macros al instante.</strong></div>
+
+    <!-- Lista de items pendientes -->
+    <div id="qamItemList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:180px;overflow-y:auto;"></div>
+
+    <!-- Input nuevo item -->
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input class="qam-input" id="qamInput" placeholder="Ej: 140g copos avena..." style="margin-bottom:0;"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();qamAddItem();}">
+      <button onclick="qamAddItem()" style="width:40px;height:42px;flex-shrink:0;background:var(--s3);border:1px solid var(--border);border-radius:11px;font-size:20px;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>
+    </div>
+    <div class="qam-hint" id="qamHint">Añade alimentos uno a uno. Cuando termines, pulsa <strong>Calcular todo</strong>.</div>
+
+    <!-- Resultado tras calcular -->
     <div class="qam-result" id="qamResult"></div>
+
     <div class="qam-btns">
       <div class="qam-cancel" onclick="closeQAMdirect()">Cancelar</div>
-      <button class="qam-confirm" id="qamConfirmBtn" onclick="qamCalcular()">✨ Calcular y añadir</button>
+      <button class="qam-confirm" id="qamConfirmBtn" onclick="qamCalcular()" disabled style="opacity:0.4;">✨ Calcular todo</button>
     </div>
   </div>
 </div>
