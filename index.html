@@ -957,6 +957,25 @@ async function handleFotoEtiqueta(e){
   reader.readAsDataURL(file);
 }
 
+async function saveComidaSupabase(comida){
+  if(!CURRENT_USER)return;
+  try{
+    await supaFetch("/rest/v1/historial_macroai",{
+      method:"POST",
+      headers:{"Prefer":"return=minimal"},
+      body:JSON.stringify({
+        usuario_id:CURRENT_USER.id,
+        fecha:comida.fecha,
+        comida:comida.nombre,
+        ingredientes:comida.ingredientes||"",
+        calorias:comida.kcal,
+        proteinas:comida.prot,
+        carbos:comida.ch,
+        grasas:comida.grasa
+      })
+    });
+  }catch(e){console.log("Supabase historial error:",e);}
+}
 function saveToday(){
   const d={fecha:TODAY,tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
     kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
@@ -1177,6 +1196,7 @@ function parseAI(raw){
       ingredientes:ingredientesTexto
     });
     updateBars();saveToday();
+    saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
     text=text.replace(regMatch[0],'').trim();
     if(nombreMatch)text=text.replace(nombreMatch[0],'').trim();
   }
