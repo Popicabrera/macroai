@@ -949,7 +949,7 @@ function enterApp(){
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
-  const BUILD_VERSION='macroai-1777218624';
+  const BUILD_VERSION='macroai-1777219968';
   const sw=`
     const CACHE='${BUILD_VERSION}';
     // Al instalar: cachear recursos y activar inmediatamente
@@ -1465,11 +1465,28 @@ function parseAI(raw){
       const chVal=tv.ch||tv.carb||tv.carbos||tv.carbohidratos||'?';
       const grasaVal=tv.grasa||tv.grasas||'?';
       h+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protVal}g</span><span class="ptm" style="color:var(--yellow)">CH ${chVal}g</span><span class="ptm" style="color:var(--blue)">G ${grasaVal}g</span><span class="ptm" style="color:var(--accent)">${kcalVal} kcal ✓</span></div></div>`;
+      // ── REGISTRO AUTOMÁTICO DESDE TOTAL (sin depender de [REGISTRAR]) ──
+      const kcalN=Math.round(parseFloat(kcalVal)||0);
+      const protN=Math.round(parseFloat(protVal)||0);
+      const chN=Math.round(parseFloat(chVal)||0);
+      const grasaN=Math.round(parseFloat(grasaVal)||0);
+      if(kcalN>0){
+        const _nombreComida=rawOrig.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
+        const _nombre=_nombreComida?_nombreComida[1].trim():`Comida ${S.comidas.length+1}`;
+        const _ingTexto=ingMatch[1].trim();
+        S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
+        S.comidas.push({nombre:_nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
+        updateBars();saveToday();
+        actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
+        saveComidaSupabase({nombre:_nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
+      }
     }
     h+='</div>';elements.push({type:'html',content:h});text=text.replace(ingMatch[0],'').trim();
   }
+  // [REGISTRAR] explícito — fallback si no hubo bloque INGREDIENTES con TOTAL
   const regMatch=rawOrig.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
-  if(regMatch){
+  const yaRegistrado=S.comidas.length>0&&rawOrig.includes('[INGREDIENTES]')&&rawOrig.includes('TOTAL:');
+  if(regMatch&&!yaRegistrado){
     S.kcalC+=parseInt(regMatch[1]);S.protC+=parseInt(regMatch[2]);S.chC+=parseInt(regMatch[3]);S.grasaC+=parseInt(regMatch[4]);
     const nombreMatch=rawOrig.match(/\[COMIDA\](.*?)\[\/COMIDA\]/);
     const ingTextMatch=rawOrig.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
@@ -1479,9 +1496,9 @@ function parseAI(raw){
     updateBars();saveToday();
     actualizarFrecuenciaDesp(ingredientesTexto+' '+nombre);
     saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
-    text=text.replace(/\[REGISTRAR\]kcal=\d+,prot=\d+,ch=\d+,grasa=\d+\[\/REGISTRAR\]/,'').trim();
-    text=text.replace(/\[COMIDA\].*?\[\/COMIDA\]/,'').trim();
   }
+  text=text.replace(/\[REGISTRAR\]kcal=\d+,prot=\d+,ch=\d+,grasa=\d+\[\/REGISTRAR\]/,'').trim();
+  text=text.replace(/\[COMIDA\].*?\[\/COMIDA\]/,'').trim();
   const wM=text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
   if(wM){elements.push({type:'html',content:`<div class="alert-card warn">⚠️ <span>${wM[1]}</span></div>`});text=text.replace(wM[0],'').trim();}
   const oM=text.match(/\[AVISO_OK\]([\s\S]*?)\[\/AVISO_OK\]/);
