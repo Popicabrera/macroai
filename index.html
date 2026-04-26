@@ -562,7 +562,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   <div class="sub-hdr">
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
     <h2>Configuración ⚙️</h2>
-    <div class="icon-nav" onclick="doLogout()" title="Cerrar sesión" style="margin-left:auto;">🚪</div>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+      <div class="icon-nav" id="adminHeaderBtn" onclick="showView('viewAdmin');loadAdminUsers()" title="Panel Admin" style="display:none;background:rgba(212,240,74,0.1);border-color:rgba(212,240,74,0.3);color:var(--accent);">⚡</div>
+      <div class="icon-nav" onclick="doLogout()" title="Cerrar sesión">🚪</div>
+    </div>
   </div>
   <div class="cfg-body">
     <div class="cfg2-sec">
@@ -627,9 +630,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       </div>
     </div>
     <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
-    <div id="adminBtnWrap" style="display:none;padding:0 14px 4px;">
-      <button class="save-btn" style="background:var(--s2);border:1px solid rgba(212,240,74,0.3);color:var(--accent);" onclick="showView('viewAdmin');loadAdminUsers()">⚡ Panel Admin</button>
-    </div>
 
   </div>
 </div>
@@ -1018,7 +1018,7 @@ function loadCfgUI(){
   document.getElementById('cfgChD').value=CFG.descanso.ch;
   document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
   setDayType(CFG.tipoDia,false);
-  document.getElementById("adminBtnWrap").style.display=CURRENT_USER?.email===ADMIN_EMAIL?"block":"none";
+  document.getElementById("adminHeaderBtn").style.display=CURRENT_USER?.email===ADMIN_EMAIL?"flex":"none";
 }
 function setDayType(tipo,update=true){
   document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
@@ -1405,12 +1405,53 @@ async function loadAdminUsers(){
   try{
     const res=await supaFetch('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
     const users=await res.json();
-    if(!Array.isArray(users)||!users.length){body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';return;}
-    body.innerHTML='';
+
+    // Consumo API: contar mensajes del historial por usuario
+    let apiCounts={};
+    try{
+      const apiRes=await supaFetch('/rest/v1/historial_macroai?select=usuario_id');
+      const apiRows=await apiRes.json();
+      if(Array.isArray(apiRows)){
+        apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});
+      }
+    }catch(e){}
+
+    // Botón crear nuevo cliente
+    body.innerHTML=`
+      <div style="padding:0 0 12px;">
+        <button onclick="showCrearCliente()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;">＋ Crear nuevo cliente</button>
+      </div>
+      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.25);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);">Nuevo cliente</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
+          <input id="newClientNombre" type="text" placeholder="Nombre del cliente" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
+          <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Contraseña</div>
+          <input id="newClientPw" type="password" placeholder="Mínimo 6 caracteres" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+        </div>
+        <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;">Crear cuenta</button>
+          <button onclick="document.getElementById('crearClienteForm').style.display='none'" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+        </div>
+      </div>`;
+
+    if(!Array.isArray(users)||!users.length){
+      body.innerHTML+='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';
+      return;
+    }
+
     users.forEach(u=>{
       const card=document.createElement('div');
       card.className='admin-card';
       const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+      const apiCount=apiCounts[u.id]||0;
       card.innerHTML=`
         <div class="admin-card-top">
           <div class="admin-card-info">
@@ -1422,14 +1463,70 @@ async function loadAdminUsers(){
             <div class="admin-toggle-dot"></div>
           </div>
         </div>
-        <div class="admin-card-status ${u.activo?'active':'inactive'}" id="status-${u.id}">
-          ${u.activo?'✅ Activo':'❌ Desactivado'}
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="admin-card-status ${u.activo?'active':'inactive'}" id="status-${u.id}" style="flex:1;">
+            ${u.activo?'✅ Activo':'❌ Desactivado'}
+          </div>
+          <div style="background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--blue);font-weight:600;white-space:nowrap;">
+            📊 ${apiCount} registros
+          </div>
         </div>`;
       body.appendChild(card);
     });
   }catch(e){
     body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';
   }
+}
+
+function showCrearCliente(){
+  const f=document.getElementById('crearClienteForm');
+  f.style.display=f.style.display==='none'?'flex':'none';
+  if(f.style.display==='flex'){
+    document.getElementById('newClientNombre').value='';
+    document.getElementById('newClientEmail').value='';
+    document.getElementById('newClientPw').value='';
+    document.getElementById('crearClienteMsg').style.display='none';
+  }
+}
+
+async function doCrearCliente(){
+  const nombre=document.getElementById('newClientNombre').value.trim();
+  const email=document.getElementById('newClientEmail').value.trim();
+  const pw=document.getElementById('newClientPw').value;
+  const msg=document.getElementById('crearClienteMsg');
+  const btn=document.getElementById('crearClienteBtn');
+  if(!nombre||!email||!pw){
+    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';msg.textContent='Rellena todos los campos.';return;}
+  if(pw.length<6){
+    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';msg.textContent='La contraseña debe tener mínimo 6 caracteres.';return;}
+  btn.disabled=true;btn.textContent='Creando...';
+  try{
+    // Crear en Supabase Auth (signup admin)
+    const res=await fetch(SUPA_URL+'/auth/v1/signup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body:JSON.stringify({email,password:pw})
+    });
+    const data=await res.json();
+    if(!res.ok){
+      msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
+      msg.textContent=data.error_description||data.message||'Error al crear la cuenta.';
+      btn.disabled=false;btn.textContent='Crear cuenta';return;
+    }
+    // Guardar en tabla usuarios_macroai
+    const uid=data.user?.id||data.id;
+    await supaFetch('/rest/v1/usuarios_macroai',{
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({id:uid,email,nombre,codigo_invitacion:'ADMIN',activo:true})
+    });
+    msg.style.display='block';msg.style.background='rgba(212,240,74,0.08)';msg.style.border='1px solid rgba(212,240,74,0.2)';msg.style.color='var(--accent)';
+    msg.textContent='✅ Cliente creado correctamente.';
+    setTimeout(()=>{document.getElementById('crearClienteForm').style.display='none';loadAdminUsers();},1500);
+  }catch(e){
+    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
+    msg.textContent='Error de conexión.';
+  }finally{btn.disabled=false;btn.textContent='Crear cuenta';}
 }
 
 async function toggleUsuario(id,activo){
