@@ -562,6 +562,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   <div class="sub-hdr">
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
     <h2>Configuración ⚙️</h2>
+    <div class="icon-nav" onclick="doLogout()" title="Cerrar sesión" style="margin-left:auto;">🚪</div>
   </div>
   <div class="cfg-body">
     <div class="cfg2-sec">
@@ -1096,7 +1097,7 @@ function sysPrompt(){
       `- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g${c.ingredientes?'\n  Ingredientes: '+c.ingredientes.substring(0,200):''}`
     ).join('\n');
   }
-  return `Eres MacroAI, consejera de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora.
+  return `Eres MacroAI, asistente de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora. LÍMITE ESTRICTO: Solo respondes sobre nutrición, alimentación, macros, calorías, recetas, despensa e historial de comidas. Si preguntan algo fuera de este ámbito responde: "Soy MacroAI, solo puedo ayudarte con nutrición y tus macros 😊".
 
 PERFIL HOY (${S.tipoDia==='entreno'?'DÍA DE ENTRENO':'DÍA DE DESCANSO'}):
 - Objetivo: ${S.kcalObj} kcal | Prot ${S.prot}g | CH ${S.ch}g | Grasa ${S.grasa}g
