@@ -784,7 +784,6 @@ async function doLogout(){
 // ── ENTER APP ──
 function enterApp(){
   document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('cfgUserEmail').textContent=CURRENT_USER?.email||'—';
   initApp();
 }
 
@@ -1006,7 +1005,6 @@ function loadCfgUI(){
   document.getElementById('cfgChD').value=CFG.descanso.ch;
   document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
   setDayType(CFG.tipoDia,false);
-  document.getElementById('cfgUserEmail').textContent=CURRENT_USER?.email||'—';
 }
 function setDayType(tipo,update=true){
   document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
