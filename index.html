@@ -21,19 +21,24 @@
   --text:#eeeff5;--muted:#5a5a70;--muted2:#3a3a50;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;overflow:hidden;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+/* ── FIX SCROLL: usar dvh con fallback, no overflow:hidden en html ── */
+html{height:100%;height:-webkit-fill-available;}
+body{
+  background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;
+  height:100%;height:-webkit-fill-available;
+  overflow:hidden;
+  position:fixed;width:100%;
+}
 .ambient{position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 70% 50% at 10% 0%,rgba(212,240,74,0.07) 0%,transparent 60%),
     radial-gradient(ellipse 50% 50% at 95% 95%,rgba(63,240,192,0.05) 0%,transparent 60%);}
 
 /* ══════════════ AUTH SCREENS ══════════════ */
-.auth-screen{display:none;flex-direction:column;height:100vh;position:absolute;inset:0;z-index:10;
-  align-items:center;justify-content:center;padding:24px;}
+.auth-screen{display:none;flex-direction:column;height:100%;position:absolute;inset:0;z-index:10;
+  align-items:center;justify-content:center;padding:24px;overflow-y:auto;}
 .auth-screen.active{display:flex;}
-
 .auth-box{width:100%;max-width:400px;display:flex;flex-direction:column;gap:20px;}
-
 .auth-logo{text-align:center;margin-bottom:8px;}
 .auth-logo-icon{width:72px;height:72px;border-radius:20px;background:var(--accent);
   display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
@@ -41,10 +46,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .auth-logo-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;}
 .auth-logo-title em{color:var(--accent);font-style:normal;}
 .auth-logo-sub{font-size:13px;color:var(--muted);margin-top:4px;letter-spacing:1px;text-transform:uppercase;}
-
 .auth-card{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:16px;}
 .auth-card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:2px;}
-
 .auth-field{display:flex;flex-direction:column;gap:6px;}
 .auth-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);font-weight:600;}
 .auth-input-wrap{position:relative;}
@@ -55,7 +58,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .auth-input::placeholder{color:var(--muted);}
 .pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);
   background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;}
-
 .auth-btn{width:100%;padding:15px;background:var(--accent);border:none;border-radius:13px;
   font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#080810;cursor:pointer;
   transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -63,33 +65,31 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .auth-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 .auth-btn.secondary{background:var(--s2);border:1px solid var(--border);color:var(--text);}
 .auth-btn.secondary:active{background:var(--s3);}
-.auth-btn.danger{background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);color:var(--red);}
-
 .auth-divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
-
 .auth-link{text-align:center;font-size:13px;color:var(--muted);}
 .auth-link a{color:var(--accent);text-decoration:none;font-weight:600;}
-
 .auth-msg{padding:11px 14px;border-radius:10px;font-size:13px;line-height:1.5;display:none;}
 .auth-msg.error{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);display:block;}
 .auth-msg.success{background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.2);color:var(--accent);display:block;}
 .auth-msg.info{background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);color:var(--blue);display:block;}
-
 .auth-spinner{width:18px;height:18px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;
   border-radius:50%;animation:spin 0.7s linear infinite;}
 .auth-spinner.light{border-color:rgba(255,255,255,0.2);border-top-color:var(--text);}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ══════════════ VIEWS ══════════════ */
-.view{display:none;flex-direction:column;height:100vh;position:absolute;inset:0;z-index:1;}
+/* FIX: views usan position:fixed + altura real del viewport */
+.view{display:none;flex-direction:column;
+  position:fixed;inset:0;z-index:1;
+  height:100%;height:-webkit-fill-available;}
 .view.active{display:flex;}
-.aw{max-width:430px;margin:0 auto;width:100%;height:100%;display:flex;flex-direction:column;}
+.aw{max-width:430px;margin:0 auto;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
 
 /* HEADER */
 .header{flex-shrink:0;padding:10px 12px 8px;display:flex;justify-content:space-between;align-items:center;
   border-bottom:1px solid var(--border);background:rgba(8,8,16,0.9);backdrop-filter:blur(20px);gap:8px;}
-.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0;}
+.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0;cursor:pointer;}
 .logo em{color:var(--accent);font-style:normal;}
 .hbtns{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 .day-pill{display:flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--border);
@@ -104,7 +104,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 /* MACRO PANEL */
 .macro-panel{flex-shrink:0;padding:14px 14px 12px;background:var(--s1);border-bottom:1px solid var(--border);}
 .macro-top{display:flex;gap:14px;align-items:center;margin-bottom:12px;}
-/* Círculo kcal */
 .kcal-ring{position:relative;width:110px;height:110px;flex-shrink:0;}
 .kcal-ring svg{transform:rotate(-90deg);}
 .ring-bg{fill:none;stroke:var(--s3);stroke-width:8;}
@@ -114,7 +113,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .kcal-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent);line-height:1;}
 .kcal-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
 .kcal-total{font-size:11px;color:var(--muted);font-weight:500;}
-/* Barras macros */
 .macro-bars{flex:1;display:flex;flex-direction:column;gap:9px;}
 .mbar{display:flex;flex-direction:column;gap:4px;}
 .mbar-row{display:flex;justify-content:space-between;align-items:baseline;}
@@ -123,26 +121,62 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .mbar-sub{font-size:10px;color:var(--muted);font-weight:400;}
 .mbar-track{height:6px;background:var(--s3);border-radius:6px;overflow:hidden;}
 .mbar-fill{height:100%;border-radius:6px;transition:width 0.8s ease;width:0%;}
-/* Stats restantes */
 .macro-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .mstat{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;}
 .mstat-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;line-height:1;}
 .mstat-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:3px;line-height:1.3;}
 
-/* MESSAGES */
-.messages{flex:1;overflow-y:auto;padding:12px 12px 4px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;}
+/* MESSAGES — FIX: flex:1 + overflow-y:auto + overscroll para Chrome */
+.messages{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  padding:12px 12px 4px;
+  display:flex;flex-direction:column;gap:8px;
+  scroll-behavior:smooth;
+  min-height:0; /* FIX crítico para Chrome flex */
+}
 .messages::-webkit-scrollbar{width:0;}
-.msg{display:flex;gap:7px;animation:fadeUp 0.3s ease both;}
+
+/* MSG con long-press para opciones */
+.msg{display:flex;gap:7px;animation:fadeUp 0.3s ease both;position:relative;}
 .msg.user{flex-direction:row-reverse;}
 .av{width:28px;height:28px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
   font-size:12px;align-self:flex-end;background:var(--s2);border:1px solid var(--border);}
 .msg.ai .av{background:var(--accent-dim);border-color:rgba(212,240,74,0.25);
   font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);}
 .bubble{max-width:82%;background:var(--s2);border:1px solid var(--border);
-  border-radius:16px;padding:10px 13px;font-size:14px;line-height:1.6;}
+  border-radius:16px;padding:10px 13px;font-size:14px;line-height:1.6;
+  user-select:none;-webkit-user-select:none;
+  cursor:pointer;position:relative;}
 .msg.user .bubble{background:linear-gradient(135deg,rgba(212,240,74,0.15),rgba(212,240,74,0.07));
   border-color:rgba(212,240,74,0.25);border-bottom-right-radius:4px;}
 .msg.ai .bubble{border-bottom-left-radius:4px;}
+.bubble.fav-marked{border-color:rgba(255,211,61,0.5);background:rgba(255,211,61,0.05);}
+.bubble.fav-marked::after{content:'⭐';position:absolute;top:6px;right:8px;font-size:11px;}
+
+/* MSG CONTEXT MENU */
+.msg-menu{
+  position:fixed;z-index:999;
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:14px;padding:6px;
+  display:flex;flex-direction:column;gap:2px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  min-width:180px;
+  animation:fadeUp 0.15s ease;
+}
+.msg-menu-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:9px;
+  font-size:14px;cursor:pointer;
+  transition:background 0.15s;
+  color:var(--text);
+}
+.msg-menu-item:active{background:var(--s3);}
+.msg-menu-item.danger{color:var(--red);}
+.msg-menu-sep{height:1px;background:var(--border);margin:3px 0;}
 
 /* QUICK REPLIES */
 .quick-replies{display:flex;flex-wrap:wrap;gap:6px;padding:2px 12px 4px;animation:fadeUp 0.3s ease both;}
@@ -202,7 +236,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
 .send-btn:disabled{opacity:0.35;cursor:not-allowed;}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;min-height:16px;}
-/* Menú adjuntos */
 .attach-menu{display:none;flex-direction:column;gap:4px;margin-top:6px;
   background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:8px;overflow:hidden;}
 .attach-menu.open{display:flex;}
@@ -210,7 +243,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   font-size:14px;cursor:pointer;transition:background 0.15s;}
 .attach-item:active{background:var(--accent-dim);}
 .attach-item span{color:var(--text);}
-/* Confirm bar */
 .confirm-bar{display:none;gap:8px;margin-top:8px;}
 .confirm-bar.visible{display:flex;}
 .confirm-btn{flex:1;padding:11px;background:var(--accent);border:none;border-radius:12px;
@@ -219,7 +251,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .confirm-btn:active{transform:scale(0.97);}
 .cancel-voice-btn{padding:11px 16px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
   font-size:14px;color:var(--muted);cursor:pointer;transition:all 0.2s;}
-.cancel-voice-btn:active{background:var(--s3);}
 
 /* SUB-HEADER */
 .sub-hdr{flex-shrink:0;padding:13px 16px;display:flex;align-items:center;gap:12px;
@@ -227,10 +258,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .sub-hdr h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
 .back-btn{width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;line-height:1;color:var(--text);}
-.scrollable{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
+.scrollable{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0;}
 
 /* CONFIG */
-.cfg-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
+.cfg-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0;}
 .cfg2-sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .cfg2-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
   font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
@@ -257,8 +288,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .cfg2-unit{font-size:10px;color:var(--muted);text-align:right;}
 .save-btn{margin:0 14px 20px;padding:15px;background:var(--accent);border:none;border-radius:13px;
   font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#080810;cursor:pointer;width:calc(100% - 28px);}
-
-/* Logout row in config */
 .cfg-logout-row{padding:14px;border-top:1px solid var(--border);margin-top:4px;}
 .cfg-user-info{font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;}
 .cfg-user-info strong{color:var(--text);}
@@ -321,7 +350,36 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;}
 
+/* FAVORITOS */
+.fav-card{background:var(--s1);border:1px solid rgba(255,211,61,0.25);border-radius:14px;overflow:hidden;}
+.fav-hdr-row{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.fav-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+.fav-date{font-size:11px;color:var(--muted);}
+.fav-macros{display:flex;padding:10px 14px;gap:12px;}
+.fav-m{flex:1;text-align:center;}
+.fav-m-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.fav-m-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+.fav-actions{display:flex;gap:8px;padding:0 14px 12px;}
+.fav-use-btn{flex:1;padding:9px;background:var(--accent-dim);border:1px solid rgba(212,240,74,0.3);
+  border-radius:9px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
+  cursor:pointer;text-align:center;}
+.fav-del-btn{padding:9px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);
+  border-radius:9px;font-size:14px;cursor:pointer;}
+.fav-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.8;}
+
 #photoInput{display:none;}
+
+/* VOICE BANNER — muestra el texto transcrito en tiempo real */
+.voice-banner{
+  display:none;
+  background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.25);
+  border-radius:10px;padding:8px 12px;margin-bottom:6px;
+  font-size:12px;color:var(--text);line-height:1.5;
+}
+.voice-banner.visible{display:block;}
+.voice-banner-lbl{font-size:10px;color:var(--red);text-transform:uppercase;letter-spacing:0.6px;font-weight:700;margin-bottom:3px;}
+.voice-banner-text{color:var(--muted);}
+.voice-banner-text em{color:var(--text);font-style:normal;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
@@ -333,7 +391,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 <div class="ambient"></div>
 <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
-<!-- ══════════════ PANTALLA LOGIN ══════════════ -->
+<!-- ══ LOGIN ══ -->
 <div class="auth-screen active" id="screenLogin">
   <div class="auth-box">
     <div class="auth-logo">
@@ -367,7 +425,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
-<!-- ══════════════ PANTALLA REGISTRO ══════════════ -->
+<!-- ══ REGISTRO ══ -->
 <div class="auth-screen" id="screenRegistro">
   <div class="auth-box">
     <div class="auth-logo">
@@ -406,7 +464,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
-<!-- ══════════════ PANTALLA RECUPERAR CONTRASEÑA ══════════════ -->
+<!-- ══ RECUPERAR ══ -->
 <div class="auth-screen" id="screenRecuperar">
   <div class="auth-box">
     <div class="auth-logo">
@@ -435,19 +493,20 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 <div class="view" id="viewMain">
 <div class="aw">
   <div class="header">
-    <div class="logo" >Macro<em>AI</em></div>
+    <div class="logo" onclick="logoTap()">Macro<em>AI</em></div>
     <div class="hbtns">
       <div class="day-pill" onclick="toggleDayType()">
         <div class="pdot" id="pillDot"></div>
         <span id="dayType">Día de entreno</span>
       </div>
       <div class="icon-nav" onclick="showView('viewDespensa')" title="Despensa">🧺</div>
+      <div class="icon-nav" onclick="showView('viewFavoritos')" title="Favoritos">⭐</div>
       <div class="icon-nav" onclick="showView('viewHistorial')" title="Historial">📅</div>
-      <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>    </div>
+      <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
+    </div>
   </div>
   <div class="macro-panel">
     <div class="macro-top">
-      <!-- Círculo kcal -->
       <div class="kcal-ring">
         <svg width="110" height="110" viewBox="0 0 110 110">
           <circle class="ring-bg" cx="55" cy="55" r="45"/>
@@ -459,7 +518,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
           <div class="kcal-total">/ <span id="kcalObj">2000</span></div>
         </div>
       </div>
-      <!-- Barras macros -->
       <div class="macro-bars">
         <div class="mbar">
           <div class="mbar-row">
@@ -484,7 +542,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
         </div>
       </div>
     </div>
-    <!-- Stats restantes -->
     <div class="macro-bottom">
       <div class="mstat"><div class="mstat-val" id="kcalResta" style="color:var(--accent)">2000</div><div class="mstat-lbl">kcal<br>restantes</div></div>
       <div class="mstat"><div class="mstat-val" id="protResta" style="color:var(--red)">100g</div><div class="mstat-lbl">prot<br>restante</div></div>
@@ -495,8 +552,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   <div class="messages" id="messages"></div>
   <div class="input-area">
     <div class="input-wrap">
-      <div class="icon-btn" id="attachBtn" onclick="document.getElementById('attachMenu').classList.toggle('open')" style="background:none;border:none;color:var(--muted);font-size:20px;width:32px;">＋</div>
-      <textarea class="input-field" id="inputField" placeholder="Escribe un mensaje..." rows="1"
+      <div class="icon-btn" onclick="document.getElementById('attachMenu').classList.toggle('open')" style="background:none;border:none;color:var(--muted);font-size:20px;width:32px;">＋</div>
+      <textarea class="input-field" id="inputField" placeholder="Escribe o usa el micrófono..." rows="1"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <div class="ibtns">
         <div class="icon-btn" id="micBtn" onclick="toggleMic()" title="Micrófono">🎤</div>
@@ -507,7 +564,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
         </button>
       </div>
     </div>
-    <!-- Menú adjuntos -->
     <div class="attach-menu" id="attachMenu">
       <label class="attach-item">
         🍽️ <span>Foto plato</span>
@@ -520,6 +576,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       <div class="attach-item" onclick="document.getElementById('photoInput').click();document.getElementById('attachMenu').classList.remove('open')">
         📷 <span>Foto nevera</span>
       </div>
+    </div>
+    <!-- Voice banner: muestra transcripción en tiempo real -->
+    <div class="voice-banner" id="voiceBanner">
+      <div class="voice-banner-lbl">🔴 Grabando...</div>
+      <div class="voice-banner-text" id="voiceBannerText">Habla ahora...</div>
     </div>
     <div class="hint" id="hint"></div>
     <div class="confirm-bar" id="confirmBar">
@@ -546,7 +607,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
     <div class="desp-actions">
       <div class="desp-btn" onclick="document.getElementById('despTextarea').focus()">
         <div class="desp-btn-icon">✍️</div>
-        <div class="desp-btn-lbl">Escribir / Voz</div>
+        <div class="desp-btn-lbl">Escribir</div>
       </div>
       <div class="desp-btn" onclick="document.getElementById('photoInput').click()">
         <div class="desp-btn-icon">📷</div>
@@ -572,6 +633,28 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       🍽️ Generar menú del día con mi despensa
     </button>
   </div>
+</div>
+</div>
+
+<!-- ══ VISTA FAVORITOS ══ -->
+<div class="view" id="viewFavoritos">
+<div class="aw">
+  <div class="sub-hdr">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <h2>Favoritos ⭐</h2>
+  </div>
+  <div class="scrollable" id="favBody"></div>
+</div>
+</div>
+
+<!-- ══ VISTA HISTORIAL ══ -->
+<div class="view" id="viewHistorial">
+<div class="aw">
+  <div class="sub-hdr">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <h2>Historial 📅</h2>
+  </div>
+  <div class="scrollable" id="histBody"></div>
 </div>
 </div>
 
@@ -649,64 +732,74 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       </div>
     </div>
     <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
-
   </div>
 </div>
 </div>
 
-<!-- ══ VISTA HISTORIAL ══ -->
-<div class="view" id="viewHistorial">
+<!-- ══ VISTA ADMIN ══ -->
+<div class="view" id="viewAdmin">
 <div class="aw">
-  <div class="sub-hdr">
+  <div class="sub-hdr" style="background:rgba(212,240,74,0.06);border-bottom:1px solid rgba(212,240,74,0.2);">
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
-    <h2>Historial 📅</h2>
+    <h2 style="color:var(--accent)">⚡ Admin</h2>
   </div>
-  <div class="scrollable" id="histBody"></div>
+  <div class="scrollable" id="adminBody"></div>
 </div>
 </div>
+
+<style>
+.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.admin-card-top{display:flex;justify-content:space-between;align-items:center;}
+.admin-card-info{display:flex;flex-direction:column;gap:3px;}
+.admin-card-nombre{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.admin-card-email{font-size:12px;color:var(--muted);}
+.admin-card-fecha{font-size:11px;color:var(--muted2);}
+.admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;}
+.admin-card-status.active{background:rgba(212,240,74,0.08);color:var(--accent);}
+.admin-card-status.inactive{background:rgba(255,107,107,0.08);color:var(--red);}
+.admin-toggle{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
+.admin-toggle.on{background:var(--accent);}
+.admin-toggle.off{background:var(--muted2);}
+.admin-toggle-dot{width:20px;height:20px;border-radius:50%;background:#080810;position:absolute;top:3px;transition:left 0.3s;}
+.admin-toggle.on .admin-toggle-dot{left:25px;}
+.admin-toggle.off .admin-toggle-dot{left:3px;}
+</style>
 
 <script>
 // ── SUPABASE ──
 const SUPA_URL='https://wgjzelrqfyvlnxikbijl.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzkxMDEsImV4cCI6MjA5MjcxNTEwMX0.grES_8m9TDG5KY8U6SeBgqAohhX5gtqqIWt0iTcaB3o';
-const CODIGO_VALIDO='POPI2025'; // código de invitación
+const CODIGO_VALIDO='POPI2025';
+const ADMIN_EMAIL='joseju.popi@hotmail.es';
+const WORKER_URL='https://macroai.joseju-popi.workers.dev';
 
-let SUPA_TOKEN=null;
-let CURRENT_USER=null;
+let SUPA_TOKEN=null,CURRENT_USER=null;
 
 async function supaFetch(path,opts={}){
   const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
-  const res=await fetch(SUPA_URL+path,{...opts,headers});
-  return res;
+  return fetch(SUPA_URL+path,{...opts,headers});
 }
 
-// ── AUTH HELPERS ──
+// ── AUTH ──
 function showAuth(id){
   document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // limpiar mensajes
   ['loginMsg','registroMsg','recuperarMsg'].forEach(m=>{const el=document.getElementById(m);if(el){el.className='auth-msg';el.textContent='';}});
 }
-
 function togglePw(inputId,btn){
   const inp=document.getElementById(inputId);
-  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
-  else{inp.type='password';btn.textContent='👁';}
+  inp.type=inp.type==='password'?'text':'password';
+  btn.textContent=inp.type==='password'?'👁':'🙈';
 }
-
 function setAuthLoading(btnId,textId,loading,defaultText){
-  const btn=document.getElementById(btnId);
-  const txt=document.getElementById(textId);
+  const btn=document.getElementById(btnId),txt=document.getElementById(textId);
   btn.disabled=loading;
   txt.innerHTML=loading?'<div class="auth-spinner"></div>':defaultText;
 }
-
 function showMsg(id,text,type='error'){
-  const el=document.getElementById(id);
-  el.textContent=text;el.className='auth-msg '+type;
+  const el=document.getElementById(id);el.textContent=text;el.className='auth-msg '+type;
 }
 
-// ── LOGIN ──
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
   const pw=document.getElementById('loginPw').value;
@@ -714,32 +807,24 @@ async function doLogin(){
   setAuthLoading('loginBtn','loginBtnText',true,'ENTRAR');
   try{
     const res=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email,password:pw})
-    });
+      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body:JSON.stringify({email,password:pw})});
     const data=await res.json();
     if(!res.ok){showMsg('loginMsg',data.error_description||data.message||'Email o contraseña incorrectos.');return;}
-    SUPA_TOKEN=data.access_token;
-    CURRENT_USER={id:data.user.id,email:data.user.email};
-    // Verificar si está activo (excepto admin)
+    SUPA_TOKEN=data.access_token;CURRENT_USER={id:data.user.id,email:data.user.email};
     if(data.user.email!==ADMIN_EMAIL){
-      const chk=await supaFetch("/rest/v1/usuarios_macroai?select=activo&id=eq."+data.user.id);
+      const chk=await supaFetch('/rest/v1/usuarios_macroai?select=activo,nombre&id=eq.'+data.user.id);
       const chkData=await chk.json();
-      if(chkData&&chkData[0]&&chkData[0].activo===false){
-        SUPA_TOKEN=null;CURRENT_USER=null;
-        showMsg("loginMsg","Tu cuenta está desactivada. Contacta con tu entrenador.");
-        return;
-      }
+      if(chkData&&chkData[0]&&chkData[0].activo===false){SUPA_TOKEN=null;CURRENT_USER=null;showMsg('loginMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');return;}
+      if(chkData&&chkData[0]&&chkData[0].nombre)CURRENT_USER.nombre=chkData[0].nombre;
     }
-    localStorage.setItem("macroai_token",SUPA_TOKEN);
-    localStorage.setItem("macroai_user",JSON.stringify(CURRENT_USER));
+    localStorage.setItem('macroai_token',SUPA_TOKEN);
+    localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
     enterApp();
-  }catch(e){showMsg('loginMsg','Error de conexión. Inténtalo de nuevo.');}
+  }catch(e){showMsg('loginMsg','Error de conexión.');}
   finally{setAuthLoading('loginBtn','loginBtnText',false,'ENTRAR');}
 }
 
-// ── REGISTRO ──
 async function doRegistro(){
   const nombre=document.getElementById('regNombre').value.trim();
   const email=document.getElementById('regEmail').value.trim();
@@ -747,73 +832,61 @@ async function doRegistro(){
   const codigo=document.getElementById('regCodigo').value.trim().toUpperCase();
   if(!nombre||!email||!pw||!codigo){showMsg('registroMsg','Rellena todos los campos.');return;}
   if(pw.length<6){showMsg('registroMsg','La contraseña debe tener mínimo 6 caracteres.');return;}
-  if(codigo!==CODIGO_VALIDO){showMsg('registroMsg','Código de invitación incorrecto. Pídelo a tu entrenador.');return;}
+  // Comprobar código: puede ser el global o uno individual de la tabla
+  let codigoOk=codigo===CODIGO_VALIDO;
+  if(!codigoOk){
+    try{
+      const chk=await supaFetch('/rest/v1/usuarios_macroai?select=id,activo&codigo_invitacion=eq.'+encodeURIComponent(codigo));
+      const rows=await chk.json();
+      if(Array.isArray(rows)&&rows.length>0&&rows[0].activo!==false)codigoOk=true;
+    }catch(e){}
+  }
+  if(!codigoOk){showMsg('registroMsg','Código de invitación incorrecto. Pídelo a tu entrenador.');return;}
   setAuthLoading('registroBtn','registroBtnText',true,'CREAR CUENTA');
   try{
-    // 1. Crear usuario en Supabase Auth
     const res=await fetch(SUPA_URL+'/auth/v1/signup',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email,password:pw})
-    });
+      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body:JSON.stringify({email,password:pw})});
     const data=await res.json();
     if(!res.ok){showMsg('registroMsg',data.error_description||data.message||'Error al crear la cuenta.');return;}
-    // 2. Si hay confirmación de email pendiente
-    if(!data.access_token){
-      showMsg('registroMsg','✅ Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.','success');
-      return;
+    if(!data.access_token){showMsg('registroMsg','✅ Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.','success');return;}
+    SUPA_TOKEN=data.access_token;CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
+    // Actualizar tabla (puede que ya exista el registro del admin)
+    const existing=await supaFetch('/rest/v1/usuarios_macroai?select=id&id=eq.'+data.user.id);
+    const existingData=await existing.json();
+    if(existingData&&existingData.length>0){
+      await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+data.user.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
+    }else{
+      await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,codigo_invitacion:codigo})});
     }
-    // 3. Login automático
-    SUPA_TOKEN=data.access_token;
-    CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
-    // 4. Guardar en tabla usuarios_macroai
-    await supaFetch('/rest/v1/usuarios_macroai',{
-      method:'POST',
-      headers:{'Prefer':'return=minimal'},
-      body:JSON.stringify({id:data.user.id,email,nombre,codigo_invitacion:codigo})
-    });
     localStorage.setItem('macroai_token',SUPA_TOKEN);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
     enterApp();
-  }catch(e){showMsg('registroMsg','Error de conexión. Inténtalo de nuevo.');}
+  }catch(e){showMsg('registroMsg','Error de conexión.');}
   finally{setAuthLoading('registroBtn','registroBtnText',false,'CREAR CUENTA');}
 }
 
-// ── RECUPERAR CONTRASEÑA ──
 async function doRecuperar(){
   const email=document.getElementById('recuperarEmail').value.trim();
   if(!email){showMsg('recuperarMsg','Escribe tu email.');return;}
   setAuthLoading('recuperarBtn','recuperarBtnText',true,'ENVIAR ENLACE');
   try{
-    const res=await fetch(SUPA_URL+'/auth/v1/recover',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email})
-    });
-    if(res.ok){showMsg('recuperarMsg','✅ Enlace enviado. Revisa tu bandeja de entrada (y el spam).','success');}
-    else{showMsg('recuperarMsg','No se encontró ese email.');}
+    const res=await fetch(SUPA_URL+'/auth/v1/recover',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},body:JSON.stringify({email})});
+    if(res.ok)showMsg('recuperarMsg','✅ Enlace enviado. Revisa tu email (y el spam).','success');
+    else showMsg('recuperarMsg','No se encontró ese email.');
   }catch(e){showMsg('recuperarMsg','Error de conexión.');}
   finally{setAuthLoading('recuperarBtn','recuperarBtnText',false,'ENVIAR ENLACE');}
 }
 
-// ── LOGOUT ──
 async function doLogout(){
-  
-  try{
-    await fetch(SUPA_URL+'/auth/v1/logout',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_TOKEN}
-    });
-  }catch(e){}
+  stopMic(false);
+  try{await fetch(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_TOKEN}});}catch(e){}
   SUPA_TOKEN=null;CURRENT_USER=null;
-  localStorage.removeItem('macroai_token');
-  localStorage.removeItem('macroai_user');
-  // volver al login
+  localStorage.removeItem('macroai_token');localStorage.removeItem('macroai_user');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   showAuth('screenLogin');
 }
 
-// ── ENTER APP ──
 function enterApp(){
   document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
   initApp();
@@ -828,18 +901,14 @@ function enterApp(){
   x.fillStyle='#080810';x.font='bold 110px Syne,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('M',96,100);
   const icon=c.toDataURL('image/png');
   document.getElementById('appleIcon').href=icon;
-  const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',
-    background_color:'#080810',theme_color:'#080810',orientation:'portrait',
-    icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
+  const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
-  const sw=`const CACHE='macroai-v4';
+  const sw=`const CACHE='macroai-v5';
     self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/macroai/','/macroai/index.html'])));self.skipWaiting();});
     self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim();});
     self.addEventListener('fetch',e=>{if(e.request.url.includes('workers.dev')||e.request.url.includes('anthropic.com')||e.request.url.includes('supabase.co'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});`;
   if('serviceWorker' in navigator)navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),{scope:'/macroai/'}).catch(()=>{});
 })();
-
-const WORKER_URL='https://macroai.joseju-popi.workers.dev';
 
 // ── CONFIG ──
 function loadCFG(){
@@ -862,7 +931,6 @@ const S={
 function loadDesp(){try{return JSON.parse(localStorage.getItem('macroai_desp')||'[]');}catch(e){return[];}}
 function saveDesp(arr){localStorage.setItem('macroai_desp',JSON.stringify(arr));}
 let DESP=loadDesp();
-
 function renderDespChips(){
   const el=document.getElementById('despChips');
   if(!DESP.length){el.innerHTML='<div class="desp-empty">Tu despensa está vacía.<br>Añade alimentos arriba 👆</div>';return;}
@@ -872,157 +940,111 @@ function removeDesp(i){DESP.splice(i,1);saveDesp(DESP);renderDespChips();}
 function clearDespInput(){document.getElementById('despTextarea').value='';}
 function clearAllDesp(){if(confirm('¿Vaciar toda la despensa?')){DESP=[];saveDesp(DESP);renderDespChips();}}
 function saveDespensa(){
-  const txt=document.getElementById('despTextarea').value.trim();
-  if(!txt)return;
+  const txt=document.getElementById('despTextarea').value.trim();if(!txt)return;
   const nuevos=txt.split(/[,;\n]+/).map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);
   nuevos.forEach(a=>{if(!DESP.includes(a))DESP.push(a);});
-  saveDesp(DESP);renderDespChips();
-  document.getElementById('despTextarea').value='';
+  saveDesp(DESP);renderDespChips();document.getElementById('despTextarea').value='';
 }
 function usarDespensa(){
   if(!DESP.length){alert('Añade alimentos a tu despensa primero.');return;}
   showView('viewMain');
-  const msg=`Tengo en casa: ${DESP.join(', ')}. Con estos ingredientes y mis macros de hoy, ¿puedes generarme el menú completo del día?`;
-  setTimeout(()=>sendDirect(msg),300);
+  setTimeout(()=>sendDirect(`Tengo en casa: ${DESP.join(', ')}. Con estos ingredientes y mis macros de hoy, ¿puedes generarme el menú completo del día?`),300);
 }
 
-// ── FOTO DESPENSA ──
-function handlePhoto(e){
-  const file=e.target.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=async function(ev){
-    const b64=ev.target.result.split(',')[1];
-    showView('viewMain');
-    addMsg('user','📷 Foto de mi nevera/despensa');
-    addTyping();
-    try{
-      S.historial.push({role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:'Analiza esta imagen de mi nevera o lista de compra. Extrae todos los alimentos que veas y añádelos a mi despensa. Luego dime cuáles has detectado en formato lista clara.'}
-      ]});
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
-      const data=await res.json();
-      const raw=data.content?.[0]?.text||'No pude analizar la imagen.';
-      S.historial.push({role:'assistant',content:raw});
-      removeTyping();
-      const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
-      if(match){
-        const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);
-        nuevos.forEach(a=>{if(!DESP.includes(a))DESP.push(a);});
-        saveDesp(DESP);renderDespChips();
-      }
-      const{text:t,elements,opciones}=parseAI(raw);
-      addMsg('ai',t,elements,opciones);
-    }catch(err){removeTyping();addMsg('ai','Error analizando la imagen. Prueba a escribir los alimentos.');}
-    e.target.value='';
+// ── FAVORITOS ──
+function loadFavs(){try{return JSON.parse(localStorage.getItem('macroai_favs')||'[]');}catch(e){return[];}}
+function saveFavs(arr){localStorage.setItem('macroai_favs',JSON.stringify(arr));}
+
+function guardarFavorito(nombre,texto,macros){
+  const favs=loadFavs();
+  const fav={
+    id:Date.now(),
+    nombre:nombre||'Favorito',
+    texto:texto||'',
+    kcal:macros?.kcal||0,prot:macros?.prot||0,ch:macros?.ch||0,grasa:macros?.grasa||0,
+    fecha:new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'})
   };
-  reader.readAsDataURL(file);
+  favs.unshift(fav);
+  if(favs.length>50)favs.pop();
+  saveFavs(favs);
+  return fav;
 }
+
+function renderFavoritos(){
+  const body=document.getElementById('favBody');
+  const favs=loadFavs();
+  if(!favs.length){
+    body.innerHTML='<div class="fav-empty">⭐<br><br>Aún no tienes favoritos.<br><br>Mantén pulsado cualquier mensaje<br>de la IA para guardarlo como favorito.</div>';
+    return;
+  }
+  body.innerHTML='';
+  favs.forEach(f=>{
+    const card=document.createElement('div');card.className='fav-card';
+    card.innerHTML=`
+      <div class="fav-hdr-row">
+        <div class="fav-name">⭐ ${escapeHtml(f.nombre)}</div>
+        <div class="fav-date">${f.fecha}</div>
+      </div>
+      ${f.kcal?`<div class="fav-macros">
+        <div class="fav-m"><div class="fav-m-val" style="color:var(--accent)">${f.kcal}</div><div class="fav-m-lbl">kcal</div></div>
+        <div class="fav-m"><div class="fav-m-val" style="color:var(--red)">${f.prot}g</div><div class="fav-m-lbl">prot</div></div>
+        <div class="fav-m"><div class="fav-m-val" style="color:var(--yellow)">${f.ch}g</div><div class="fav-m-lbl">ch</div></div>
+        <div class="fav-m"><div class="fav-m-val" style="color:var(--blue)">${f.grasa}g</div><div class="fav-m-lbl">grasa</div></div>
+      </div>`:''}
+      <div class="fav-actions">
+        <button class="fav-use-btn" onclick="usarFavorito(${f.id})">↩ Usar este menú/plato</button>
+        <button class="fav-del-btn" onclick="eliminarFavorito(${f.id})">🗑️</button>
+      </div>`;
+    body.appendChild(card);
+  });
+}
+
+function usarFavorito(id){
+  const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
+  showView('viewMain');
+  setTimeout(()=>sendDirect(`Quiero preparar: ${f.nombre}. ${f.texto?'Recuérdame cómo hacerlo y adapta las cantidades a mis macros de hoy.':''}`),300);
+}
+
+function eliminarFavorito(id){
+  let favs=loadFavs();favs=favs.filter(f=>f.id!==id);saveFavs(favs);renderFavoritos();
+}
+
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ── TODAY DATA ──
 function loadToday(){
   try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+TODAY)||'null');
     if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}}catch(e){}
 }
-
-// ── FOTO PLATO ──
-async function handleFotoPlato(e){
-  const file=e.target.files[0];if(!file)return;
-  e.target.value='';
-  const reader=new FileReader();
-  reader.onload=async function(ev){
-    const b64=ev.target.result.split(',')[1];
-    addMsg('user','🍽️ Analizando este plato...');
-    addTyping();
-    try{
-      S.historial.push({role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:`Analiza este plato de comida. Estima los macronutrientes (kcal, proteínas, carbohidratos, grasas) de forma aproximada. Avisa que es una estimación visual. Luego pregunta si quiero registrarlo. Mis macros restantes: ${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g. Usa [OPCIONES]Sí, registrar|Ajustar cantidad|No registrar`}
-      ]});
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
-      const data=await res.json();
-      const raw=data.content?.[0]?.text||'No pude analizar el plato.';
-      S.historial.push({role:'assistant',content:raw});
-      removeTyping();
-      const{text:t,elements,opciones}=parseAI(raw);
-      addMsg('ai',t,elements,opciones);
-    }catch(err){removeTyping();addMsg('ai','Error al analizar el plato. Inténtalo de nuevo.');}
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── FOTO ETIQUETA ──
-async function handleFotoEtiqueta(e){
-  const file=e.target.files[0];if(!file)return;
-  e.target.value='';
-  const reader=new FileReader();
-  reader.onload=async function(ev){
-    const b64=ev.target.result.split(',')[1];
-    addMsg('user','🏷️ Leyendo etiqueta nutricional...');
-    addTyping();
-    try{
-      S.historial.push({role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:`Lee la información nutricional de esta etiqueta. Extrae: nombre del producto, kcal por 100g/porción, proteínas, carbohidratos (azúcares), grasas (saturadas) y fibra. Luego dime si encaja con mis macros restantes de hoy (${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g). Si tiene mucha azúcar o grasa saturada, avísame. Pregunta qué cantidad voy a comer para calcular exacto. Usa [OPCIONES] para sugerir cantidades típicas.`}
-      ]});
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
-      const data=await res.json();
-      const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
-      S.historial.push({role:'assistant',content:raw});
-      removeTyping();
-      const{text:t,elements,opciones}=parseAI(raw);
-      addMsg('ai',t,elements,opciones);
-    }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta. Inténtalo de nuevo.');}
-  };
-  reader.readAsDataURL(file);
-}
-
-async function saveComidaSupabase(comida){
-  if(!CURRENT_USER)return;
-  try{
-    await supaFetch("/rest/v1/historial_macroai",{
-      method:"POST",
-      headers:{"Prefer":"return=minimal"},
-      body:JSON.stringify({
-        usuario_id:CURRENT_USER.id,
-        fecha:comida.fecha,
-        comida:comida.nombre,
-        ingredientes:comida.ingredientes||"",
-        calorias:comida.kcal,
-        proteinas:comida.prot,
-        carbos:comida.ch,
-        grasas:comida.grasa
-      })
-    });
-  }catch(e){console.log("Supabase historial error:",e);}
-}
 function saveToday(){
-  const d={fecha:TODAY,tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
-    kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
+  const d={fecha:TODAY,tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
   localStorage.setItem('macroai_dia_'+TODAY,JSON.stringify(d));
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
   if(!idx.includes(TODAY)){idx.push(TODAY);localStorage.setItem('macroai_dias',JSON.stringify(idx));}
 }
 function getYesterdayComidas(){
-  try{
-    const ayer=new Date();ayer.setDate(ayer.getDate()-1);
-    const ayerStr=ayer.toISOString().split('T')[0];
+  try{const ayer=new Date();ayer.setDate(ayer.getDate()-1);const ayerStr=ayer.toISOString().split('T')[0];
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+ayerStr)||'null');
     if(!d||!d.comidas||!d.comidas.length)return null;
-    return{fecha:ayerStr,comidas:d.comidas};
-  }catch(e){return null;}
+    return{fecha:ayerStr,comidas:d.comidas};}catch(e){return null;}
+}
+
+async function saveComidaSupabase(comida){
+  if(!CURRENT_USER)return;
+  try{await supaFetch('/rest/v1/historial_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({usuario_id:CURRENT_USER.id,fecha:comida.fecha,comida:comida.nombre,ingredientes:comida.ingredientes||'',calorias:comida.kcal,proteinas:comida.prot,carbos:comida.ch,grasas:comida.grasa})});}
+  catch(e){}
 }
 
 // ── VISTAS ──
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  closeContextMenu();
   if(id==='viewConfig')loadCfgUI();
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewDespensa')renderDespChips();
+  if(id==='viewFavoritos')renderFavoritos();
 }
 
 // ── CONFIG UI ──
@@ -1037,7 +1059,7 @@ function loadCfgUI(){
   document.getElementById('cfgChD').value=CFG.descanso.ch;
   document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
   setDayType(CFG.tipoDia,false);
-  document.getElementById("adminHeaderBtn").style.display=CURRENT_USER?.email===ADMIN_EMAIL?"flex":"none";
+  document.getElementById('adminHeaderBtn').style.display=CURRENT_USER?.email===ADMIN_EMAIL?'flex':'none';
 }
 function setDayType(tipo,update=true){
   document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
@@ -1045,17 +1067,9 @@ function setDayType(tipo,update=true){
   if(update)CFG.tipoDia=tipo;
 }
 function saveConfig(){
-  CFG.entreno={kcal:+document.getElementById('cfgKcalE').value||2000,
-    prot:+document.getElementById('cfgProtE').value||100,
-    ch:+document.getElementById('cfgChE').value||250,
-    grasa:+document.getElementById('cfgGrasaE').value||44};
-  CFG.descanso={kcal:+document.getElementById('cfgKcalD').value||1700,
-    prot:+document.getElementById('cfgProtD').value||100,
-    ch:+document.getElementById('cfgChD').value||180,
-    grasa:+document.getElementById('cfgGrasaD').value||55};
-  saveCFG(CFG);
-  applyMacros(CFG.tipoDia);
-  showView('viewMain');
+  CFG.entreno={kcal:+document.getElementById('cfgKcalE').value||2000,prot:+document.getElementById('cfgProtE').value||100,ch:+document.getElementById('cfgChE').value||250,grasa:+document.getElementById('cfgGrasaE').value||44};
+  CFG.descanso={kcal:+document.getElementById('cfgKcalD').value||1700,prot:+document.getElementById('cfgProtD').value||100,ch:+document.getElementById('cfgChD').value||180,grasa:+document.getElementById('cfgGrasaD').value||55};
+  saveCFG(CFG);applyMacros(CFG.tipoDia);showView('viewMain');
 }
 function applyMacros(tipo){
   const m=CFG[tipo];
@@ -1074,7 +1088,7 @@ function toggleDayType(){
 function renderHistorial(){
   const body=document.getElementById('histBody');
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]').sort().reverse();
-  if(!idx.length){body.innerHTML='<div class="hist-empty"><div class="big">📅</div>Todavía no hay días registrados.<br>Las comidas aparecerán aquí cuando las registres.</div>';return;}
+  if(!idx.length){body.innerHTML='<div class="hist-empty" style="text-align:center;padding:40px 0;color:var(--muted)"><div class="big">📅</div>Todavía no hay días registrados.</div>';return;}
   body.innerHTML='';
   idx.forEach(fecha=>{
     try{
@@ -1093,7 +1107,7 @@ function renderHistorial(){
           <button class="hist-repetir-btn" onclick="repetirDia('${fecha}')">↩ Usar comidas de este día</button>
         </div>`:'';
       body.innerHTML+=`<div class="hist-day">
-        <div class="hist-dh"><div class="hist-date">${fmtF}</div><div class="hist-tipo ${d.tipoDia}">${d.tipoDia==='entreno'?'💪 Entreno':'😴 Descanso'}</div></div>
+        <div class="hist-dh"><div class="hist-date">${fmtF}</div><div class="hist-tipo ${d.tipoDia||'entreno'}">${d.tipoDia==='descanso'?'😴 Descanso':'💪 Entreno'}</div></div>
         <div class="hist-macros">
           <div class="hm"><div class="hm-val" style="color:var(--accent)">${d.kcalC}</div><div class="hm-lbl">kcal</div></div>
           <div class="hm"><div class="hm-val" style="color:var(--red)">${d.protC}g</div><div class="hm-lbl">prot</div></div>
@@ -1111,14 +1125,13 @@ function renderHistorial(){
     }catch(e){}
   });
 }
-
 function repetirDia(fecha){
   try{
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
     if(!d||!d.comidas||!d.comidas.length)return;
     const resumen=d.comidas.map(c=>`${c.nombre||'Comida'} (${c.kcal}kcal)`).join(', ');
     showView('viewMain');
-    setTimeout(()=>sendDirect(`El ${fecha} comí: ${resumen}. Quiero repetir estas comidas hoy adaptándolas a mis macros actuales. Ayúdame.`),300);
+    setTimeout(()=>sendDirect(`El ${fecha} comí: ${resumen}. Quiero repetir estas comidas hoy adaptándolas a mis macros actuales.`),300);
   }catch(e){}
 }
 
@@ -1127,18 +1140,10 @@ function sysPrompt(){
   const r={kcal:S.kcalObj-S.kcalC,prot:S.prot-S.protC,ch:S.ch-S.chC,grasa:S.grasa-S.grasaC};
   const despStr=DESP.length?`\nDESPENSA DISPONIBLE: ${DESP.join(', ')}`:'\nDESPENSA: no configurada aún';
   let comidasHoy='';
-  if(S.comidas.length){
-    comidasHoy='\nCOMIDAS DE HOY:\n'+S.comidas.map(c=>
-      `- ${c.nombre} (${c.hora||''}): ${c.kcal}kcal | P${c.prot}g CH${c.ch}g G${c.grasa}g${c.ingredientes?'\n  Ingredientes: '+c.ingredientes.substring(0,200):''}`
-    ).join('\n');
-  }
+  if(S.comidas.length)comidasHoy='\nCOMIDAS DE HOY:\n'+S.comidas.map(c=>`- ${c.nombre} (${c.hora||''}): ${c.kcal}kcal | P${c.prot}g CH${c.ch}g G${c.grasa}g`).join('\n');
   let comidasAyer='';
   const ayer=getYesterdayComidas();
-  if(ayer&&ayer.comidas.length){
-    comidasAyer='\nCOMIDAS DE AYER ('+ayer.fecha+'):\n'+ayer.comidas.map(c=>
-      `- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g${c.ingredientes?'\n  Ingredientes: '+c.ingredientes.substring(0,200):''}`
-    ).join('\n');
-  }
+  if(ayer&&ayer.comidas.length)comidasAyer='\nCOMIDAS DE AYER ('+ayer.fecha+'):\n'+ayer.comidas.map(c=>`- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g`).join('\n');
   return `Eres MacroAI, asistente de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora. LÍMITE ESTRICTO: Solo respondes sobre nutrición, alimentación, macros, calorías, recetas, despensa e historial de comidas. Si preguntan algo fuera de este ámbito responde: "Soy MacroAI, solo puedo ayudarte con nutrición y tus macros 😊".
 
 PERFIL HOY (${S.tipoDia==='entreno'?'DÍA DE ENTRENO':'DÍA DE DESCANSO'}):
@@ -1149,11 +1154,9 @@ ${S.planDia?`- Plan del día activo: ${JSON.stringify(S.planDia)}`:''}
 
 REGLAS:
 - Usa siempre los alimentos de la despensa si están disponibles
-- Cuando el cliente pida "el desayuno de ayer" o "lo de ayer", usa las comidas de ayer para replicar o adaptar
 - Cuando generes un menú completo, usa el formato PLAN_DIA
 - Cuando calcules ingredientes de una comida, usa INGREDIENTES y luego REGISTRAR y COMIDA juntos
 - Actúa como consejera: si falta proteína sugiere añadir, si sobra grasa avisa
-- Si el cliente pregunta por un alimento (ej: "¿el arroz tiene mucha azúcar?"), responde con análisis nutricional completo
 - Máximo 2-3 frases de texto + datos. Termina con pregunta o acción.
 - Español siempre.
 
@@ -1189,7 +1192,7 @@ function parseAI(raw){
   if(planMatch){
     const lines=planMatch[1].trim().split('\n');const plan={};const items=[];
     const emojis={desayuno:'🌅',comida:'☀️',merienda:'🍎',cena:'🌙'};
-    lines.forEach(l=>{const[name,vals]=l.split(':');if(!name||!vals)return;const kv={};vals.split(',').forEach(p=>{const[k,v]=p.split('=');kv[k]=parseInt(v);});plan[name.trim()]=kv;items.push({name:name.trim(),...kv});});
+    lines.forEach(l=>{const[name,...rest]=l.split(':');const vals=rest.join(':');if(!name||!vals)return;const kv={};vals.split(',').forEach(p=>{const[k,v]=p.split('=');kv[k]=parseInt(v);});plan[name.trim()]=kv;items.push({name:name.trim(),...kv});});
     S.planDia=plan;
     let h='<div class="day-plan-card">';
     items.forEach(i=>{const em=emojis[i.name]||'🍽️';const lbl=i.name.charAt(0).toUpperCase()+i.name.slice(1);
@@ -1213,11 +1216,7 @@ function parseAI(raw){
     const ingTextMatch=text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
     const nombre=nombreMatch?nombreMatch[1].trim():`Comida ${S.comidas.length+1}`;
     const ingredientesTexto=ingTextMatch?ingTextMatch[1].trim():'';
-    S.comidas.push({
-      nombre, hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
-      kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),
-      ingredientes:ingredientesTexto
-    });
+    S.comidas.push({nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
     updateBars();saveToday();
     saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
     text=text.replace(regMatch[0],'').trim();
@@ -1233,8 +1232,130 @@ function parseAI(raw){
   return{text:text.trim(),elements,opciones};
 }
 
+// ── CONTEXT MENU (long-press) ──
+let ctxMenu=null,ctxTimer=null,ctxMsgEl=null;
+
+function closeContextMenu(){
+  if(ctxMenu){ctxMenu.remove();ctxMenu=null;}
+}
+
+function attachMsgListeners(msgDiv,role,textContent,macros){
+  let pressTimer=null;
+  const startPress=()=>{
+    pressTimer=setTimeout(()=>{
+      showContextMenu(msgDiv,role,textContent,macros);
+    },500);
+  };
+  const cancelPress=()=>clearTimeout(pressTimer);
+  msgDiv.addEventListener('touchstart',startPress,{passive:true});
+  msgDiv.addEventListener('touchend',cancelPress);
+  msgDiv.addEventListener('touchmove',cancelPress,{passive:true});
+  msgDiv.addEventListener('mousedown',startPress);
+  msgDiv.addEventListener('mouseup',cancelPress);
+  msgDiv.addEventListener('mouseleave',cancelPress);
+}
+
+function showContextMenu(msgDiv,role,textContent,macros){
+  closeContextMenu();
+  // Posición del menú
+  const rect=msgDiv.getBoundingClientRect();
+  ctxMenu=document.createElement('div');
+  ctxMenu.className='msg-menu';
+  // Items según rol
+  const items=[];
+  if(role==='ai'){
+    items.push({icon:'⭐',label:'Guardar en favoritos',action:()=>{
+      // Intentar extraer nombre del contenido
+      const nombre=textContent.split('\n')[0].substring(0,40)||'Favorito';
+      guardarFavorito(nombre,textContent,macros);
+      msgDiv.querySelector('.bubble').classList.add('fav-marked');
+      closeContextMenu();
+      showToast('⭐ Guardado en favoritos');
+    }});
+    items.push({icon:'📋',label:'Copiar texto',action:()=>{
+      navigator.clipboard.writeText(textContent).catch(()=>{});
+      closeContextMenu();showToast('📋 Copiado');
+    }});
+  }
+  items.push({type:'sep'});
+  items.push({icon:'🗑️',label:'Borrar desde aquí',danger:true,action:()=>{
+    closeContextMenu();
+    borrarDesdeAqui(msgDiv);
+  }});
+  items.push({icon:'↩',label:'Borrar solo este',danger:true,action:()=>{
+    closeContextMenu();
+    borrarMensaje(msgDiv);
+  }});
+
+  items.forEach(item=>{
+    if(item.type==='sep'){const sep=document.createElement('div');sep.className='msg-menu-sep';ctxMenu.appendChild(sep);return;}
+    const el=document.createElement('div');
+    el.className='msg-menu-item'+(item.danger?' danger':'');
+    el.innerHTML=`${item.icon} ${item.label}`;
+    el.addEventListener('click',item.action);
+    ctxMenu.appendChild(el);
+  });
+
+  // Posicionar
+  const menuH=items.length*48;
+  const top=Math.min(rect.bottom+4, window.innerHeight-menuH-10);
+  const left=Math.min(Math.max(rect.left,8), window.innerWidth-196);
+  ctxMenu.style.top=top+'px';ctxMenu.style.left=left+'px';
+  document.body.appendChild(ctxMenu);
+
+  // Cerrar al tocar fuera
+  setTimeout(()=>{
+    document.addEventListener('touchstart',closeContextMenu,{once:true,passive:true});
+    document.addEventListener('mousedown',closeContextMenu,{once:true});
+  },50);
+}
+
+function getMsgIndex(msgDiv){
+  const all=Array.from(document.getElementById('messages').querySelectorAll('.msg'));
+  return all.indexOf(msgDiv);
+}
+
+function borrarMensaje(msgDiv){
+  const allMsgs=document.getElementById('messages');
+  const all=Array.from(allMsgs.querySelectorAll('.msg'));
+  const idx=all.indexOf(msgDiv);
+  if(idx>=0&&idx<S.historial.length){S.historial.splice(idx,1);}
+  // También borrar quick-replies siguiente si las hay
+  const next=msgDiv.nextElementSibling;
+  if(next&&next.classList.contains('quick-replies'))next.remove();
+  msgDiv.remove();
+  showToast('Mensaje borrado');
+}
+
+function borrarDesdeAqui(msgDiv){
+  if(!confirm('¿Borrar este mensaje y todos los siguientes?'))return;
+  const allMsgs=document.getElementById('messages');
+  const all=Array.from(allMsgs.querySelectorAll('.msg'));
+  const idx=all.indexOf(msgDiv);
+  if(idx>=0)S.historial.splice(idx);
+  // Borrar del DOM desde idx
+  for(let i=all.length-1;i>=idx;i--){
+    const next=all[i].nextElementSibling;
+    if(next&&next.classList.contains('quick-replies'))next.remove();
+    all[i].remove();
+  }
+  // Borrar quick-replies sueltos que queden
+  allMsgs.querySelectorAll('.quick-replies').forEach(el=>el.remove());
+  showToast('Conversación recortada');
+}
+
+// ── TOAST ──
+function showToast(msg){
+  let t=document.getElementById('toastMsg');
+  if(!t){t=document.createElement('div');t.id='toastMsg';
+    t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:9px 18px;font-size:13px;color:var(--text);z-index:9999;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.4)';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._timer);t._timer=setTimeout(()=>{t.style.opacity='0';},2000);
+}
+
 // ── MESSAGES ──
-function addMsg(role,text,extraElements=[],opciones=[]){
+function addMsg(role,text,extraElements=[],opciones=[],macros=null){
   const msgs=document.getElementById('messages');
   const div=document.createElement('div');div.className=`msg ${role}`;
   const av=document.createElement('div');av.className='av';av.textContent=role==='ai'?'IA':'👤';
@@ -1243,6 +1364,8 @@ function addMsg(role,text,extraElements=[],opciones=[]){
     .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   extraElements.forEach(el=>{if(el.type==='html')h+=el.content;});
   bub.innerHTML=h;div.appendChild(av);div.appendChild(bub);msgs.appendChild(div);
+  // Long-press para menú contextual
+  attachMsgListeners(div,role,text,macros);
   if(opciones.length){
     const qr=document.createElement('div');qr.className='quick-replies';
     opciones.forEach(op=>{const btn=document.createElement('div');btn.className='qr';btn.textContent=op;
@@ -1273,15 +1396,21 @@ async function callAI(userMsg){
   return raw;
 }
 
-// ── SEND ──
 async function sendMessage(){
   const field=document.getElementById('inputField');const text=field.value.trim();if(!text)return;
   field.value='';field.style.height='auto';await sendDirect(text);
 }
 async function sendDirect(text){
-  removeQR();document.getElementById('sendBtn').disabled=true;
+  removeQR();closeContextMenu();document.getElementById('sendBtn').disabled=true;
   addMsg('user',text);addTyping();
-  try{const raw=await callAI(text);removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);}
+  try{
+    const raw=await callAI(text);removeTyping();
+    const{text:t,elements,opciones}=parseAI(raw);
+    // Extraer macros si hay REGISTRAR para favoritos
+    const regMatch=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+    const macros=regMatch?{kcal:+regMatch[1],prot:+regMatch[2],ch:+regMatch[3],grasa:+regMatch[4]}:null;
+    addMsg('ai',t,elements,opciones,macros);
+  }
   catch(e){removeTyping();addMsg('ai','Error de conexión. Comprueba tu internet.',[],['Reintentar']);}
   document.getElementById('sendBtn').disabled=false;
 }
@@ -1306,54 +1435,144 @@ function updateBars(){
   document.getElementById('grasaResta').textContent=Math.max(0,S.grasa-S.grasaC)+'g';
 }
 
-// ── VOICE ──
-// Estado voz: idle | recording | paused
-let micState='idle', recog=null, voiceText='';
+// ══════════════════════════════════════════
+// ── VOZ — FIX COMPLETO ──
+// PROBLEMA: onresult itera desde i=0 siempre → los finals anteriores
+// se vuelven a concatenar → duplicados/triplicados.
+// SOLUCIÓN: usar e.resultIndex para iterar solo desde el nuevo resultado,
+// y acumular finals en voiceFinalText separado del interino.
+// ══════════════════════════════════════════
+let micState='idle', recog=null;
+let voiceFinalText='';   // solo resultados finales confirmados
+let voiceInterim='';     // resultado parcial actual (no final)
 
 function toggleMic(){
-  if(micState==='idle') startMic();
-  else if(micState==='recording') pauseMic();
-  else if(micState==='paused') resumeMic();
+  if(micState==='idle')startMic();
+  else if(micState==='recording')pauseMic();
+  else if(micState==='paused')resumeMic();
 }
 
 function startMic(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){setHint('⚠️ Sin soporte de voz en este navegador.');return;}
-  voiceText=document.getElementById('inputField').value||'';
+  // Recuperar texto ya escrito en el campo como base
+  voiceFinalText=document.getElementById('inputField').value||'';
+  voiceInterim='';
   recog=new SR();
-  recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
-  recog.onresult=e=>{
-    let interim='';let final=voiceText;
-    for(let i=0;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
+  recog.lang='es-ES';
+  recog.continuous=true;
+  recog.interimResults=true;
+
+  recog.onresult=function(e){
+    // ── FIX CLAVE: iterar solo desde resultIndex ──
+    let newFinals='';
+    let newInterim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal){
+        newFinals+=e.results[i][0].transcript;
+      }else{
+        newInterim+=e.results[i][0].transcript;
+      }
     }
-    document.getElementById('inputField').value=final+(interim?interim:'');
+    // Acumular finals
+    if(newFinals)voiceFinalText+=(voiceFinalText&&!voiceFinalText.endsWith(' ')?' ':'')+newFinals;
+    voiceInterim=newInterim;
+
+    // Actualizar campo y banner
+    const combined=(voiceFinalText+(voiceInterim?' '+voiceInterim:'')).trim();
+    document.getElementById('inputField').value=combined;
     autoResize(document.getElementById('inputField'));
-    if(e.results[e.results.length-1].isFinal)voiceText=final;
+    updateVoiceBanner();
   };
-  recog.onerror=e=>{if(e.error!=='aborted')stopMic(false);};
-  recog.onend=()=>{if(micState==='recording'){try{recog.start();}catch(e){}}};
+
+  recog.onerror=function(e){
+    if(e.error==='aborted')return; // pausado intencionalmente
+    if(e.error==='no-speech')return; // silencio normal
+    stopMic(false);
+    setHint('⚠️ Error de micrófono: '+e.error);
+  };
+
+  // Auto-restart para mantener continuo (Chrome corta cada ~60s)
+  recog.onend=function(){
+    if(micState==='recording'){
+      try{recog.start();}catch(err){
+        // Si falla el restart, reiniciar con nueva instancia
+        setTimeout(()=>{if(micState==='recording')startMicFresh();},200);
+      }
+    }
+  };
+
   recog.start();
   micState='recording';
   updateMicBtn();
-  setHint('🔴 Grabando... pulsa ⏸ para pausar');
+  updateVoiceBanner();
+  setHint('');
+}
+
+function startMicFresh(){
+  // Restart limpio manteniendo el texto acumulado
+  if(recog){try{recog.abort();}catch(e){}}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  recog=new SR();
+  recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
+  // Reasignar handlers
+  recog.onresult=recog_onresult_handler;
+  recog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopMic(false);};
+  recog.onend=function(){if(micState==='recording'){try{recog.start();}catch(err){setTimeout(()=>{if(micState==='recording')startMicFresh();},200);}}};
+  try{recog.start();}catch(e){}
+}
+
+// Handler separado para poder reasignarlo
+function recog_onresult_handler(e){
+  let newFinals='';let newInterim='';
+  for(let i=e.resultIndex;i<e.results.length;i++){
+    if(e.results[i].isFinal)newFinals+=e.results[i][0].transcript;
+    else newInterim+=e.results[i][0].transcript;
+  }
+  if(newFinals)voiceFinalText+=(voiceFinalText&&!voiceFinalText.endsWith(' ')?' ':'')+newFinals;
+  voiceInterim=newInterim;
+  const combined=(voiceFinalText+(voiceInterim?' '+voiceInterim:'')).trim();
+  document.getElementById('inputField').value=combined;
+  autoResize(document.getElementById('inputField'));
+  updateVoiceBanner();
 }
 
 function pauseMic(){
   micState='paused';
-  voiceText=document.getElementById('inputField').value||'';
+  voiceInterim=''; // descartar interino al pausar
   if(recog){try{recog.abort();}catch(e){}}
   updateMicBtn();
-  setHint('⏸ En pausa · pulsa ▶ para continuar o envía');
+  updateVoiceBanner();
+  setHint('⏸ Pausado · pulsa ▶ para continuar');
 }
 
 function resumeMic(){
   micState='recording';
-  if(recog){try{recog.start();}catch(e){recog=null;startMic();return;}}
-  else{startMic();return;}
+  // Reiniciar recog con nueva instancia para evitar estados corruptos
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  recog=new SR();
+  recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
+  recog.onresult=recog_onresult_handler;
+  recog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopMic(false);};
+  recog.onend=function(){if(micState==='recording'){try{recog.start();}catch(err){setTimeout(()=>{if(micState==='recording')startMicFresh();},200);}}};
+  try{recog.start();}catch(e){micState='idle';updateMicBtn();return;}
   updateMicBtn();
-  setHint('🔴 Grabando... pulsa ⏸ para pausar');
+  updateVoiceBanner();
+  setHint('');
+}
+
+function stopMic(sendAfter){
+  const wasRecording=micState!=='idle';
+  micState='idle';
+  voiceInterim='';
+  if(recog){try{recog.abort();}catch(e){}recog=null;}
+  updateMicBtn();
+  hideBanner();
+  setHint('');
+  document.getElementById('confirmBar').classList.remove('visible');
+  if(sendAfter&&wasRecording)setTimeout(sendMessage,200);
 }
 
 function updateMicBtn(){
@@ -1367,143 +1586,98 @@ function updateMicBtn(){
   }
 }
 
-function stopMic(send){
-  micState='idle';
-  if(recog){try{recog.abort();}catch(e){}recog=null;}
-  updateMicBtn();
-  setHint('');
-  if(send)setTimeout(sendMessage,200);
+function updateVoiceBanner(){
+  const banner=document.getElementById('voiceBanner');
+  const bannerText=document.getElementById('voiceBannerText');
+  if(micState==='idle'){hideBanner();return;}
+  banner.classList.add('visible');
+  banner.querySelector('.voice-banner-lbl').textContent=micState==='paused'?'⏸ En pausa':'🔴 Grabando...';
+  const finalPart=voiceFinalText.trim();
+  const interimPart=voiceInterim.trim();
+  if(!finalPart&&!interimPart){bannerText.innerHTML='<span style="color:var(--muted)">Habla ahora...</span>';return;}
+  // Mostrar últimas ~60 chars de finals + interino en cursiva/gris
+  const finalShort=finalPart.length>60?'...'+finalPart.slice(-60):finalPart;
+  bannerText.innerHTML=(finalShort?`<em>${escapeHtml(finalShort)}</em>`:'')+
+    (interimPart?`<span style="color:var(--muted)"> ${escapeHtml(interimPart)}</span>`:'');
 }
 
-function setHint(text){
-  document.getElementById('hint').textContent=text;
+function hideBanner(){
+  document.getElementById('voiceBanner').classList.remove('visible');
 }
 
-function showConfirmBar(){
-  const field=document.getElementById('inputField');
-  if(field.value.trim()){
-    setHint('¿Enviar este mensaje?');
-    document.getElementById('confirmBar').classList.add('visible');
-  }else{setHint('');}
-}
+function setHint(text){document.getElementById('hint').textContent=text;}
 
 function confirmVoice(){
   stopMic(false);
   document.getElementById('confirmBar').classList.remove('visible');
-  setHint('');
   sendMessage();
 }
-
 function cancelVoice(){
   stopMic(false);
-  document.getElementById('confirmBar').classList.remove('visible');
   document.getElementById('inputField').value='';
   document.getElementById('inputField').style.height='auto';
-  voiceText='';
-  setHint('');
+  voiceFinalText='';voiceInterim='';
 }
 
-function borrarConversacion(){
-  if(!confirm('¿Borrar la conversación de hoy? Los macros registrados se mantienen.'))return;
-  S.historial=[];
-  document.getElementById('messages').innerHTML='';
-  document.querySelectorAll('.quick-replies').forEach(el=>el.remove());
-  // Saludo de nuevo
-  addTyping();
-  const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
-  callAI(`Nueva conversación. Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Recuérdame que hoy llevo ${S.kcalC} kcal de ${S.kcalObj}. Usa [OPCIONES] con sugerencias.`)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
-    .catch(()=>{removeTyping();addMsg('ai','¡Conversación reiniciada! ¿En qué te ayudo?');});
-}
-
-
-function initApp(){
-  loadToday();applyMacros(S.tipoDia);updateBars();
-  showView('viewMain');
-  addTyping();
-  const despStr=DESP.length?` Tengo en mi despensa: ${DESP.join(', ')}.`:'';
-  const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
-  try{
-    const ctx=S.comidas.length>0
-      ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
-      :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Pregúntale cuántas comidas quiere hacer. Usa [OPCIONES]: 2 comidas|3 comidas|4 comidas|5 comidas`;
-    callAI(ctx).then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);}).catch(()=>{
-      removeTyping();
-      addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Cuántas comidas quieres hacer?`,[],['2 comidas','3 comidas','4 comidas','5 comidas']);
-    });
-  }catch(e){
-    removeTyping();
-    addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Cuántas comidas quieres hacer?`,[],['2 comidas','3 comidas','4 comidas','5 comidas']);
-  }
-}
-
-// ── BOOT ──
-window.addEventListener('load',()=>{
-  // Restaurar sesión guardada
-  const savedToken=localStorage.getItem('macroai_token');
-  const savedUser=localStorage.getItem('macroai_user');
-  if(savedToken&&savedUser){
+// ── FOTO HANDLERS ──
+function handlePhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];
+    showView('viewMain');addMsg('user','📷 Foto de mi nevera/despensa');addTyping();
     try{
-      SUPA_TOKEN=savedToken;
-      CURRENT_USER=JSON.parse(savedUser);
-      enterApp();
-      return;
-    }catch(e){
-      localStorage.removeItem('macroai_token');
-      localStorage.removeItem('macroai_user');
-    }
-  }
-  // Mostrar login
-  showAuth('screenLogin');
-});
-</script>
-</body>
-</html>
+      S.historial.push({role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+        {type:'text',text:'Analiza esta imagen de mi nevera o lista de compra. Extrae todos los alimentos que veas y añádelos a mi despensa. Luego dime cuáles has detectado en formato lista clara.'}
+      ]});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar la imagen.';
+      S.historial.push({role:'assistant',content:raw});removeTyping();
+      const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
+      if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);nuevos.forEach(a=>{if(!DESP.includes(a))DESP.push(a);});saveDesp(DESP);renderDespChips();}
+      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+    }catch(err){removeTyping();addMsg('ai','Error analizando la imagen.');}
+    e.target.value='';
+  };reader.readAsDataURL(file);
+}
 
-<!-- ══ VISTA ADMIN ══ -->
-<div class="view" id="viewAdmin">
-<div class="aw">
-  <div class="sub-hdr" style="background:rgba(212,240,74,0.06);border-bottom:1px solid rgba(212,240,74,0.2);">
-    <div class="back-btn" onclick="showView('viewMain')">‹</div>
-    <h2 style="color:var(--accent)">⚡ Admin</h2>
-  </div>
-  <div class="scrollable" id="adminBody"></div>
-</div>
-</div>
+async function handleFotoPlato(e){
+  const file=e.target.files[0];if(!file)return;e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];addMsg('user','🍽️ Analizando este plato...');addTyping();
+    try{
+      S.historial.push({role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:`Analiza este plato. Estima los macronutrientes (kcal, proteínas, carbohidratos, grasas). Avisa que es una estimación visual. Pregunta si quiero registrarlo. Macros restantes: ${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g. Usa [OPCIONES]Sí, registrar|Ajustar cantidad|No registrar`}]});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar el plato.';
+      S.historial.push({role:'assistant',content:raw});removeTyping();
+      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+    }catch(err){removeTyping();addMsg('ai','Error al analizar el plato.');}
+  };reader.readAsDataURL(file);
+}
 
-<style>
-.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
-.admin-card-top{display:flex;justify-content:space-between;align-items:center;}
-.admin-card-info{display:flex;flex-direction:column;gap:3px;}
-.admin-card-nombre{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
-.admin-card-email{font-size:12px;color:var(--muted);}
-.admin-card-fecha{font-size:11px;color:var(--muted2);}
-.admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;}
-.admin-card-status.active{background:rgba(212,240,74,0.08);color:var(--accent);}
-.admin-card-status.inactive{background:rgba(255,107,107,0.08);color:var(--red);}
-.admin-toggle{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
-.admin-toggle.on{background:var(--accent);}
-.admin-toggle.off{background:var(--muted2);}
-.admin-toggle-dot{width:20px;height:20px;border-radius:50%;background:#080810;position:absolute;top:3px;transition:left 0.3s;}
-.admin-toggle.on .admin-toggle-dot{left:25px;}
-.admin-toggle.off .admin-toggle-dot{left:3px;}
-</style>
+async function handleFotoEtiqueta(e){
+  const file=e.target.files[0];if(!file)return;e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    const b64=ev.target.result.split(',')[1];addMsg('user','🏷️ Leyendo etiqueta nutricional...');addTyping();
+    try{
+      S.historial.push({role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:`Lee esta etiqueta nutricional. Extrae: nombre, kcal por 100g/porción, proteínas, carbohidratos, grasas, fibra. Dime si encaja con mis macros restantes (${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g). Usa [OPCIONES] para sugerir cantidades típicas.`}]});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const data=await res.json();const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
+      S.historial.push({role:'assistant',content:raw});removeTyping();
+      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+    }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta.');}
+  };reader.readAsDataURL(file);
+}
 
-<script>
-const ADMIN_EMAIL='joseju.popi@hotmail.es';
+// ── ADMIN ──
 let adminTaps=0,adminTimer=null;
-
 function logoTap(){
-  adminTaps++;
-  clearTimeout(adminTimer);
+  adminTaps++;clearTimeout(adminTimer);
   adminTimer=setTimeout(()=>adminTaps=0,2000);
-  if(adminTaps>=5){
-    adminTaps=0;
-    if(CURRENT_USER?.email===ADMIN_EMAIL){
-      showView('viewAdmin');
-      loadAdminUsers();
-    }
-  }
+  if(adminTaps>=5){adminTaps=0;if(CURRENT_USER?.email===ADMIN_EMAIL){showView('viewAdmin');loadAdminUsers();}}
 }
 
 async function loadAdminUsers(){
@@ -1512,23 +1686,14 @@ async function loadAdminUsers(){
   try{
     const res=await supaFetch('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
     const users=await res.json();
-
-    // Consumo API: contar mensajes del historial por usuario
     let apiCounts={};
-    try{
-      const apiRes=await supaFetch('/rest/v1/historial_macroai?select=usuario_id');
-      const apiRows=await apiRes.json();
-      if(Array.isArray(apiRows)){
-        apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});
-      }
-    }catch(e){}
+    try{const apiRes=await supaFetch('/rest/v1/historial_macroai?select=usuario_id');const apiRows=await apiRes.json();if(Array.isArray(apiRows))apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});}catch(e){}
 
-    // Botón crear nuevo cliente
     body.innerHTML=`
       <div style="padding:0 0 12px;">
         <button onclick="showCrearCliente()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;">＋ Crear nuevo cliente</button>
       </div>
-      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.25);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;">
+      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.25);border-radius:14px;padding:16px;margin-bottom:12px;flex-direction:column;gap:12px;">
         <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);">Nuevo cliente</div>
         <div style="display:flex;flex-direction:column;gap:5px;">
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
@@ -1549,14 +1714,9 @@ async function loadAdminUsers(){
         </div>
       </div>`;
 
-    if(!Array.isArray(users)||!users.length){
-      body.innerHTML+='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';
-      return;
-    }
-
+    if(!Array.isArray(users)||!users.length){body.innerHTML+='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';return;}
     users.forEach(u=>{
-      const card=document.createElement('div');
-      card.className='admin-card';
+      const card=document.createElement('div');card.className='admin-card';
       const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
       const apiCount=apiCounts[u.id]||0;
       card.innerHTML=`
@@ -1580,112 +1740,50 @@ async function loadAdminUsers(){
         </div>`;
       body.appendChild(card);
     });
-  }catch(e){
-    body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';
-  }
+  }catch(e){body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';}
 }
 
 function showCrearCliente(){
   const f=document.getElementById('crearClienteForm');
-  f.style.display=f.style.display==='none'?'flex':'none';
-  if(f.style.display==='flex'){
-    document.getElementById('newClientNombre').value='';
-    document.getElementById('newClientEmail').value='';
-    document.getElementById('newClientPw').value='';
-    document.getElementById('crearClienteMsg').style.display='none';
-  }
+  const visible=f.style.display==='flex';
+  f.style.display=visible?'none':'flex';
 }
 
 let _ultimoWhatsapp='';
-
 function cerrarFormCliente(){
   document.getElementById('crearClienteForm').style.display='none';
-  document.getElementById('newClientNombre').value='';
-  document.getElementById('newClientEmail').value='';
-  document.getElementById('crearClienteMsg').style.display='none';
-  document.getElementById('whatsappBox').style.display='none';
-  document.getElementById('copiarBtnWrap').style.display='none';
-  document.getElementById('crearBtnRow').style.display='flex';
-  document.getElementById('crearClienteBtn').textContent='Crear cliente';
 }
-
 function copiarWhatsapp(){
-  navigator.clipboard.writeText(_ultimoWhatsapp).then(()=>{
-    const btn=document.querySelector('#copiarBtnWrap button');
-    btn.textContent='✅ Copiado';
-    setTimeout(()=>{btn.textContent='📋 Copiar mensaje WhatsApp';},2000);
-  }).catch(()=>{
-    // Fallback para móvil
-    const ta=document.createElement('textarea');ta.value=_ultimoWhatsapp;
-    document.body.appendChild(ta);ta.select();document.execCommand('copy');
-    document.body.removeChild(ta);
-    const btn=document.querySelector('#copiarBtnWrap button');
-    btn.textContent='✅ Copiado';
-    setTimeout(()=>{btn.textContent='📋 Copiar mensaje WhatsApp';},2000);
+  navigator.clipboard.writeText(_ultimoWhatsapp).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=_ultimoWhatsapp;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
   });
+  const btn=document.querySelector('#copiarBtnWrap button');
+  btn.textContent='✅ Copiado';setTimeout(()=>{btn.textContent='📋 Copiar mensaje WhatsApp';},2000);
 }
 
 async function doCrearCliente(){
   const nombre=document.getElementById('newClientNombre').value.trim();
   const email=document.getElementById('newClientEmail').value.trim();
-  const msg=document.getElementById('crearClienteMsg');
-  const btn=document.getElementById('crearClienteBtn');
-  if(!nombre||!email){
-    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';msg.textContent='Rellena nombre y email.';return;}
+  const msg=document.getElementById('crearClienteMsg');const btn=document.getElementById('crearClienteBtn');
+  if(!nombre||!email){msg.style.display='block';msg.style.cssText+='background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';msg.textContent='Rellena nombre y email.';return;}
   btn.disabled=true;btn.textContent='Creando...';
-  // Generar código único para este cliente
   const codigo='POPI-'+Math.random().toString(36).substring(2,7).toUpperCase();
   try{
-    // Crear en Supabase Auth con contraseña temporal
     const pwTemp=codigo+'#'+Math.floor(Math.random()*9000+1000);
-    const res=await fetch(SUPA_URL+'/auth/v1/signup',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email,password:pwTemp})
-    });
+    const res=await fetch(SUPA_URL+'/auth/v1/signup',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},body:JSON.stringify({email,password:pwTemp})});
     const data=await res.json();
-    if(!res.ok){
-      msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
-      msg.textContent=data.error_description||data.message||'Error al crear la cuenta.';
-      btn.disabled=false;btn.textContent='Crear cliente';return;
-    }
+    if(!res.ok){msg.style.display='block';msg.textContent=data.error_description||data.message||'Error.';btn.disabled=false;btn.textContent='Crear cliente';return;}
     const uid=data.user?.id||data.id;
-    // Guardar en tabla con código de invitación único
-    await supaFetch('/rest/v1/usuarios_macroai',{
-      method:'POST',
-      headers:{'Prefer':'return=minimal'},
-      body:JSON.stringify({id:uid,email,nombre,codigo_invitacion:codigo,activo:true})
-    });
-    // Mostrar mensaje WhatsApp
-    _ultimoWhatsapp=`Hola ${nombre} 👋
-
-Te he dado acceso a MacroAI, tu asistente de nutrición personalizado.
-
-📲 Entra aquí:
-https://popicabrera.github.io/macroai/
-
-📧 Tu email: ${email}
-🔑 Tu código de acceso: ${codigo}
-
-Pasos:
-1. Abre el enlace
-2. Pulsa "Crear cuenta nueva"
-3. Pon tu email y elige tu contraseña
-4. Introduce el código cuando te lo pida
-
-¡Cualquier duda me dices! 💪`;
+    await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,email,nombre,codigo_invitacion:codigo,activo:true})});
+    _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado.\n\n📲 Entra aquí:\nhttps://popicabrera.github.io/macroai/\n\n📧 Tu email: ${email}\n🔑 Tu código de acceso: ${codigo}\n\nPasos:\n1. Abre el enlace\n2. Pulsa "Crear cuenta nueva"\n3. Pon tu email y elige tu contraseña\n4. Introduce el código cuando te lo pida\n\n¡Cualquier duda me dices! 💪`;
     document.getElementById('whatsappBox').textContent=_ultimoWhatsapp;
     document.getElementById('whatsappBox').style.display='block';
     document.getElementById('copiarBtnWrap').style.display='block';
     document.getElementById('crearBtnRow').style.display='none';
-    msg.style.display='block';msg.style.background='rgba(212,240,74,0.08)';msg.style.border='1px solid rgba(212,240,74,0.2)';msg.style.color='var(--accent)';
+    msg.style.display='block';msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.2);color:var(--accent);';
     msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
-    setTimeout(()=>loadAdminUsers(),2000);
-  }catch(e){
-    msg.style.display='block';msg.style.background='rgba(255,107,107,0.1)';msg.style.border='1px solid rgba(255,107,107,0.25)';msg.style.color='var(--red)';
-    msg.textContent='Error de conexión.';
-    btn.disabled=false;btn.textContent='Crear cliente';
-  }
+    setTimeout(()=>loadAdminUsers(),1500);
+  }catch(e){msg.style.display='block';msg.textContent='Error de conexión.';btn.disabled=false;btn.textContent='Crear cliente';}
 }
 
 async function toggleUsuario(id,activo){
@@ -1696,40 +1794,41 @@ async function toggleUsuario(id,activo){
   status.className='admin-card-status '+(nuevoEstado?'active':'inactive');
   status.textContent=nuevoEstado?'✅ Activo':'❌ Desactivado';
   toggle.onclick=()=>toggleUsuario(id,nuevoEstado);
-  try{
-    await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{
-      method:'PATCH',
-      headers:{'Prefer':'return=minimal'},
-      body:JSON.stringify({activo:nuevoEstado})
-    });
-  }catch(e){
-    toggle.className='admin-toggle '+(activo?'on':'off');
-    status.className='admin-card-status '+(activo?'active':'inactive');
-    status.textContent=activo?'✅ Activo':'❌ Desactivado';
-    toggle.onclick=()=>toggleUsuario(id,activo);
-  }
+  try{await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({activo:nuevoEstado})});}
+  catch(e){toggle.className='admin-toggle '+(activo?'on':'off');status.className='admin-card-status '+(activo?'active':'inactive');status.textContent=activo?'✅ Activo':'❌ Desactivado';toggle.onclick=()=>toggleUsuario(id,activo);}
 }
 
-async function eliminarCliente(id,nombre){
-  if(!confirm('¿Eliminar a '+nombre+'? Esta acción no se puede deshacer.'))return;
-  const card=document.getElementById('client-card-'+id);
-  if(card){card.style.opacity='0.4';card.style.pointerEvents='none';}
-  try{
-    await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{
-      method:'DELETE',
-      headers:{'Prefer':'return=minimal'}
-    });
-    if(card)card.remove();
-    const lista=document.getElementById('clientesList');
-    if(lista){
-      const remaining=lista.querySelectorAll('.admin-client-card').length;
-      const cnt=document.getElementById('clientCount');
-      if(cnt)cnt.textContent=remaining?'('+remaining+')':'';
-      if(!remaining)lista.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px 14px;font-size:13px;">No hay clientes aún.</div>';
-    }
-  }catch(e){
-    if(card){card.style.opacity='1';card.style.pointerEvents='auto';}
-    alert('Error al eliminar. Inténtalo de nuevo.');
-  }
+// ── INIT ──
+function initApp(){
+  loadToday();applyMacros(S.tipoDia);updateBars();
+  showView('viewMain');addTyping();
+  const despStr=DESP.length?` Tengo en mi despensa: ${DESP.join(', ')}.`:'';
+  const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
+  const ctx=S.comidas.length>0
+    ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
+    :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Pregúntale cuántas comidas quiere hacer. Usa [OPCIONES]: 2 comidas|3 comidas|4 comidas|5 comidas`;
+  callAI(ctx)
+    .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
+    .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Cuántas comidas quieres hacer?`,[],['2 comidas','3 comidas','4 comidas','5 comidas']);});
 }
+
+// ── BOOT ──
+window.addEventListener('load',()=>{
+  const savedToken=localStorage.getItem('macroai_token');
+  const savedUser=localStorage.getItem('macroai_user');
+  if(savedToken&&savedUser){
+    try{SUPA_TOKEN=savedToken;CURRENT_USER=JSON.parse(savedUser);enterApp();return;}
+    catch(e){localStorage.removeItem('macroai_token');localStorage.removeItem('macroai_user');}
+  }
+  showAuth('screenLogin');
+});
+
+// FIX ROTACIÓN: recalcular altura al rotar
+window.addEventListener('resize',()=>{
+  // Forzar re-scroll al fondo del chat si estaba al fondo
+  const msgs=document.getElementById('messages');
+  if(msgs){const atBottom=msgs.scrollHeight-msgs.scrollTop-msgs.clientHeight<50;if(atBottom)setTimeout(()=>msgs.scrollTop=msgs.scrollHeight,100);}
+});
 </script>
+</body>
+</html>
