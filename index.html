@@ -899,7 +899,6 @@ async function doRecuperar(){
 }
 
 async function doLogout(){
-  if(!confirm('¿Cerrar sesión?'))return;
   stopMic(false);
   // Primero limpiar estado local y mostrar login (no esperar a Supabase)
   SUPA_TOKEN=null;CURRENT_USER=null;
