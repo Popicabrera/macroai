@@ -186,27 +186,31 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 .typing span:nth-child(3){animation-delay:0.4s;}
 
 /* INPUT */
-.input-area{flex-shrink:0;padding:8px 12px 16px;background:rgba(8,8,16,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);}
-.photo-btns{display:flex;gap:8px;margin-bottom:8px;}
-.photo-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
-  padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:11px;
-  font-size:13px;cursor:pointer;color:var(--muted);}
-.photo-btn:active{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);color:var(--text);}
-.photo-btn span{font-size:12px;font-weight:500;}
-.input-wrap{background:var(--s2);border:1px solid var(--border);border-radius:22px;padding:8px 8px 8px 14px;
-  display:flex;align-items:flex-end;gap:6px;transition:border-color 0.3s;}
+.input-area{flex-shrink:0;padding:8px 12px 16px;background:rgba(8,8,16,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);position:relative;}
+.input-wrap{background:var(--s2);border:1px solid var(--border);border-radius:22px;padding:8px 8px 8px 6px;
+  display:flex;align-items:flex-end;gap:4px;transition:border-color 0.3s;}
 .input-wrap:focus-within{border-color:rgba(212,240,74,0.35);}
 .input-field{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;
-  font-size:15px;line-height:1.4;resize:none;max-height:90px;min-height:22px;}
+  font-size:15px;line-height:1.4;resize:none;max-height:90px;min-height:22px;padding:4px 4px;}
 .input-field::placeholder{color:var(--muted);}
 .ibtns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
 .icon-btn{width:36px;height:36px;border-radius:11px;background:var(--s3);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0;transition:all 0.2s;}
 .icon-btn.recording{background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4);animation:recPulse 1s infinite;}
+.icon-btn.paused{background:rgba(255,211,61,0.15);border-color:rgba(255,211,61,0.4);}
 .send-btn{width:36px;height:36px;border-radius:11px;background:var(--accent);border:none;
   display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
 .send-btn:disabled{opacity:0.35;cursor:not-allowed;}
-.hint{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;}
+.hint{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;min-height:16px;}
+/* Menú adjuntos */
+.attach-menu{display:none;flex-direction:column;gap:4px;margin-top:6px;
+  background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:8px;overflow:hidden;}
+.attach-menu.open{display:flex;}
+.attach-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  font-size:14px;cursor:pointer;transition:background 0.15s;}
+.attach-item:active{background:var(--accent-dim);}
+.attach-item span{color:var(--text);}
+/* Confirm bar */
 .confirm-bar{display:none;gap:8px;margin-top:8px;}
 .confirm-bar.visible{display:flex;}
 .confirm-btn{flex:1;padding:11px;background:var(--accent);border:none;border-radius:12px;
@@ -439,6 +443,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
       </div>
       <div class="icon-nav" onclick="showView('viewDespensa')" title="Despensa">🧺</div>
       <div class="icon-nav" onclick="showView('viewHistorial')" title="Historial">📅</div>
+      <div class="icon-nav" onclick="borrarConversacion()" title="Borrar conversación">🗑️</div>
       <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
     </div>
   </div>
@@ -491,21 +496,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
   </div>
   <div class="messages" id="messages"></div>
   <div class="input-area">
-    <div class="photo-btns">
-      <label class="photo-btn" title="Foto a un plato">
-        🍽️ <span>Foto plato</span>
-        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoPlato(event)">
-      </label>
-      <label class="photo-btn" title="Foto a una etiqueta nutricional">
-        🏷️ <span>Foto etiqueta</span>
-        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoEtiqueta(event)">
-      </label>
-    </div>
     <div class="input-wrap">
-      <textarea class="input-field" id="inputField" placeholder="Responde o escribe..." rows="1"
+      <div class="icon-btn" id="attachBtn" onclick="document.getElementById('attachMenu').classList.toggle('open')" style="background:none;border:none;color:var(--muted);font-size:20px;width:32px;">＋</div>
+      <textarea class="input-field" id="inputField" placeholder="Escribe un mensaje..." rows="1"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <div class="ibtns">
-        <div class="icon-btn" id="micBtn" onclick="toggleMic()">🎤</div>
+        <div class="icon-btn" id="micBtn" onclick="toggleMic()" title="Micrófono">🎤</div>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -513,7 +509,21 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
         </button>
       </div>
     </div>
-    <div class="hint" id="hint">🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta</div>
+    <!-- Menú adjuntos -->
+    <div class="attach-menu" id="attachMenu">
+      <label class="attach-item">
+        🍽️ <span>Foto plato</span>
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoPlato(event);document.getElementById('attachMenu').classList.remove('open')">
+      </label>
+      <label class="attach-item">
+        🏷️ <span>Foto etiqueta</span>
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoEtiqueta(event);document.getElementById('attachMenu').classList.remove('open')">
+      </label>
+      <div class="attach-item" onclick="document.getElementById('photoInput').click();document.getElementById('attachMenu').classList.remove('open')">
+        📷 <span>Foto nevera</span>
+      </div>
+    </div>
+    <div class="hint" id="hint"></div>
     <div class="confirm-bar" id="confirmBar">
       <button class="confirm-btn" onclick="confirmVoice()">✅ Enviar</button>
       <button class="cancel-voice-btn" onclick="cancelVoice()">✕ Cancelar</button>
@@ -1299,68 +1309,116 @@ function updateBars(){
 }
 
 // ── VOICE ──
-let isRec=false,recog=null;
+// Estado voz: idle | recording | paused
+let micState='idle', recog=null, voiceText='';
+
 function toggleMic(){
-  const btn=document.getElementById('micBtn');const hint=document.getElementById('hint');
-  if(!isRec){
-    isRec=true;btn.classList.add('recording');btn.textContent='⏹️';
-    hint.textContent='🔴 Escuchando... pulsa ⏹️ para parar';
-    document.getElementById('confirmBar').classList.remove('visible');
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(SR){
-      recog=new SR();recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
-      recog.onresult=e=>{
-        const t=Array.from(e.results).map(r=>r[0].transcript).join('');
-        document.getElementById('inputField').value=t;
-        autoResize(document.getElementById('inputField'));
-      };
-      recog.onerror=()=>stopMic(false);
-      recog.onend=()=>{
-        // Si sigue grabando (pausa automática del sistema) — reinicia
-        if(isRec){try{recog.start();}catch(e){showConfirmBar();}}
-      };
-      recog.start();
-    }else{hint.textContent='⚠️ Sin soporte de voz.';setTimeout(()=>stopMic(false),2000);}
+  if(micState==='idle') startMic();
+  else if(micState==='recording') pauseMic();
+  else if(micState==='paused') resumeMic();
+}
+
+function startMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setHint('⚠️ Sin soporte de voz en este navegador.');return;}
+  voiceText=document.getElementById('inputField').value||'';
+  recog=new SR();
+  recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
+  recog.onresult=e=>{
+    let interim='';let final=voiceText;
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('inputField').value=final+(interim?interim:'');
+    autoResize(document.getElementById('inputField'));
+    if(e.results[e.results.length-1].isFinal)voiceText=final;
+  };
+  recog.onerror=e=>{if(e.error!=='aborted')stopMic(false);};
+  recog.onend=()=>{if(micState==='recording'){try{recog.start();}catch(e){}}};
+  recog.start();
+  micState='recording';
+  updateMicBtn();
+  setHint('🔴 Grabando... pulsa ⏸ para pausar');
+}
+
+function pauseMic(){
+  micState='paused';
+  voiceText=document.getElementById('inputField').value||'';
+  if(recog){try{recog.abort();}catch(e){}}
+  updateMicBtn();
+  setHint('⏸ En pausa · pulsa ▶ para continuar o envía');
+}
+
+function resumeMic(){
+  micState='recording';
+  if(recog){try{recog.start();}catch(e){recog=null;startMic();return;}}
+  else{startMic();return;}
+  updateMicBtn();
+  setHint('🔴 Grabando... pulsa ⏸ para pausar');
+}
+
+function updateMicBtn(){
+  const btn=document.getElementById('micBtn');
+  if(micState==='recording'){
+    btn.textContent='⏸';btn.classList.add('recording');btn.classList.remove('paused');
+  }else if(micState==='paused'){
+    btn.textContent='▶';btn.classList.remove('recording');btn.classList.add('paused');
   }else{
-    // Usuario pulsa ⏹️ — para y muestra botón confirmar
-    stopRecording();
-    showConfirmBar();
+    btn.textContent='🎤';btn.classList.remove('recording','paused');
   }
 }
-function stopRecording(){
-  isRec=false;
-  document.getElementById('micBtn').classList.remove('recording');
-  document.getElementById('micBtn').textContent='🎤';
-  if(recog){try{recog.stop();}catch(e){}recog=null;}
+
+function stopMic(send){
+  micState='idle';
+  if(recog){try{recog.abort();}catch(e){}recog=null;}
+  updateMicBtn();
+  setHint('');
+  if(send)setTimeout(sendMessage,200);
 }
+
+function setHint(text){
+  document.getElementById('hint').textContent=text;
+}
+
 function showConfirmBar(){
   const field=document.getElementById('inputField');
   if(field.value.trim()){
-    document.getElementById('hint').textContent='¿Enviar este mensaje?';
+    setHint('¿Enviar este mensaje?');
     document.getElementById('confirmBar').classList.add('visible');
-  }else{
-    document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
-  }
+  }else{setHint('');}
 }
+
 function confirmVoice(){
+  stopMic(false);
   document.getElementById('confirmBar').classList.remove('visible');
-  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
+  setHint('');
   sendMessage();
 }
+
 function cancelVoice(){
+  stopMic(false);
   document.getElementById('confirmBar').classList.remove('visible');
   document.getElementById('inputField').value='';
   document.getElementById('inputField').style.height='auto';
-  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
-}
-function stopMic(send){
-  stopRecording();
-  document.getElementById('hint').textContent='🎤 Habla · ✍️ Escribe · 🍽️ Foto plato · 🏷️ Etiqueta';
-  document.getElementById('confirmBar').classList.remove('visible');
-  if(send)setTimeout(sendMessage,300);
+  voiceText='';
+  setHint('');
 }
 
-// ── INIT APP (post-login) ──
+function borrarConversacion(){
+  if(!confirm('¿Borrar la conversación de hoy? Los macros registrados se mantienen.'))return;
+  S.historial=[];
+  document.getElementById('messages').innerHTML='';
+  document.querySelectorAll('.quick-replies').forEach(el=>el.remove());
+  // Saludo de nuevo
+  addTyping();
+  const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
+  callAI(`Nueva conversación. Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Recuérdame que hoy llevo ${S.kcalC} kcal de ${S.kcalObj}. Usa [OPCIONES] con sugerencias.`)
+    .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
+    .catch(()=>{removeTyping();addMsg('ai','¡Conversación reiniciada! ¿En qué te ayudo?');});
+}
+
+
 function initApp(){
   loadToday();applyMacros(S.tipoDia);updateBars();
   showView('viewMain');
