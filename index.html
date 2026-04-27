@@ -12,6 +12,14 @@
 <link rel="apple-touch-icon" id="appleIcon">
 <link rel="manifest" id="manifestLink">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script>
+(function(){
+  var cdns=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js','https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'];
+  var idx=0;
+  function loadNext(){if(idx>=cdns.length)return;var s=document.createElement('script');s.src=cdns[idx++];s.onerror=function(){loadNext();};document.head.appendChild(s);}
+  loadNext();
+})();
+</script>
 <style>
 :root{
   --bg:#f5f0e8;--s1:#ede8df;--s2:#e4ddd0;--s3:#d8d0c0;
@@ -847,7 +855,13 @@ const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
 const SUPA_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEzOTEwMSwiZXhwIjoyMDkyNzE1MTAxfQ.BFH-QFpbkP9hlfr6kWTgeTT3JcopXQfR2dM-yu7B9Gc';
 
-let SUPA_TOKEN=null,CURRENT_USER=null;
+let SUPA_TOKEN=null,CURRENT_USER=null,db=null;
+
+function initSupabaseClient(){
+  if(window.supabase&&window.supabase.createClient){
+    db=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+  }
+}
 
 async function supaFetch(path,opts={}){
   const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
@@ -889,12 +903,10 @@ async function doLogin(){
   if(!email||!pw){showMsg('loginMsg','Rellena email y contraseña.');return;}
   setAuthLoading('loginBtn','loginBtnText',true,'ENTRAR');
   try{
-    const res=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
-      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email,password:pw})});
-    const data=await res.json();
-    if(!res.ok){showMsg('loginMsg',data.error_description||data.message||'Email o contraseña incorrectos.');return;}
-    SUPA_TOKEN=data.access_token;CURRENT_USER={id:data.user.id,email:data.user.email};
+    if(!db){showMsg('loginMsg','Error de conexión. Recarga la página.');return;}
+    const{data,error}=await db.auth.signInWithPassword({email,password:pw});
+    if(error){showMsg('loginMsg',error.message);return;}
+    SUPA_TOKEN=data.session.access_token;CURRENT_USER={id:data.user.id,email:data.user.email};
     if(data.user.email!==ADMIN_EMAIL){
       const chk=await supaFetch('/rest/v1/usuarios_macroai?select=activo,nombre&id=eq.'+data.user.id);
       const chkData=await chk.json();
@@ -904,7 +916,7 @@ async function doLogin(){
     localStorage.setItem('macroai_token',SUPA_TOKEN);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
     enterApp();
-  }catch(e){showMsg('loginMsg','Error de conexión.');}
+  }catch(e){showMsg('loginMsg','Error: '+e.message);}
   finally{setAuthLoading('loginBtn','loginBtnText',false,'ENTRAR');}
 }
 
@@ -916,28 +928,25 @@ async function doRegistro(){
   if(pw.length<6){showMsg('registroMsg','La contraseña debe tener mínimo 6 caracteres.');return;}
   setAuthLoading('registroBtn','registroBtnText',true,'CREAR CUENTA');
   try{
-    const res=await fetch(SUPA_URL+'/auth/v1/signup',{
-      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body:JSON.stringify({email,password:pw})});
-    const data=await res.json();
-    if(!res.ok){showMsg('registroMsg',data.error_description||data.message||'Error al crear la cuenta.');return;}
-    if(!data.access_token){showMsg('registroMsg','✅ Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.','success');return;}
-    SUPA_TOKEN=data.access_token;CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
-    // Buscar fila existente por email (creada por admin) o por id
-    const existingByEmail=await supaFetch('/rest/v1/usuarios_macroai?select=id,activo&email=eq.'+encodeURIComponent(email));
-    const rowsByEmail=await existingByEmail.json();
-    if(rowsByEmail&&rowsByEmail.length>0){
-      // Vincular auth uid con la fila existente del admin
-      if(rowsByEmail[0].activo===false){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
-      await supaFetch('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,nombre})});
-      CURRENT_USER.nombre=nombre;
+    if(!db){showMsg('registroMsg','Error de conexión. Recarga la página.');return;}
+    const{data,error}=await db.auth.signUp({email,password:pw,options:{data:{nombre}}});
+    if(error){showMsg('registroMsg',error.message);return;}
+    if(!data.session){showMsg('registroMsg','✅ Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.','success');return;}
+    SUPA_TOKEN=data.session.access_token;
+    CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
+    // Vincular con fila creada por admin o insertar nueva
+    const existingRes=await supaFetch('/rest/v1/usuarios_macroai?select=id,activo&email=eq.'+encodeURIComponent(email));
+    const rows=await existingRes.json();
+    if(rows&&rows.length>0){
+      if(rows[0].activo===false){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
+      await supaAdmin('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,nombre})});
     }else{
-      await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,activo:true})});
+      await supaAdmin('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,activo:true})});
     }
     localStorage.setItem('macroai_token',SUPA_TOKEN);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
     enterApp();
-  }catch(e){showMsg('registroMsg','Error de conexión.');}
+  }catch(e){showMsg('registroMsg','Error: '+e.message);}
   finally{setAuthLoading('registroBtn','registroBtnText',false,'CREAR CUENTA');}
 }
 
@@ -2778,6 +2787,16 @@ function closeNCM(){
 
 // ── BOOT ──
 window.addEventListener('load',()=>{
+  // Inicializar SDK Supabase
+  let attempts=0;
+  function tryInitDb(){
+    attempts++;
+    if(window.supabase&&window.supabase.createClient){
+      db=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+    } else if(attempts<10){setTimeout(tryInitDb,300);}
+  }
+  setTimeout(tryInitDb,200);
+
   const savedToken=localStorage.getItem('macroai_token');
   const savedUser=localStorage.getItem('macroai_user');
   if(savedToken&&savedUser){
