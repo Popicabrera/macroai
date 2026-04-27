@@ -2215,6 +2215,9 @@ async function loadAdminUsers(){
           <div style="background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--blue);font-weight:600;white-space:nowrap;">
             📊 ${apiCount} registros
           </div>
+          <div onclick="eliminarCliente('${u.id}','${u.nombre||'este cliente'}')" style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--red);font-weight:600;white-space:nowrap;cursor:pointer;">
+            🗑️
+          </div>
         </div>`;
       body.appendChild(card);
     });
@@ -2256,6 +2259,15 @@ async function doCrearCliente(){
     msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
     setTimeout(()=>loadAdminUsers(),1500);
   }catch(e){msg.style.display='block';msg.textContent='Error de conexión.';btn.disabled=false;btn.textContent='Crear cliente';}
+}
+
+async function eliminarCliente(id, nombre){
+  if(!confirm('¿Eliminar a '+nombre+'? Esta acción no se puede deshacer.'))return;
+  try{
+    await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+    showToast('🗑️ Cliente eliminado');
+    loadAdminUsers();
+  }catch(e){showToast('Error al eliminar');}
 }
 
 async function toggleUsuario(id,activo){
