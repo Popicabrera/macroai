@@ -717,44 +717,6 @@ body{
 </div>
 </div>
 
-<!-- ══ VISTA DESPENSA ══ -->
-    <div class="desp-actions">
-      <div class="desp-btn" onclick="document.getElementById('despTextarea').focus()">
-        <div class="desp-btn-icon">✍️</div>
-        <div class="desp-btn-lbl">Escribir</div>
-      </div>
-      <div class="desp-btn" onclick="document.getElementById('photoInput').click()">
-        <div class="desp-btn-icon">📷</div>
-        <div class="desp-btn-lbl">Foto nevera</div>
-      </div>
-      <label class="desp-btn">
-        <div class="desp-btn-icon">🧾</div>
-        <div class="desp-btn-lbl">Ticket compra</div>
-        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicket(event)">
-      </label>
-    </div>
-    <div class="desp-input-wrap">
-      <div class="desp-input-hdr">
-        <span class="desp-input-title">Añadir alimentos</span>
-        <span class="desp-clear" onclick="clearDespInput()">Limpiar</span>
-      </div>
-      <textarea class="desp-textarea" id="despTextarea" placeholder="Ej: pollo, arroz, huevos, brócoli, avena, leche..."></textarea>
-      <button class="desp-save" onclick="saveDespensa()">＋ Añadir a la despensa</button>
-    </div>
-    <div class="desp-input-wrap">
-      <div class="desp-input-hdr">
-        <span class="desp-input-title">Despensa actual</span>
-        <span class="desp-clear" onclick="clearAllDesp()">Vaciar todo</span>
-      </div>
-      <div id="despChips"></div>
-    </div>
-    <button class="use-desp-btn" onclick="usarDespensa()">
-      🍽️ Generar menú del día con mi despensa
-    </button>
-  </div>
-</div>
-</div>
-
 <!-- ══ VISTA FAVORITOS ══ -->
 <div class="view" id="viewFavoritos">
 <div class="aw">
@@ -1675,7 +1637,7 @@ function showContextMenu(msgDiv,role,textContent,macros){
     const el=document.createElement('div');
     el.className='msg-menu-item'+(item.danger?' danger':'');
     el.innerHTML=`${item.icon} ${item.label}`;
-    el.addEventListener('click',item.action);
+    el.addEventListener('pointerdown',(e)=>{e.stopPropagation();e.preventDefault();item.action();});
     ctxMenu.appendChild(el);
   });
 
@@ -1688,8 +1650,7 @@ function showContextMenu(msgDiv,role,textContent,macros){
 
   // Cerrar al tocar fuera
   setTimeout(()=>{
-    document.addEventListener('touchstart',closeContextMenu,{once:true,passive:true});
-    document.addEventListener('mousedown',closeContextMenu,{once:true});
+    document.addEventListener('pointerdown',closeContextMenu,{once:true});
   },50);
 }
 
