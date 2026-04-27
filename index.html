@@ -917,7 +917,15 @@ async function doLogin(){
   if(!email||!pw){showMsg('loginMsg','Rellena email y contraseña.');return;}
   setAuthLoading('loginBtn','loginBtnText',true,'ENTRAR');
   try{
-    if(!db){showMsg('loginMsg','Error de conexión. Recarga la página.');return;}
+    // Esperar hasta 3s a que el SDK cargue
+    if(!db){
+      let waited=0;
+      while(!db&&waited<30){await new Promise(r=>setTimeout(r,100));waited++;}
+      if(!db){
+        db=window.supabase?.createClient?window.supabase.createClient(SUPA_URL,SUPA_KEY):null;
+      }
+      if(!db){showMsg('loginMsg','Error de conexión. Recarga la página.');return;}
+    }
     const{data,error}=await db.auth.signInWithPassword({email,password:pw});
     if(error){showMsg('loginMsg',error.message);return;}
     SUPA_TOKEN=data.session.access_token;CURRENT_USER={id:data.user.id,email:data.user.email};
@@ -942,7 +950,12 @@ async function doRegistro(){
   if(pw.length<6){showMsg('registroMsg','La contraseña debe tener mínimo 6 caracteres.');return;}
   setAuthLoading('registroBtn','registroBtnText',true,'CREAR CUENTA');
   try{
-    if(!db){showMsg('registroMsg','Error de conexión. Recarga la página.');return;}
+    if(!db){
+      let waited=0;
+      while(!db&&waited<30){await new Promise(r=>setTimeout(r,100));waited++;}
+      if(!db){db=window.supabase?.createClient?window.supabase.createClient(SUPA_URL,SUPA_KEY):null;}
+      if(!db){showMsg('registroMsg','Error de conexión. Recarga la página.');return;}
+    }
     const{data,error}=await db.auth.signUp({email,password:pw,options:{data:{nombre}}});
     if(error){showMsg('registroMsg',error.message);return;}
     if(!data.session){showMsg('registroMsg','✅ Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.','success');return;}
@@ -1122,6 +1135,15 @@ let CFG=loadCFG();
 
 // ── STATE ──
 const TODAY=new Date().toISOString().split('T')[0];
+
+// ── RESET MEDIANOCHE ──
+setInterval(()=>{
+  const ahora=new Date().toISOString().split('T')[0];
+  if(ahora!==TODAY){
+    // Nuevo día — resetear contadores y recargar app
+    window.location.reload();
+  }
+},60000); // comprobar cada minuto
 const S={
   kcalObj:CFG[CFG.tipoDia].kcal,prot:CFG[CFG.tipoDia].prot,
   ch:CFG[CFG.tipoDia].ch,grasa:CFG[CFG.tipoDia].grasa,
