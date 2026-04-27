@@ -2239,16 +2239,14 @@ async function doCrearCliente(){
     const res=await fetch(SUPA_URL+'/auth/v1/signup',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},body:JSON.stringify({email,password:pwTemp})});
     const data=await res.json();
     let uid=data.user?.id||data.id;
-    // Si el email ya existe en auth, buscar su uid en la tabla
     if(!res.ok||!uid){
+      // Email ya existe en Auth — buscar en tabla y actualizar o ignorar
       const chk=await supaFetch('/rest/v1/usuarios_macroai?select=id&email=eq.'+encodeURIComponent(email));
       const rows=await chk.json();
       if(Array.isArray(rows)&&rows.length>0){
-        // Ya existe, actualizar nombre y activo
         await supaFetch('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre,activo:true})});
-      } else if(!uid){
-        msg.style.display='block';msg.style.cssText+='background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';msg.textContent=data.error_description||data.message||'Error al crear cuenta.';btn.disabled=false;btn.textContent='Crear cliente';return;
       }
+      // En cualquier caso, continuar y mostrar el mensaje WhatsApp
     } else {
       await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,email,nombre,activo:true})});
     }
