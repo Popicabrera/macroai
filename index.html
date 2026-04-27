@@ -916,11 +916,14 @@ async function doRegistro(){
     if(!res.ok){showMsg('registroMsg',data.error_description||data.message||'Error al crear la cuenta.');return;}
     if(!data.access_token){showMsg('registroMsg','✅ Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.','success');return;}
     SUPA_TOKEN=data.access_token;CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
-    // Actualizar tabla (puede que ya exista el registro del admin)
-    const existing=await supaFetch('/rest/v1/usuarios_macroai?select=id&id=eq.'+data.user.id);
-    const existingData=await existing.json();
-    if(existingData&&existingData.length>0){
-      await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+data.user.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
+    // Buscar fila existente por email (creada por admin) o por id
+    const existingByEmail=await supaFetch('/rest/v1/usuarios_macroai?select=id,activo&email=eq.'+encodeURIComponent(email));
+    const rowsByEmail=await existingByEmail.json();
+    if(rowsByEmail&&rowsByEmail.length>0){
+      // Vincular auth uid con la fila existente del admin
+      if(rowsByEmail[0].activo===false){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
+      await supaFetch('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,nombre})});
+      CURRENT_USER.nombre=nombre;
     }else{
       await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,activo:true})});
     }
@@ -2234,23 +2237,15 @@ async function doCrearCliente(){
   if(!nombre||!email){msg.style.display='block';msg.style.cssText+='background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';msg.textContent='Rellena nombre y email.';return;}
   btn.disabled=true;btn.textContent='Creando...';
   try{
-    // Crear cuenta auth con contraseña temporal
-    const pwTemp='MacroAI-'+Math.random().toString(36).substring(2,8)+'!';
-    const res=await fetch(SUPA_URL+'/auth/v1/signup',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},body:JSON.stringify({email,password:pwTemp})});
-    const data=await res.json();
-    let uid=data.user?.id||data.id;
-    if(!res.ok||!uid){
-      // Email ya existe en Auth — buscar en tabla y actualizar o ignorar
-      const chk=await supaFetch('/rest/v1/usuarios_macroai?select=id&email=eq.'+encodeURIComponent(email));
-      const rows=await chk.json();
-      if(Array.isArray(rows)&&rows.length>0){
-        await supaFetch('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre,activo:true})});
-      }
-      // En cualquier caso, continuar y mostrar el mensaje WhatsApp
+    // Guardar cliente en tabla (sin tocar Supabase Auth — el cliente se registra solo)
+    const chk=await supaFetch('/rest/v1/usuarios_macroai?select=id&email=eq.'+encodeURIComponent(email));
+    const rows=await chk.json();
+    if(Array.isArray(rows)&&rows.length>0){
+      await supaFetch('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre,activo:true})});
     } else {
-      await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,email,nombre,activo:true})});
+      await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({email,nombre,activo:true})});
     }
-    _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado 🥗\n\n📲 Entra aquí:\nhttps://popicabrera.github.io/macroai/\n\nPasos:\n1. Abre el enlace\n2. Pulsa "¿Olvidaste tu contraseña?"\n3. Pon tu email: ${email}\n4. Recibirás un enlace para crear tu contraseña\n\n¡Cualquier duda me dices! 💪`;
+    _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado 🥗\n\n📲 Entra aquí:\nhttps://popicabrera.github.io/macroai/\n\nPasos:\n1. Abre el enlace\n2. Pulsa "Crear cuenta"\n3. Usa este email: ${email}\n4. Elige tu contraseña\n\n¡Cualquier duda me dices! 💪`;
     document.getElementById('whatsappBox').textContent=_ultimoWhatsapp;
     document.getElementById('whatsappBox').style.display='block';
     document.getElementById('copiarBtnWrap').style.display='block';
