@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>MacroAI</title>
-<meta name="theme-color" content="#080810">
+<meta name="theme-color" content="#f5f0e8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -725,6 +725,12 @@ body{
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
     <h2>Historial 📅</h2>
   </div>
+  <!-- Navegación día -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 4px;">
+    <button id="histPrevBtn" onclick="histNavegar(-1)" style="width:36px;height:36px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--muted);cursor:pointer;">‹</button>
+    <div id="histFechaLabel" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);"></div>
+    <button id="histNextBtn" onclick="histNavegar(1)" style="width:36px;height:36px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--muted);cursor:pointer;">›</button>
+  </div>
   <div class="scrollable" id="histBody"></div>
 </div>
 </div>
@@ -989,12 +995,12 @@ function enterApp(){
 (function(){
   const c=document.createElement('canvas');c.width=192;c.height=192;
   const x=c.getContext('2d');
-  x.fillStyle='#080810';x.fillRect(0,0,192,192);
+  x.fillStyle='#f5f0e8';x.fillRect(0,0,192,192);
   x.fillStyle='#d4f04a';x.beginPath();x.arc(96,96,88,0,Math.PI*2);x.fill();
-  x.fillStyle='#080810';x.font='bold 110px Syne,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('M',96,100);
+  x.fillStyle='#5a7a00';x.font='bold 110px Syne,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('M',96,100);
   const icon=c.toDataURL('image/png');
   document.getElementById('appleIcon').href=icon;
-  const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#080810',theme_color:'#080810',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
+  const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#f5f0e8',theme_color:'#f5f0e8',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
   const BUILD_VERSION='macroai-1777219968';
@@ -1364,53 +1370,174 @@ function toggleDayType(){
 }
 
 // ── HISTORIAL ──
+let _histDias=[];
+let _histIdx=0;
+
 function renderHistorial(){
   const body=document.getElementById('histBody');
-  const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]').sort().reverse();
-  if(!idx.length){body.innerHTML='<div class="hist-empty" style="text-align:center;padding:40px 0;color:var(--muted)"><div class="big">📅</div>Todavía no hay días registrados.</div>';return;}
-  body.innerHTML='';
-  idx.forEach(fecha=>{
-    try{
-      const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');if(!d)return;
-      const pK=Math.round(Math.min(100,(d.kcalC/d.kcalObj)*100));
-      const pP=Math.round(Math.min(100,(d.protC/d.protObj)*100));
-      const pC=Math.round(Math.min(100,(d.chC/d.chObj)*100));
-      const pG=Math.round(Math.min(100,(d.grasaC/d.grasaObj)*100));
-      const fmtF=new Date(fecha+'T12:00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
-      const comidasHTML=d.comidas&&d.comidas.length?`
-        <div class="hist-comidas">
-          ${d.comidas.map(c=>`<div class="hcomida">
-            <div class="hcomida-nombre">${c.nombre||'Comida'}</div>
-            <div class="hcomida-macros">${c.kcal}kcal · P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g</div>
-          </div>`).join('')}
-          <button class="hist-repetir-btn" onclick="repetirDia('${fecha}')">↩ Usar comidas de este día</button>
-        </div>`:'';
-      body.innerHTML+=`<div class="hist-day">
-        <div class="hist-dh"><div class="hist-date">${fmtF}</div><div class="hist-tipo ${d.tipoDia||'entreno'}">${d.tipoDia==='descanso'?'😴 Descanso':'💪 Entreno'}</div></div>
-        <div class="hist-macros">
-          <div class="hm"><div class="hm-val" style="color:var(--accent)">${d.kcalC}</div><div class="hm-lbl">kcal</div></div>
-          <div class="hm"><div class="hm-val" style="color:var(--red)">${d.protC}g</div><div class="hm-lbl">prot</div></div>
-          <div class="hm"><div class="hm-val" style="color:var(--yellow)">${d.chC}g</div><div class="hm-lbl">ch</div></div>
-          <div class="hm"><div class="hm-val" style="color:var(--blue)">${d.grasaC}g</div><div class="hm-lbl">grasa</div></div>
+  _histDias=JSON.parse(localStorage.getItem('macroai_dias')||'[]').sort().reverse();
+  if(!_histDias.length){
+    body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)"><div style="font-size:44px;margin-bottom:14px;">📅</div>Todavía no hay días registrados.</div>';
+    document.getElementById('histFechaLabel').textContent='Sin registros';
+    document.getElementById('histPrevBtn').style.opacity='0.3';
+    document.getElementById('histNextBtn').style.opacity='0.3';
+    return;
+  }
+  _histIdx=0;
+  renderHistorialDia();
+}
+
+function histNavegar(dir){
+  const newIdx=_histIdx+dir;
+  if(newIdx<0||newIdx>=_histDias.length)return;
+  _histIdx=newIdx;
+  renderHistorialDia();
+}
+
+function renderHistorialDia(){
+  const body=document.getElementById('histBody');
+  const fecha=_histDias[_histIdx];
+  const prevBtn=document.getElementById('histPrevBtn');
+  const nextBtn=document.getElementById('histNextBtn');
+  // Botones activo/inactivo
+  prevBtn.style.opacity=_histIdx<_histDias.length-1?'1':'0.3';
+  prevBtn.style.pointerEvents=_histIdx<_histDias.length-1?'auto':'none';
+  nextBtn.style.opacity=_histIdx>0?'1':'0.3';
+  nextBtn.style.pointerEvents=_histIdx>0?'auto':'none';
+
+  const fmtF=new Date(fecha+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('histFechaLabel').textContent=fmtF.charAt(0).toUpperCase()+fmtF.slice(1);
+
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(!d){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">Sin datos para este día.</div>';return;}
+    const pK=Math.round(Math.min(100,(d.kcalC/(d.kcalObj||1))*100));
+    const pP=Math.round(Math.min(100,(d.protC/(d.protObj||1))*100));
+    const pC=Math.round(Math.min(100,(d.chC/(d.chObj||1))*100));
+    const pG=Math.round(Math.min(100,(d.grasaC/(d.grasaObj||1))*100));
+
+    let html=`
+    <div style="margin:0 0 12px;">
+      <!-- Resumen macros -->
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Resumen del día</span>
+          <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${d.tipoDia==='descanso'?'rgba(107,184,246,0.1)':'rgba(212,240,74,0.1)'};color:${d.tipoDia==='descanso'?'var(--blue)':'var(--accent)'};">${d.tipoDia==='descanso'?'😴 Descanso':'💪 Entreno'}</span>
         </div>
-        <div class="hist-bars">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${d.kcalC}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">kcal</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--red)">${d.protC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">prot</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--yellow)">${d.chC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">ch</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--blue)">${d.grasaC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">grasa</div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
           <div class="hbr"><span class="hbr-lbl">Kcal</span><div class="hbr-track"><div class="hbr-fill" style="width:${pK}%;background:var(--accent)"></div></div><span class="hbr-pct">${pK}%</span></div>
           <div class="hbr"><span class="hbr-lbl">Prot</span><div class="hbr-track"><div class="hbr-fill" style="width:${pP}%;background:var(--red)"></div></div><span class="hbr-pct">${pP}%</span></div>
           <div class="hbr"><span class="hbr-lbl">CH</span><div class="hbr-track"><div class="hbr-fill" style="width:${pC}%;background:var(--yellow)"></div></div><span class="hbr-pct">${pC}%</span></div>
           <div class="hbr"><span class="hbr-lbl">Grasa</span><div class="hbr-track"><div class="hbr-fill" style="width:${pG}%;background:var(--blue)"></div></div><span class="hbr-pct">${pG}%</span></div>
         </div>
-        ${comidasHTML}
       </div>`;
-    }catch(e){}
-  });
+
+    // Comidas del día
+    if(d.comidas&&d.comidas.length){
+      html+=`<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding:0 2px;">Comidas</div>`;
+      d.comidas.forEach((c,ci)=>{
+        const tipo=c.tipo||'';
+        // Ingredientes si los hay
+        let ingHtml='';
+        if(c.ingredientes){
+          const lines=c.ingredientes.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:'));
+          if(lines.length){
+            ingHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px;">';
+            lines.forEach(l=>{
+              const fc=l.indexOf(':');
+              const nom=fc>=0?l.substring(0,fc).trim():l.trim();
+              const cant=fc>=0?l.substring(fc+1).split(':')[0].trim():'';
+              ingHtml+=`<div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text)">${escapeHtml(nom)}</span><span style="color:var(--accent);font-weight:600;">${escapeHtml(cant)}</span></div>`;
+            });
+            ingHtml+='</div>';
+          }
+        }
+        html+=`<div class="hist-comida-card" data-hist-fecha="${fecha}" data-hist-ci="${ci}" style="background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;user-select:none;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div>
+              ${tipo?`<div style="font-size:10px;color:var(--accent);font-weight:600;margin-bottom:3px;">${tipo}</div>`:''}
+              <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||'Comida')}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">${c.kcal} kcal</div>
+              <div style="font-size:10px;color:var(--muted)">P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g</div>
+            </div>
+          </div>
+          ${ingHtml}
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;">Mantén pulsado para opciones</div>
+        </div>`;
+      });
+    } else {
+      html+=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Sin comidas registradas este día.</div>`;
+    }
+
+    html+='</div>';
+    body.innerHTML=html;
+
+    // Añadir long-press a cada comida
+    body.querySelectorAll('.hist-comida-card').forEach(card=>{
+      let timer=null;
+      const start=()=>{timer=setTimeout(()=>histComidaMenu(card),500);};
+      const cancel=()=>clearTimeout(timer);
+      card.addEventListener('touchstart',start,{passive:true});
+      card.addEventListener('touchend',cancel);
+      card.addEventListener('touchmove',cancel,{passive:true});
+      card.addEventListener('mousedown',start);
+      card.addEventListener('mouseup',cancel);
+      card.addEventListener('mouseleave',cancel);
+    });
+
+  }catch(e){body.innerHTML='<div style="padding:20px;color:var(--muted)">Error cargando datos.</div>';}
 }
-function repetirDia(fecha){
+
+function histComidaMenu(card){
+  const fecha=card.dataset.histFecha;
+  const ci=parseInt(card.dataset.histCi);
   try{
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
-    if(!d||!d.comidas||!d.comidas.length)return;
-    const resumen=d.comidas.map(c=>`${c.nombre||'Comida'} (${c.kcal}kcal)`).join(', ');
-    showView('viewMain');
-    setTimeout(()=>sendDirect(`El ${fecha} comí: ${resumen}. Quiero repetir estas comidas hoy adaptándolas a mis macros actuales.`),300);
+    if(!d||!d.comidas[ci])return;
+    const c=d.comidas[ci];
+    // Menú contextual simple
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+    overlay.innerHTML=`<div style="background:#f0ebe0;border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;color:#222;">${escapeHtml(c.nombre||'Comida')}</div>
+      <button onclick="histGuardarFav('${fecha}',${ci})" style="width:100%;padding:13px;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.25);border-radius:12px;font-size:14px;color:#5a7a00;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
+      <button onclick="histCopiarComida('${fecha}',${ci})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:#444;margin-bottom:12px;cursor:pointer;text-align:left;">📋 Copiar datos</button>
+      <button onclick="this.closest('[data-hist-overlay]').remove()" style="width:100%;padding:13px;background:#e8e0d0;border:none;border-radius:12px;font-size:14px;color:#888;cursor:pointer;">Cancelar</button>
+    </div>`;
+    overlay.querySelector('div').setAttribute('data-hist-overlay','');
+    overlay.addEventListener('click',(e)=>{if(e.target===overlay)overlay.remove();});
+    document.body.appendChild(overlay);
+  }catch(e){}
+}
+
+function histGuardarFav(fecha,ci){
+  document.querySelectorAll('[data-hist-overlay]').forEach(el=>el.parentElement?.remove());
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(!d||!d.comidas[ci])return;
+    const c=d.comidas[ci];
+    guardarFavorito(c.nombre||'Favorito','',{kcal:c.kcal,prot:c.prot,ch:c.ch,grasa:c.grasa},c.ingredientes||'');
+    showToast('⭐ Guardado en favoritos');
+  }catch(e){}
+}
+
+function histCopiarComida(fecha,ci){
+  document.querySelectorAll('[data-hist-overlay]').forEach(el=>el.parentElement?.remove());
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(!d||!d.comidas[ci])return;
+    const c=d.comidas[ci];
+    const txt=`${c.nombre||'Comida'}\n${c.kcal}kcal · P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g${c.ingredientes?'\n'+c.ingredientes:''}`;
+    navigator.clipboard.writeText(txt).catch(()=>{});
+    showToast('📋 Copiado');
   }catch(e){}
 }
 
@@ -1798,6 +1925,27 @@ function recalcMacrosFromDOM(){
 }
 
 // ── TOAST ──
+function setMealTipo(mealIdx, btn, tipo){
+  if(!S.comidas[mealIdx]) return;
+  S.comidas[mealIdx].tipo = tipo;
+  saveToday();
+  // Quitar selector
+  const sel = document.getElementById('tipoSel_'+mealIdx);
+  if(sel) sel.remove();
+  // Actualizar badge con el tipo
+  const msgDiv = document.querySelector(`.msg[data-meal-idx="${mealIdx}"]`);
+  if(msgDiv){
+    const badge = msgDiv.querySelector('.meal-edit-badge span');
+    if(badge){
+      const m = S.comidas[mealIdx];
+      badge.innerHTML = `<strong style="color:var(--accent)">${tipo}</strong> · ${m.kcal} kcal · P${m.prot}g · CH${m.ch}g · G${m.grasa}g`;
+    }
+    // Actualizar plan-hdr
+    const hdr = msgDiv.querySelector('.plan-hdr');
+    if(hdr) hdr.innerHTML = `📋 ${tipo} — Ingredientes y cantidades`;
+  }
+}
+
 function showToast(msg){
   let t=document.getElementById('toastMsg');
   if(!t){t=document.createElement('div');t.id='toastMsg';
@@ -1820,7 +1968,19 @@ function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1,in
   extraElements.forEach(el=>{if(el.type==='html')h+=el.content;});
   if(mealIdx>=0&&S.comidas[mealIdx]){
     const m=S.comidas[mealIdx];
-    h+=`<div class="meal-edit-badge" style="margin-top:8px;padding:6px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>${m.kcal} kcal · P${m.prot}g · CH${m.ch}g · G${m.grasa}g</span><span style="color:var(--accent);font-size:10px;font-weight:600;">mantén para editar</span></div>`;
+    const tipoLabel=m.tipo||'';
+    h+=`<div class="meal-edit-badge" style="margin-top:8px;padding:6px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span>${tipoLabel?'<strong style="color:var(--accent)">'+tipoLabel+'</strong> · ':''}${m.kcal} kcal · P${m.prot}g · CH${m.ch}g · G${m.grasa}g</span>
+      <span style="color:var(--accent);font-size:10px;font-weight:600;">mantén para editar</span>
+    </div>`;
+    // Selector tipo comida si aún no tiene tipo asignado
+    if(!m.tipo){
+      h+=`<div class="meal-tipo-sel" id="tipoSel_${mealIdx}" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;">
+        ${['🌅 Desayuno','☕ Almuerzo','☀️ Comida','🍎 Merienda','🌙 Cena'].map(t=>
+          `<button onclick="setMealTipo(${mealIdx},this,'${t}')" style="padding:5px 10px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--muted);cursor:pointer;">${t}</button>`
+        ).join('')}
+      </div>`;
+    }
   }
   bub.innerHTML=h;div.appendChild(av);div.appendChild(bub);msgs.appendChild(div);
   // Long-press para menú contextual
@@ -2167,7 +2327,7 @@ function initApp(){
       if(c.ingredientes){
         const lines=c.ingredientes.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:'));
         if(lines.length>0){
-          ingHtml='<div class="plan-card"><div class="plan-hdr">📋 Ingredientes y cantidades</div>';
+          ingHtml='<div class="plan-card"><div class="plan-hdr">📋 '+(c.tipo?c.tipo+' — ':'')+'Ingredientes y cantidades</div>';
           lines.forEach(l=>{
             const firstColon=l.indexOf(':');if(firstColon<0)return;
             const namePart=l.substring(0,firstColon).trim();
@@ -2704,6 +2864,21 @@ function saveEditMeal() {
   if (_editMsgDiv) {
     const badge = _editMsgDiv.querySelector('.meal-edit-badge span');
     if (badge) badge.textContent = newKcal + ' kcal · P' + newProt + 'g · CH' + newCh + 'g · G' + newGrasa + 'g';
+
+    // Rerenderizar tarjeta de ingredientes
+    const planCard = _editMsgDiv.querySelector('.plan-card');
+    if (planCard && nuevosIngs) {
+      const lines = nuevosIngs.split('\n').filter(l=>l.trim());
+      let h = '<div class="plan-hdr">📋 Ingredientes y cantidades</div>';
+      lines.forEach(l => {
+        const firstColon = l.indexOf(':');
+        const nombre = firstColon>=0 ? l.substring(0,firstColon).trim() : l.trim();
+        const cantidad = firstColon>=0 ? l.substring(firstColon+1).trim() : '';
+        h += `<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(cantidad)}</div></div></div>`;
+      });
+      h += `<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${newProt}g</span><span class="ptm" style="color:var(--yellow)">CH ${newCh}g</span><span class="ptm" style="color:var(--blue)">G ${newGrasa}g</span><span class="ptm" style="color:var(--accent)">${newKcal} kcal ✓</span></div></div>`;
+      planCard.innerHTML = h;
+    }
   }
 
   document.getElementById('editMealOverlay').classList.remove('open');
