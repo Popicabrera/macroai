@@ -756,7 +756,7 @@ body{
   </div>
   <div class="cfg-body">
     <div class="cfg2-sec">
-      <div class="cfg2-title">Días de entreno semanales</div>
+      <div class="cfg2-title">Días de entreno · hoy <span id="hoyLabel" style="font-weight:400;text-transform:none;letter-spacing:0;"></span></div>
       <div class="cfg2-weekrow" id="weekRow">
         <div class="cfg2-weekbtn" id="wd1" onclick="toggleWeekDay(1)">L</div>
         <div class="cfg2-weekbtn" id="wd2" onclick="toggleWeekDay(2)">M</div>
@@ -766,14 +766,13 @@ body{
         <div class="cfg2-weekbtn" id="wd6" onclick="toggleWeekDay(6)">S</div>
         <div class="cfg2-weekbtn" id="wd0" onclick="toggleWeekDay(0)">D</div>
       </div>
-      <div class="cfg2-title">Tipo de día hoy</div>
-      <div class="cfg2-daytoggle">
-        <div class="cfg2-daybtn active" id="btnEntreno" onclick="setDayType('entreno')">
-          <div class="cfg2-dayicon">💪</div>
+      <div style="display:flex;gap:8px;padding:0 14px 12px;">
+        <div class="cfg2-daybtn" id="btnEntreno" onclick="setDayType('entreno')" style="flex:1;padding:8px 4px;gap:2px;">
+          <div style="font-size:16px;">💪</div>
           <div class="cfg2-daylbl">Entreno</div>
         </div>
-        <div class="cfg2-daybtn" id="btnDescanso" onclick="setDayType('descanso')">
-          <div class="cfg2-dayicon">😴</div>
+        <div class="cfg2-daybtn" id="btnDescanso" onclick="setDayType('descanso')" style="flex:1;padding:8px 4px;gap:2px;">
+          <div style="font-size:16px;">😴</div>
           <div class="cfg2-daylbl">Descanso</div>
         </div>
       </div>
@@ -1116,12 +1115,19 @@ function toggleWeekDay(d){
 
 function renderWeekDays(){
   const hoy=new Date().getDay();
+  const nombres=['D','L','M','X','J','V','S'];
   [0,1,2,3,4,5,6].forEach(d=>{
     const el=document.getElementById("wd"+d);
     if(!el)return;
     el.classList.toggle("active",WEEK_DAYS.includes(d));
     el.classList.toggle("hoy",d===hoy);
   });
+  const lbl=document.getElementById('hoyLabel');
+  if(lbl){
+    const esentreno=WEEK_DAYS.includes(hoy);
+    lbl.textContent='(hoy: '+(esentreno?'💪 entreno':'😴 descanso')+')';
+    lbl.style.color=esentreno?'var(--accent)':'var(--blue)';
+  }
 }
 
 function autoDetectDayType(){
@@ -1138,14 +1144,12 @@ function getToday(){return new Date().toISOString().split('T')[0];}
 const TODAY=getToday();
 
 // ── RESET MEDIANOCHE ──
-setInterval(()=>{
-  if(getToday()!==TODAY){
-    // Nuevo día — resetear contadores y recargar app
-    S.comidas=[];S.kcalC=0;S.protC=0;S.chC=0;S.grasaC=0;S.historial=[];
-    try{document.getElementById('messages').innerHTML='';}catch(e){}
+// Detectar nuevo día cuando el usuario vuelve a la app — cero gasto
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&getToday()!==TODAY){
     window.location.reload();
   }
-},30000); // comprobar cada 30 segundos
+});
 const S={
   kcalObj:CFG[CFG.tipoDia].kcal,prot:CFG[CFG.tipoDia].prot,
   ch:CFG[CFG.tipoDia].ch,grasa:CFG[CFG.tipoDia].grasa,
@@ -1371,14 +1375,14 @@ function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 
 // ── TODAY DATA ──
 function loadToday(){
-  try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+TODAY)||'null');
+  try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+getToday())||'null');
     if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}}catch(e){}
 }
 function saveToday(){
-  const d={fecha:TODAY,tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
-  localStorage.setItem('macroai_dia_'+TODAY,JSON.stringify(d));
+  const d={fecha:getToday(),tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
+  localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d));
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
-  if(!idx.includes(TODAY)){idx.push(TODAY);localStorage.setItem('macroai_dias',JSON.stringify(idx));}
+  if(!idx.includes(getToday())){idx.push(getToday());localStorage.setItem('macroai_dias',JSON.stringify(idx));}
 }
 function getYesterdayComidas(){
   try{const ayer=new Date();ayer.setDate(ayer.getDate()-1);const ayerStr=ayer.toISOString().split('T')[0];
