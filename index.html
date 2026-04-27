@@ -305,8 +305,8 @@ body{
 .cfg2-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
   font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 .cfg2-daytoggle{display:flex;gap:10px;padding:12px 14px;}
-.cfg2-weekrow{display:flex;gap:6px;padding:10px 14px 14px;justify-content:space-between;}
-.cfg2-weekbtn{flex:1;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--s3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);transition:all 0.2s;}
+.cfg2-weekrow{display:flex;gap:5px;padding:8px 14px 10px;justify-content:space-between;}
+.cfg2-weekbtn{flex:1;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--s3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all 0.2s;}
 .cfg2-weekbtn.active{background:var(--accent-dim);border-color:rgba(90,138,0,0.4);color:var(--accent);}
 .cfg2-weekbtn.hoy{box-shadow:0 0 0 2px var(--accent);}
 .cfg2-daybtn{flex:1;padding:12px 8px;border-radius:11px;border:1px solid var(--border);background:var(--s3);
@@ -1102,7 +1102,7 @@ function loadCFG(){
 function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));}
 
 // ── DÍAS DE ENTRENO SEMANALES ──
-function loadWeekDays(){try{return JSON.parse(localStorage.getItem("macroai_weekdays")||"[1,2,3,4,5]");}catch(e){return[1,2,3,4,5];}}
+function loadWeekDays(){try{const d=JSON.parse(localStorage.getItem("macroai_weekdays")||"[1,2,3,4,5]");return(Array.isArray(d)&&d.length>0)?d:[1,2,3,4,5];}catch(e){return[1,2,3,4,5];}}
 function saveWeekDays(days){localStorage.setItem("macroai_weekdays",JSON.stringify(days));}
 let WEEK_DAYS=loadWeekDays();
 
@@ -1134,16 +1134,18 @@ function autoDetectDayType(){
 let CFG=loadCFG();
 
 // ── STATE ──
-const TODAY=new Date().toISOString().split('T')[0];
+function getToday(){return new Date().toISOString().split('T')[0];}
+const TODAY=getToday();
 
 // ── RESET MEDIANOCHE ──
 setInterval(()=>{
-  const ahora=new Date().toISOString().split('T')[0];
-  if(ahora!==TODAY){
+  if(getToday()!==TODAY){
     // Nuevo día — resetear contadores y recargar app
+    S.comidas=[];S.kcalC=0;S.protC=0;S.chC=0;S.grasaC=0;S.historial=[];
+    try{document.getElementById('messages').innerHTML='';}catch(e){}
     window.location.reload();
   }
-},60000); // comprobar cada minuto
+},30000); // comprobar cada 30 segundos
 const S={
   kcalObj:CFG[CFG.tipoDia].kcal,prot:CFG[CFG.tipoDia].prot,
   ch:CFG[CFG.tipoDia].ch,grasa:CFG[CFG.tipoDia].grasa,
