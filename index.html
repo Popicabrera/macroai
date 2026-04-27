@@ -673,10 +673,9 @@ body{
   <div class="input-area">
     <div class="input-wrap">
       <div class="icon-btn" onclick="document.getElementById('attachMenu').classList.toggle('open')" style="background:none;border:none;color:var(--muted);font-size:20px;width:32px;">＋</div>
-      <textarea class="input-field" id="inputField" placeholder="Escribe o usa el micrófono..." rows="1"
+      <textarea class="input-field" id="inputField" placeholder="Escribe aquí..." rows="1"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <div class="ibtns">
-        <div class="icon-btn" id="micBtn" onclick="toggleMic()" title="Micrófono">🎤</div>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -701,16 +700,7 @@ body{
         <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicket(event);document.getElementById('attachMenu').classList.remove('open')">
       </label>
     </div>
-    <div class="voice-banner" id="voiceBanner">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="voice-banner-lbl" id="voiceBannerLbl">🔴 Grabando...</div>
-        <div style="display:flex;gap:6px;">
-          <button onclick="confirmVoice()" style="padding:4px 10px;background:var(--accent);border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#080810;cursor:pointer;">✅ Enviar</button>
-          <button onclick="cancelVoice()" style="padding:4px 10px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;font-size:11px;color:var(--red);cursor:pointer;">✕ Descartar</button>
-        </div>
-      </div>
-      <div class="voice-banner-text" id="voiceBannerText">Habla ahora...</div>
-    </div>
+
     <div class="hint" id="hint"></div>
   </div>
   </div><!-- /chatViewWrap -->
@@ -963,8 +953,6 @@ async function doRecuperar(){
 }
 
 function doLogout(){
-  // Parar micrófono sin errores
-  try{micState='idle';if(recog){recog.abort();recog=null;}updateMicBtn();hideBanner();}catch(e){}
   // Limpiar sesión
   SUPA_TOKEN=null;CURRENT_USER=null;
   localStorage.removeItem('macroai_token');
@@ -1825,124 +1813,7 @@ function updateBars(){
 }
 
 // ══════════════════════════════════════════
-// ── VOZ — SIN BEEPS, SIN RESTART ──
-// continuous:true → el navegador gestiona solo, sin recrear instancias
-// ══════════════════════════════════════════
-let micState='idle', recog=null;
-let voiceFinalText='';
-let voiceInterim='';
-
-function toggleMic(){
-  if(micState==='idle')startMic();
-  else stopMic(false);
-}
-
-function startMic(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){setHint('⚠️ Sin soporte de voz en este navegador.');return;}
-  voiceFinalText=document.getElementById('inputField').value||'';
-  voiceInterim='';
-  if(recog){try{recog.abort();}catch(e){} recog=null;}
-  recog=new SR();
-  recog.lang='es-ES';
-  recog.continuous=true;
-  recog.interimResults=true;
-  recog.maxAlternatives=1;
-
-  recog.onresult=function(e){
-    let newFinals=''; let newInterim='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal) newFinals+=e.results[i][0].transcript;
-      else newInterim+=e.results[i][0].transcript;
-    }
-    if(newFinals){
-      voiceFinalText+=(voiceFinalText&&!voiceFinalText.endsWith(' ')?' ':'')+newFinals;
-    }
-    voiceInterim=newInterim;
-    const combined=(voiceFinalText+(voiceInterim?' '+voiceInterim:'')).trim();
-    document.getElementById('inputField').value=combined;
-    autoResize(document.getElementById('inputField'));
-    updateVoiceBanner();
-  };
-
-  recog.onerror=function(e){
-    if(e.error==='aborted'||e.error==='no-speech')return;
-    stopMic(false);
-    setHint('⚠️ Error: '+e.error);
-  };
-
-  // NO auto-restart — cada restart genera un beep en Android
-  recog.onend=function(){
-    if(micState==='recording'){
-      micState='idle';
-      updateMicBtn();
-      hideBanner();
-      setHint('');
-    }
-  };
-
-  try{recog.start();}catch(e){setHint('⚠️ No se pudo iniciar el micrófono.');return;}
-  micState='recording';
-  updateMicBtn();
-  updateVoiceBanner();
-  setHint('');
-}
-
-function stopMic(sendAfter){
-  const wasRecording=micState!=='idle';
-  micState='idle';
-  voiceInterim='';
-  if(recog){try{recog.abort();}catch(e){}recog=null;}
-  updateMicBtn();
-  hideBanner();
-  setHint('');
-  document.getElementById('confirmBar').classList.remove('visible');
-  if(sendAfter&&wasRecording)setTimeout(sendMessage,200);
-}
-
-function updateMicBtn(){
-  const btn=document.getElementById('micBtn');
-  if(micState==='recording'){
-    btn.textContent='⏸';btn.classList.add('recording');btn.classList.remove('paused');
-  }else if(micState==='paused'){
-    btn.textContent='▶';btn.classList.remove('recording');btn.classList.add('paused');
-  }else{
-    btn.textContent='🎤';btn.classList.remove('recording','paused');
-  }
-}
-
-function updateVoiceBanner(){
-  const banner=document.getElementById('voiceBanner');
-  const bannerText=document.getElementById('voiceBannerText');
-  if(micState==='idle'){hideBanner();return;}
-  banner.classList.add('visible');
-  document.getElementById('voiceBannerLbl').textContent=micState==='paused'?'⏸ EN PAUSA':'🔴 Grabando...';
-  const finalPart=voiceFinalText.trim();
-  const interimPart=voiceInterim.trim();
-  if(!finalPart&&!interimPart){bannerText.innerHTML='<span style="color:var(--muted)">Habla ahora...</span>';return;}
-  // Mostrar últimas ~60 chars de finals + interino en cursiva/gris
-  const finalShort=finalPart.length>60?'...'+finalPart.slice(-60):finalPart;
-  bannerText.innerHTML=(finalShort?`<em>${escapeHtml(finalShort)}</em>`:'')+
-    (interimPart?`<span style="color:var(--muted)"> ${escapeHtml(interimPart)}</span>`:'');
-}
-
-function hideBanner(){
-  document.getElementById('voiceBanner').classList.remove('visible');
-}
-
 function setHint(text){document.getElementById('hint').textContent=text;}
-
-function confirmVoice(){
-  stopMic(false);
-  document.getElementById('confirmBar').classList.remove('visible');
-  sendMessage();
-}
-function cancelVoice(){
-  stopMic(false);
-  document.getElementById('inputField').value='';
-  document.getElementById('inputField').style.height='auto';
-  voiceFinalText='';voiceInterim='';
-}
 
 // ── FOTO HANDLERS ──
 function handlePhoto(e){
