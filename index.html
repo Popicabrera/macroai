@@ -631,11 +631,11 @@ body{
       </div>
       <div style="position:relative;">
         <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu(event)">☰</div>
-        <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+        <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:#f0ebe0;border:1px solid #d8d0bc;border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
           <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
-          <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+          <div style="height:1px;background:#d8d0bc;margin:4px 0;"></div>
           <div class="nav-menu-item" style="color:var(--red);" onclick="event.stopPropagation();borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
           <div class="nav-menu-item" style="color:var(--muted);" onclick="event.stopPropagation();closeNavMenu();doLogout()">🚪 Cerrar sesión</div>
         </div>
@@ -1615,7 +1615,7 @@ function parseAI(raw){
     h+='</div>';elements.push({type:'html',content:h});text=text.replace(ingMatch[0],'').trim();
   }
   // [REGISTRAR] explícito — fallback si no hubo bloque INGREDIENTES con TOTAL
-  const regMatch=rawOrig.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+  const regMatch=rawOrig.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
   const yaRegistrado=S.comidas.length>0&&rawOrig.includes('[INGREDIENTES]')&&rawOrig.includes('TOTAL:');
   if(regMatch&&!yaRegistrado){
     S.kcalC+=parseInt(regMatch[1]);S.protC+=parseInt(regMatch[2]);S.chC+=parseInt(regMatch[3]);S.grasaC+=parseInt(regMatch[4]);
@@ -1862,7 +1862,7 @@ async function sendDirect(text){
     const raw=await callAI(text);removeTyping();
     const{text:t,elements,opciones,ingredientesRaw}=parseAI(raw);
     // Extraer macros si hay REGISTRAR para favoritos
-    const regMatch=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+    const regMatch=raw.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
     const macros=regMatch?{kcal:+regMatch[1],prot:+regMatch[2],ch:+regMatch[3],grasa:+regMatch[4]}:null;
     addMsg('ai',t,elements,opciones,macros,-1,ingredientesRaw||'');
   }
@@ -2339,7 +2339,7 @@ TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]`;
     const raw=await callAI(prompt);
     const ingM=raw.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
-    const regM=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+    const regM=raw.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
     if(regM&&ingM){
       const kcalN=parseInt(regM[1]),protN=parseInt(regM[2]),chN=parseInt(regM[3]),grasaN=parseInt(regM[4]);
       const ingTexto=ingM[1].trim();
@@ -2473,7 +2473,7 @@ TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
     const raw=await callAI(prompt);
     const ingM=raw.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
-    const regM=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
+    const regM=raw.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
     if(regM&&ingM){
       const kcalN=parseInt(regM[1]),protN=parseInt(regM[2]),chN=parseInt(regM[3]),grasaN=parseInt(regM[4]);
       const ingTexto=ingM[1].trim();
