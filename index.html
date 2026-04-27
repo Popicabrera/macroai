@@ -474,6 +474,39 @@ body{
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
 @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.4);}50%{box-shadow:0 0 0 6px rgba(255,107,107,0);}}
+
+/* ── EDIT MEAL MODAL ── */
+.edit-meal-overlay{
+  display:none;position:fixed;inset:0;z-index:800;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+  align-items:flex-end;justify-content:center;
+}
+.edit-meal-overlay.open{display:flex;}
+.edit-meal-sheet{
+  width:100%;max-width:430px;
+  background:var(--s1);border-radius:22px 22px 0 0;
+  border-top:1px solid var(--border);
+  padding:20px 20px 36px;
+  display:flex;flex-direction:column;gap:14px;
+  animation:slideUp 0.25s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.edit-meal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;}
+.edit-meal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.edit-meal-field{display:flex;flex-direction:column;gap:5px;}
+.edit-meal-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:600;}
+.edit-meal-inp{
+  background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;color:var(--text);font-family:'Syne',sans-serif;
+  font-size:17px;font-weight:700;outline:none;width:100%;
+  transition:border-color 0.2s;
+}
+.edit-meal-inp:focus{border-color:rgba(90,138,0,0.5);}
+.edit-meal-btns{display:flex;gap:8px;margin-top:4px;}
+.edit-meal-save{flex:1;padding:14px;background:var(--accent);border:none;border-radius:13px;
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;}
+.edit-meal-cancel{padding:14px 18px;background:var(--s2);border:1px solid var(--border);border-radius:13px;
+  font-size:14px;color:var(--muted);cursor:pointer;}
 </style>
 </head>
 <body>
@@ -626,24 +659,8 @@ body{
       </div>
     </div>
   </div>
-
-  <!-- ── MODE TOGGLE ── -->
-  <div style="flex-shrink:0;display:flex;background:var(--s1);border-bottom:1px solid var(--border);padding:0 14px;">
-    <div id="modeBtnDiario" onclick="setMainMode('diario')" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;">📋 Diario</div>
-    <div id="modeBtnChat" onclick="setMainMode('chat')" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;">💬 Chat IA</div>
-  </div>
-
-  <!-- ── DIARIO VIEW ── -->
-  <div id="diarioView" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;display:flex;flex-direction:column;">
-    <div id="mealBlocks"></div>
-    <div style="padding:10px 14px 6px;">
-      <button onclick="openNumComidasModal()" style="width:100%;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">⚙️ Cambiar número de comidas</button>
-    </div>
-    <div style="height:10px;flex-shrink:0;"></div>
-  </div>
-
   <!-- ── CHAT VIEW ── -->
-  <div id="chatViewWrap" style="flex:1;overflow:hidden;display:none;flex-direction:column;min-height:0;">
+  <div id="chatViewWrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
   <div class="messages" id="messages"></div>
   <div class="input-area">
     <div class="input-wrap">
@@ -1579,7 +1596,7 @@ function parseAI(raw){
   const opM=text.match(/\[OPCIONES\](.*?)\[\/OPCIONES\]/);
   let opciones=[];
   if(opM){opciones=opM[1].split('|').map(o=>o.trim()).filter(Boolean);text=text.replace(opM[0],'').trim();}
-  return{text:text.trim(),elements,opciones};
+  return{text:text.trim(),elements,opciones,mealIdx:regMatch?S.comidas.length-1:-1};
 }
 
 // ── CONTEXT MENU (long-press) ──
@@ -1615,7 +1632,6 @@ function showContextMenu(msgDiv,role,textContent,macros){
   const items=[];
   if(role==='ai'){
     items.push({icon:'⭐',label:'Guardar en favoritos',action:()=>{
-      // Intentar extraer nombre del contenido
       const nombre=textContent.split('\n')[0].substring(0,40)||'Favorito';
       guardarFavorito(nombre,textContent,macros);
       msgDiv.querySelector('.bubble').classList.add('fav-marked');
@@ -1627,14 +1643,23 @@ function showContextMenu(msgDiv,role,textContent,macros){
       closeContextMenu();showToast('📋 Copiado');
     }});
   }
+  // Opción editar si es una comida registrada
+  const mealIdx = msgDiv.dataset.mealIdx !== undefined ? parseInt(msgDiv.dataset.mealIdx) : -1;
+  if(mealIdx >= 0){
+    items.push({type:'sep'});
+    items.push({icon:'✏️',label:'Editar comida',action:()=>{
+      closeContextMenu();
+      openEditMeal(mealIdx, msgDiv);
+    }});
+  }
   items.push({type:'sep'});
+  items.push({icon:'🗑️',label:'Borrar mensaje',danger:true,action:()=>{
+    closeContextMenu();
+    borrarMensaje(msgDiv);
+  }});
   items.push({icon:'🗑️',label:'Borrar desde aquí',danger:true,action:()=>{
     closeContextMenu();
     borrarDesdeAqui(msgDiv);
-  }});
-  items.push({icon:'↩',label:'Borrar solo este',danger:true,action:()=>{
-    closeContextMenu();
-    borrarMensaje(msgDiv);
   }});
 
   items.forEach(item=>{
@@ -1705,14 +1730,19 @@ function showToast(msg){
 }
 
 // ── MESSAGES ──
-function addMsg(role,text,extraElements=[],opciones=[],macros=null){
+function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1){
   const msgs=document.getElementById('messages');
   const div=document.createElement('div');div.className=`msg ${role}`;
+  if(mealIdx>=0)div.dataset.mealIdx=mealIdx;
   const av=document.createElement('div');av.className='av';av.textContent=role==='ai'?'IA':'👤';
   const bub=document.createElement('div');bub.className='bubble';
   let h=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   extraElements.forEach(el=>{if(el.type==='html')h+=el.content;});
+  if(mealIdx>=0&&S.comidas[mealIdx]){
+    const m=S.comidas[mealIdx];
+    h+=`<div class="meal-edit-badge" style="margin-top:8px;padding:6px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>${m.kcal} kcal · P${m.prot}g · CH${m.ch}g · G${m.grasa}g</span><span style="color:var(--accent);font-size:10px;font-weight:600;">mantén para editar</span></div>`;
+  }
   bub.innerHTML=h;div.appendChild(av);div.appendChild(bub);msgs.appendChild(div);
   // Long-press para menú contextual
   attachMsgListeners(div,role,text,macros);
@@ -2026,7 +2056,7 @@ function handlePhoto(e){
       S.historial.push({role:'assistant',content:raw});removeTyping();
       const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
       if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);addToDesp(nuevos);}
-      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
     }catch(err){removeTyping();addMsg('ai','Error analizando la imagen.');}
     e.target.value='';
   };reader.readAsDataURL(file);
@@ -2042,7 +2072,7 @@ async function handleFotoPlato(e){
       const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar el plato.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
-      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
     }catch(err){removeTyping();addMsg('ai','Error al analizar el plato.');}
   };reader.readAsDataURL(file);
 }
@@ -2057,7 +2087,7 @@ async function handleFotoEtiqueta(e){
       const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
-      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
     }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta.');}
   };reader.readAsDataURL(file);
 }
@@ -2087,7 +2117,7 @@ async function handleFotoTicket(e){
         const n=addToDesp(nuevos);
         if(n>0)showToast(`🧾 ${n} productos añadidos a la despensa`);
       }
-      const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);
+      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
     }catch(err){removeTyping();addMsg('ai','Error al leer el ticket. Inténtalo de nuevo.');}
   };reader.readAsDataURL(file);
 }
@@ -2249,7 +2279,7 @@ function borrarConversacion(){
   addTyping();
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
   callAI('Nueva conversación. Saluda brevemente'+(nombreUsuario?' a '+nombreUsuario:'')+'. Recuérdame que hoy llevo '+S.kcalC+' kcal de '+S.kcalObj+'. Usa [OPCIONES] con sugerencias.')
-    .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
+    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
     .catch(()=>{removeTyping();addMsg('ai','¡Conversación reiniciada! ¿En qué te ayudo?');});
 }
 
@@ -2260,40 +2290,25 @@ function initApp(){
   // Mostrar Admin en menú si es admin
   const adminItem=document.getElementById('navAdminItem');
   if(adminItem)adminItem.style.display=CURRENT_USER?.email===ADMIN_EMAIL?'block':'none';
-  // Renderizar diario con comidas del día
-  renderDiario();
-  // Modo por defecto: Diario
-  setMainMode(localStorage.getItem('macroai_mode')||'diario');
+  setMainMode('chat');
   // Iniciar chat en background
   addTyping();
   const despStr=DESP.length?` Tengo en mi despensa: ${despNombres().join(', ')}.`:'';
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
   const ctx=S.comidas.length>0
     ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
-    :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Dile que puede anotar comidas en el Diario o preguntarle a la IA. Usa [OPCIONES]: Ver mi diario|¿Qué como hoy?|Generar menú completo`;
+    :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Dile que puede registrar sus comidas contándoselas o preguntarle lo que necesite. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`;
   callAI(ctx)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones}=parseAI(raw);addMsg('ai',t,elements,opciones);})
+    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. Usa el Diario para anotar o pregúntame lo que necesites.`,[],[]);});
 }
 
-// ── MODE TOGGLE ──
 function setMainMode(mode){
-  localStorage.setItem('macroai_mode',mode);
-  const diario=document.getElementById('diarioView');
+  // Solo chat, sin diario
   const chat=document.getElementById('chatViewWrap');
-  const btnD=document.getElementById('modeBtnDiario');
-  const btnC=document.getElementById('modeBtnChat');
-  if(mode==='diario'){
-    diario.style.display='flex';chat.style.display='none';
-    btnD.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
-    btnC.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
-  }else{
-    diario.style.display='none';chat.style.display='flex';
-    btnC.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
-    btnD.style.cssText='flex:1;padding:10px 0;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;';
-    // Scroll al fondo del chat
-    setTimeout(()=>{const m=document.getElementById('messages');if(m)m.scrollTop=m.scrollHeight;},50);
-  }
+  if(chat)chat.style.display='flex';
+  setTimeout(()=>{const m=document.getElementById('messages');if(m)m.scrollTop=m.scrollHeight;},50);
+}
 }
 
 // ── DIARIO — CONFIGURACIÓN COMIDAS ──
@@ -2703,6 +2718,65 @@ window.addEventListener('resize',()=>{
   const msgs=document.getElementById('messages');
   if(msgs){const atBottom=msgs.scrollHeight-msgs.scrollTop-msgs.clientHeight<50;if(atBottom)setTimeout(()=>msgs.scrollTop=msgs.scrollHeight,100);}
 });
+
+// ── EDITAR COMIDA REGISTRADA ──
+let _editMealIdx = -1;
+let _editMsgDiv = null;
+
+function openEditMeal(mealIdx, msgDiv) {
+  const meal = S.comidas[mealIdx];
+  if (!meal) return;
+  _editMealIdx = mealIdx;
+  _editMsgDiv = msgDiv;
+  document.getElementById('editMealName').textContent = '✏️ ' + meal.nombre;
+  document.getElementById('editKcal').value = meal.kcal;
+  document.getElementById('editProt').value = meal.prot;
+  document.getElementById('editCh').value = meal.ch;
+  document.getElementById('editGrasa').value = meal.grasa;
+  document.getElementById('editMealOverlay').classList.add('open');
+}
+
+function closeEditMeal(e) {
+  if (e && e.target !== document.getElementById('editMealOverlay')) return;
+  document.getElementById('editMealOverlay').classList.remove('open');
+  _editMealIdx = -1; _editMsgDiv = null;
+}
+
+function saveEditMeal() {
+  if (_editMealIdx < 0 || !S.comidas[_editMealIdx]) return;
+  const oldMeal = S.comidas[_editMealIdx];
+  const newKcal = parseInt(document.getElementById('editKcal').value) || 0;
+  const newProt = parseInt(document.getElementById('editProt').value) || 0;
+  const newCh   = parseInt(document.getElementById('editCh').value)   || 0;
+  const newGrasa= parseInt(document.getElementById('editGrasa').value)|| 0;
+
+  // Recalcular totales del día
+  S.kcalC  = S.kcalC  - oldMeal.kcal  + newKcal;
+  S.protC  = S.protC  - oldMeal.prot  + newProt;
+  S.chC    = S.chC    - oldMeal.ch    + newCh;
+  S.grasaC = S.grasaC - oldMeal.grasa + newGrasa;
+
+  // Actualizar comida
+  S.comidas[_editMealIdx].kcal  = newKcal;
+  S.comidas[_editMealIdx].prot  = newProt;
+  S.comidas[_editMealIdx].ch    = newCh;
+  S.comidas[_editMealIdx].grasa = newGrasa;
+
+  updateBars(); saveToday();
+
+  // Actualizar badge en el mensaje del chat
+  if (_editMsgDiv) {
+    const badge = _editMsgDiv.querySelector('.meal-edit-badge');
+    if (badge) {
+      badge.textContent = newKcal + ' kcal · P' + newProt + 'g · CH' + newCh + 'g · G' + newGrasa + 'g';
+    }
+  }
+
+  document.getElementById('editMealOverlay').classList.remove('open');
+  showToast('✅ Comida actualizada');
+  _editMealIdx = -1; _editMsgDiv = null;
+}
+
 </script>
 <!-- ══ QUICK ADD MODAL — MULTI ITEM ══ -->
 <div class="qam-overlay" id="qamOverlay" onclick="closeQAM(event)">
@@ -2745,5 +2819,34 @@ window.addEventListener('resize',()=>{
   </div>
 </div>
 
+
+<!-- ══ EDIT MEAL MODAL ══ -->
+<div class="edit-meal-overlay" id="editMealOverlay" onclick="closeEditMeal(event)">
+  <div class="edit-meal-sheet">
+    <div class="edit-meal-title" id="editMealName">Editar comida</div>
+    <div class="edit-meal-grid">
+      <div class="edit-meal-field">
+        <span class="edit-meal-lbl">Calorías (kcal)</span>
+        <input class="edit-meal-inp" id="editKcal" type="number" inputmode="numeric">
+      </div>
+      <div class="edit-meal-field">
+        <span class="edit-meal-lbl">Proteína (g)</span>
+        <input class="edit-meal-inp" id="editProt" type="number" inputmode="numeric">
+      </div>
+      <div class="edit-meal-field">
+        <span class="edit-meal-lbl">Carbohidratos (g)</span>
+        <input class="edit-meal-inp" id="editCh" type="number" inputmode="numeric">
+      </div>
+      <div class="edit-meal-field">
+        <span class="edit-meal-lbl">Grasa (g)</span>
+        <input class="edit-meal-inp" id="editGrasa" type="number" inputmode="numeric">
+      </div>
+    </div>
+    <div class="edit-meal-btns">
+      <button class="edit-meal-cancel" onclick="closeEditMeal()">Cancelar</button>
+      <button class="edit-meal-save" onclick="saveEditMeal()">✅ Guardar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
