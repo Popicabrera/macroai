@@ -1151,12 +1151,26 @@ function usarDespensa(){
 function loadFavs(){try{return JSON.parse(localStorage.getItem('macroai_favs')||'[]');}catch(e){return[];}}
 function saveFavs(arr){localStorage.setItem('macroai_favs',JSON.stringify(arr));}
 
-function guardarFavorito(nombre,texto,macros){
+function guardarFavorito(nombre,texto,macros,ingredientesRaw){
   const favs=loadFavs();
+  // Parsear ingredientes del raw para guardarlos como lista editable
+  let ingredientes=[];
+  if(ingredientesRaw){
+    ingredientesRaw.trim().split('\n').forEach(l=>{
+      const lt=l.trim();if(!lt||lt.startsWith('TOTAL:'))return;
+      const firstColon=lt.indexOf(':');if(firstColon<0)return;
+      const namePart=lt.substring(0,firstColon).trim();
+      const rest=lt.substring(firstColon+1);
+      const secondColon=rest.indexOf(':');
+      const grams=secondColon>=0?rest.substring(0,secondColon).trim():rest.trim();
+      if(namePart)ingredientes.push({nombre:namePart,cantidad:grams});
+    });
+  }
   const fav={
     id:Date.now(),
     nombre:nombre||'Favorito',
     texto:texto||'',
+    ingredientes:ingredientes,
     kcal:macros?.kcal||0,prot:macros?.prot||0,ch:macros?.ch||0,grasa:macros?.grasa||0,
     fecha:new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'})
   };
@@ -1176,11 +1190,14 @@ function renderFavoritos(){
   body.innerHTML='';
   favs.forEach(f=>{
     const card=document.createElement('div');card.className='fav-card';
+    const ingHtml=f.ingredientes&&f.ingredientes.length?
+      `<div style="padding:6px 14px 2px;font-size:11px;color:var(--muted);">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:8px;">• ${escapeHtml(i.nombre)} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
     card.innerHTML=`
       <div class="fav-hdr-row">
         <div class="fav-name">⭐ ${escapeHtml(f.nombre)}</div>
         <div class="fav-date">${f.fecha}</div>
       </div>
+      ${ingHtml}
       ${f.kcal?`<div class="fav-macros">
         <div class="fav-m"><div class="fav-m-val" style="color:var(--accent)">${f.kcal}</div><div class="fav-m-lbl">kcal</div></div>
         <div class="fav-m"><div class="fav-m-val" style="color:var(--red)">${f.prot}g</div><div class="fav-m-lbl">prot</div></div>
@@ -1188,7 +1205,8 @@ function renderFavoritos(){
         <div class="fav-m"><div class="fav-m-val" style="color:var(--blue)">${f.grasa}g</div><div class="fav-m-lbl">grasa</div></div>
       </div>`:''}
       <div class="fav-actions">
-        <button class="fav-use-btn" onclick="usarFavorito(${f.id})">↩ Usar este menú/plato</button>
+        <button class="fav-use-btn" onclick="usarFavorito(${f.id})">↩ Registrar ahora</button>
+        <button class="fav-use-btn" style="background:rgba(255,211,61,0.08);border-color:rgba(255,211,61,0.25);" onclick="editarFavorito(${f.id})">✏️ Editar</button>
         <button class="fav-del-btn" onclick="eliminarFavorito(${f.id})">🗑️</button>
       </div>`;
     body.appendChild(card);
@@ -1197,8 +1215,73 @@ function renderFavoritos(){
 
 function usarFavorito(id){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
+  // Construir mensaje con ingredientes guardados para registrar directamente
+  let msg;
+  if(f.ingredientes&&f.ingredientes.length){
+    const lista=f.ingredientes.map(i=>`${i.cantidad} de ${i.nombre.replace(/^[^\w]+/,'')}`).join(', ');
+    msg=`Registra este favorito: ${f.nombre}. Ingredientes: ${lista}`;
+  } else {
+    msg=`Registra este favorito: ${f.nombre}`;
+  }
   showView('viewMain');
-  setTimeout(()=>sendDirect(`Quiero preparar: ${f.nombre}. ${f.texto?'Recuérdame cómo hacerlo y adapta las cantidades a mis macros de hoy.':''}`),300);
+  setTimeout(()=>sendDirect(msg),300);
+}
+
+function editarFavorito(id){
+  const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
+  // Crear modal de edición
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;';
+  let ingInputs=f.ingredientes&&f.ingredientes.length?f.ingredientes:[];
+  const renderIngInputs=()=>ingInputs.map((ing,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+      <input data-ing-nombre="${i}" value="${escapeHtml(ing.nombre)}" placeholder="Ingrediente"
+        style="flex:2;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:13px;">
+      <input data-ing-cantidad="${i}" value="${escapeHtml(ing.cantidad)}" placeholder="Cantidad"
+        style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:13px;">
+      <button onclick="this.closest('[data-fav-edit]').dispatchEvent(new CustomEvent('del-ing',{detail:${i}}))"
+        style="padding:6px 10px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:var(--red);font-size:13px;">✕</button>
+    </div>`).join('');
+  overlay.innerHTML=`
+    <div data-fav-edit style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:85vh;overflow-y:auto;">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;">✏️ Editar favorito</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Nombre</div>
+      <input id="favEditNombre" value="${escapeHtml(f.nombre)}"
+        style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--fg);font-size:14px;margin-bottom:14px;box-sizing:border-box;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">Ingredientes y cantidades</div>
+      <div id="favEditIngs">${renderIngInputs()}</div>
+      <button id="favAddIng" style="width:100%;padding:9px;background:rgba(212,240,74,0.08);border:1px dashed rgba(212,240,74,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:16px;cursor:pointer;">+ Añadir ingrediente</button>
+      <div style="display:flex;gap:10px;">
+        <button id="favEditCancel" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--fg);font-size:14px;cursor:pointer;">Cancelar</button>
+        <button id="favEditSave" style="flex:2;padding:12px;background:var(--accent);border:none;border-radius:12px;color:#080810;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Guardar cambios</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const panel=overlay.querySelector('[data-fav-edit]');
+  // Añadir ingrediente
+  overlay.querySelector('#favAddIng').addEventListener('click',()=>{
+    ingInputs.push({nombre:'',cantidad:''});
+    overlay.querySelector('#favEditIngs').innerHTML=renderIngInputs();
+  });
+  // Borrar ingrediente
+  panel.addEventListener('del-ing',(e)=>{
+    ingInputs.splice(e.detail,1);
+    overlay.querySelector('#favEditIngs').innerHTML=renderIngInputs();
+  });
+  // Cancelar
+  overlay.querySelector('#favEditCancel').addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',(e)=>{if(e.target===overlay)overlay.remove();});
+  // Guardar
+  overlay.querySelector('#favEditSave').addEventListener('click',()=>{
+    // Leer valores actuales de los inputs
+    const nombresInputs=[...overlay.querySelectorAll('[data-ing-nombre]')];
+    const cantidadesInputs=[...overlay.querySelectorAll('[data-ing-cantidad]')];
+    const nuevosIngs=nombresInputs.map((inp,i)=>({nombre:inp.value.trim(),cantidad:cantidadesInputs[i]?.value.trim()||''})).filter(x=>x.nombre);
+    const nuevoNombre=overlay.querySelector('#favEditNombre').value.trim()||f.nombre;
+    const idx=favs.findIndex(x=>x.id===id);
+    if(idx>=0){favs[idx].nombre=nuevoNombre;favs[idx].ingredientes=nuevosIngs;}
+    saveFavs(favs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
+  });
 }
 
 function eliminarFavorito(id){
@@ -1545,8 +1628,9 @@ function parseAI(raw){
     actualizarFrecuenciaDesp(ingredientesTexto+' '+nombre);
     saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
   }
-  text=text.replace(/\[REGISTRAR\]kcal=\d+,prot=\d+,ch=\d+,grasa=\d+\[\/REGISTRAR\]/,'').trim();
-  text=text.replace(/\[COMIDA\].*?\[\/COMIDA\]/,'').trim();
+  // Limpiar TODOS los tags de control del texto visible (robusto, todas las ocurrencias)
+  text=text.replace(/\[REGISTRAR\][^\[]*\[\/REGISTRAR\]/gi,'').trim();
+  text=text.replace(/\[COMIDA\][^\[]*\[\/COMIDA\]/gi,'').trim();
   const wM=text.match(/\[AVISO_WARN\]([\s\S]*?)\[\/AVISO_WARN\]/);
   if(wM){elements.push({type:'html',content:`<div class="alert-card warn">⚠️ <span>${wM[1]}</span></div>`});text=text.replace(wM[0],'').trim();}
   const oM=text.match(/\[AVISO_OK\]([\s\S]*?)\[\/AVISO_OK\]/);
@@ -1554,7 +1638,7 @@ function parseAI(raw){
   const opM=text.match(/\[OPCIONES\](.*?)\[\/OPCIONES\]/);
   let opciones=[];
   if(opM){opciones=opM[1].split('|').map(o=>o.trim()).filter(Boolean);text=text.replace(opM[0],'').trim();}
-  return{text:text.trim(),elements,opciones,mealIdx:regMatch?S.comidas.length-1:-1};
+  return{text:text.trim(),elements,opciones,mealIdx:regMatch?S.comidas.length-1:-1,ingredientesRaw:ingMatch?ingMatch[1].trim():''};
 }
 
 // ── CONTEXT MENU (long-press) ──
@@ -1564,11 +1648,11 @@ function closeContextMenu(){
   if(ctxMenu){ctxMenu.remove();ctxMenu=null;}
 }
 
-function attachMsgListeners(msgDiv,role,textContent,macros){
+function attachMsgListeners(msgDiv,role,textContent,macros,ingredientesRaw=''){
   let pressTimer=null;
   const startPress=()=>{
     pressTimer=setTimeout(()=>{
-      showContextMenu(msgDiv,role,textContent,macros);
+      showContextMenu(msgDiv,role,textContent,macros,ingredientesRaw);
     },500);
   };
   const cancelPress=()=>clearTimeout(pressTimer);
@@ -1580,7 +1664,7 @@ function attachMsgListeners(msgDiv,role,textContent,macros){
   msgDiv.addEventListener('mouseleave',cancelPress);
 }
 
-function showContextMenu(msgDiv,role,textContent,macros){
+function showContextMenu(msgDiv,role,textContent,macros,ingredientesRaw=''){
   closeContextMenu();
   // Posición del menú
   const rect=msgDiv.getBoundingClientRect();
@@ -1591,7 +1675,7 @@ function showContextMenu(msgDiv,role,textContent,macros){
   if(role==='ai'){
     items.push({icon:'⭐',label:'Guardar en favoritos',action:()=>{
       const nombre=textContent.split('\n')[0].substring(0,40)||'Favorito';
-      guardarFavorito(nombre,textContent,macros);
+      guardarFavorito(nombre,textContent,macros,ingredientesRaw);
       msgDiv.querySelector('.bubble').classList.add('fav-marked');
       closeContextMenu();
       showToast('⭐ Guardado en favoritos');
@@ -1680,7 +1764,7 @@ function borrarDesdeAqui(msgDiv){
     const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
     addTyping();
     callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
-      .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
+      .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');})
       .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
   }
   showToast('Conversación recortada');
@@ -1720,10 +1804,11 @@ function showToast(msg){
 }
 
 // ── MESSAGES ──
-function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1){
+function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1,ingredientesRaw=''){
   const msgs=document.getElementById('messages');
   const div=document.createElement('div');div.className=`msg ${role}`;
   if(mealIdx>=0)div.dataset.mealIdx=mealIdx;
+  if(ingredientesRaw)div.dataset.ingredientesRaw=ingredientesRaw;
   const av=document.createElement('div');av.className='av';av.textContent=role==='ai'?'IA':'👤';
   const bub=document.createElement('div');bub.className='bubble';
   let h=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1735,7 +1820,7 @@ function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1){
   }
   bub.innerHTML=h;div.appendChild(av);div.appendChild(bub);msgs.appendChild(div);
   // Long-press para menú contextual
-  attachMsgListeners(div,role,text,macros);
+  attachMsgListeners(div,role,text,macros,ingredientesRaw);
   if(opciones.length){
     const qr=document.createElement('div');qr.className='quick-replies';
     opciones.forEach(op=>{const btn=document.createElement('div');btn.className='qr';btn.textContent=op;
@@ -1775,11 +1860,11 @@ async function sendDirect(text){
   addMsg('user',text);addTyping();
   try{
     const raw=await callAI(text);removeTyping();
-    const{text:t,elements,opciones}=parseAI(raw);
+    const{text:t,elements,opciones,ingredientesRaw}=parseAI(raw);
     // Extraer macros si hay REGISTRAR para favoritos
     const regMatch=raw.match(/\[REGISTRAR\]kcal=(\d+),prot=(\d+),ch=(\d+),grasa=(\d+)\[\/REGISTRAR\]/);
     const macros=regMatch?{kcal:+regMatch[1],prot:+regMatch[2],ch:+regMatch[3],grasa:+regMatch[4]}:null;
-    addMsg('ai',t,elements,opciones,macros);
+    addMsg('ai',t,elements,opciones,macros,-1,ingredientesRaw||'');
   }
   catch(e){removeTyping();addMsg('ai','Error de conexión. Comprueba tu internet.',[],['Reintentar']);}
   document.getElementById('sendBtn').disabled=false;
@@ -1832,7 +1917,7 @@ function handlePhoto(e){
       S.historial.push({role:'assistant',content:raw});removeTyping();
       const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
       if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);addToDesp(nuevos);}
-      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error analizando la imagen.');}
     e.target.value='';
   };reader.readAsDataURL(file);
@@ -1848,7 +1933,7 @@ async function handleFotoPlato(e){
       const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar el plato.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
-      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error al analizar el plato.');}
   };reader.readAsDataURL(file);
 }
@@ -1863,7 +1948,7 @@ async function handleFotoEtiqueta(e){
       const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
-      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta.');}
   };reader.readAsDataURL(file);
 }
@@ -1893,7 +1978,7 @@ async function handleFotoTicket(e){
         const n=addToDesp(nuevos);
         if(n>0)showToast(`🧾 ${n} productos añadidos a la despensa`);
       }
-      const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error al leer el ticket. Inténtalo de nuevo.');}
   };reader.readAsDataURL(file);
 }
@@ -2057,7 +2142,7 @@ function borrarConversacion(){
   addTyping();
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
   callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
+    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');})
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
 }
 
@@ -2077,7 +2162,7 @@ function initApp(){
     ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
     :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Dile que puede registrar sus comidas contándoselas o preguntarle lo que necesite. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`;
   callAI(ctx)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
+    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');})
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. Usa el Diario para anotar o pregúntame lo que necesites.`,[],[]);});
 }
 
