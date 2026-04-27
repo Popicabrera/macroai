@@ -1664,10 +1664,10 @@ function borrarMensaje(msgDiv){
   const all=Array.from(allMsgs.querySelectorAll('.msg'));
   const idx=all.indexOf(msgDiv);
   if(idx>=0&&idx<S.historial.length){S.historial.splice(idx,1);}
-  // También borrar quick-replies siguiente si las hay
   const next=msgDiv.nextElementSibling;
   if(next&&next.classList.contains('quick-replies'))next.remove();
   msgDiv.remove();
+  recalcMacrosFromDOM();
   showToast('Mensaje borrado');
 }
 
@@ -1685,7 +1685,40 @@ function borrarDesdeAqui(msgDiv){
   }
   // Borrar quick-replies sueltos que queden
   allMsgs.querySelectorAll('.quick-replies').forEach(el=>el.remove());
+  recalcMacrosFromDOM();
+  // Si no quedan mensajes, lanzar saludo inicial
+  const remaining = allMsgs.querySelectorAll('.msg');
+  if(remaining.length === 0){
+    const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
+    addTyping();
+    callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
+      .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
+      .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
+  }
   showToast('Conversación recortada');
+}
+
+
+// ── RECALCULAR MACROS DESDE MENSAJES VISIBLES ──
+function recalcMacrosFromDOM(){
+  // Recoger todos los mealIdx presentes en el DOM
+  const presentIdxs = new Set(
+    Array.from(document.querySelectorAll('.msg[data-meal-idx]'))
+      .map(el => parseInt(el.dataset.mealIdx))
+      .filter(n => !isNaN(n))
+  );
+  // Filtrar S.comidas a solo las que tienen su mensaje visible
+  // Los índices pueden no ser contiguos — recalculamos sumando las que quedan
+  S.kcalC=0; S.protC=0; S.chC=0; S.grasaC=0;
+  S.comidas.forEach((meal, idx) => {
+    if(presentIdxs.has(idx)){
+      S.kcalC  += meal.kcal  || 0;
+      S.protC  += meal.prot  || 0;
+      S.chC    += meal.ch    || 0;
+      S.grasaC += meal.grasa || 0;
+    }
+  });
+  updateBars(); saveToday();
 }
 
 // ── TOAST ──
@@ -2241,15 +2274,17 @@ function _closeNavMenuOutside(e){
 function closeNavMenu(){document.getElementById('navMenu').style.display='none';}
 
 function borrarConversacion(){
-
+  if(!confirm('¿Borrar toda la conversación y resetear los macros de hoy?'))return;
   S.historial=[];
+  S.comidas=[]; S.kcalC=0; S.protC=0; S.chC=0; S.grasaC=0;
+  saveToday(); updateBars();
   document.getElementById('messages').innerHTML='';
   document.querySelectorAll('.quick-replies').forEach(el=>el.remove());
   addTyping();
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
-  callAI('Nueva conversación. Saluda brevemente'+(nombreUsuario?' a '+nombreUsuario:'')+'. Recuérdame que hoy llevo '+S.kcalC+' kcal de '+S.kcalObj+'. Usa [OPCIONES] con sugerencias.')
+  callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
     .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1);})
-    .catch(()=>{removeTyping();addMsg('ai','¡Conversación reiniciada! ¿En qué te ayudo?');});
+    .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
 }
 
 // ── INIT ──
