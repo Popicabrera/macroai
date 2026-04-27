@@ -2268,7 +2268,7 @@ async function doCrearCliente(){
     document.getElementById('crearBtnRow').style.display='none';
     msg.style.display='block';msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.2);color:var(--accent);';
     msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
-    setTimeout(()=>loadAdminUsers(),1500);
+    setTimeout(()=>loadAdminUsers(),8000);
   }catch(e){showErr('Error de conexión: '+e.message);}
 }
 
