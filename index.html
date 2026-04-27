@@ -589,15 +589,15 @@ body{
         <span id="dayType">Día de entreno</span>
       </div>
       <div style="position:relative;">
-        <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu()">☰</div>
+        <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu(event)">☰</div>
         <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-          <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewDespensa'),50)">🧺 Despensa</div>
-          <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
-          <div class="nav-menu-item" onclick="closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
-          <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
+          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewDespensa'),50)">🧺 Despensa</div>
+          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
+          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
+          <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
           <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-          <div class="nav-menu-item" style="color:var(--red);" onclick="borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
-          <div class="nav-menu-item" style="color:var(--muted);" onclick="closeNavMenu();doLogout()">🚪 Cerrar sesión</div>
+          <div class="nav-menu-item" style="color:var(--red);" onclick="event.stopPropagation();borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
+          <div class="nav-menu-item" style="color:var(--muted);" onclick="event.stopPropagation();closeNavMenu();doLogout()">🚪 Cerrar sesión</div>
         </div>
       </div>
       <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
@@ -2232,15 +2232,24 @@ async function toggleUsuario(id,activo){
 }
 
 // ── NAV MENU ──
-function toggleNavMenu(){
+function toggleNavMenu(e){
+  if(e){e.stopPropagation();}
   const m=document.getElementById('navMenu');
   const open=m.style.display==='block';
   m.style.display=open?'none':'block';
   if(!open){
+    // Usar setTimeout para que el evento actual (touch/click) no cierre el menú inmediatamente
     setTimeout(()=>{
-      document.addEventListener('touchstart',closeNavMenu,{once:true,passive:true});
-      document.addEventListener('mousedown',closeNavMenu,{once:true});
-    },50);
+      document.addEventListener('touchstart',_closeNavMenuOutside,{once:true,passive:true});
+      document.addEventListener('mousedown',_closeNavMenuOutside,{once:true});
+    },100);
+  }
+}
+function _closeNavMenuOutside(e){
+  const m=document.getElementById('navMenu');
+  const btn=document.getElementById('menuBtn');
+  if(m&&!m.contains(e.target)&&btn&&!btn.contains(e.target)){
+    m.style.display='none';
   }
 }
 function closeNavMenu(){document.getElementById('navMenu').style.display='none';}
