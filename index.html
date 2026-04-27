@@ -1892,14 +1892,6 @@ function stopMic(sendAfter){
   const wasRecording=micState!=='idle';
   micState='idle';
   voiceInterim='';
-  if(recog){try{recog.stop();}catch(e){}recog=null;}
-  updateMicBtn();
-  hideBanner();
-  setHint('');
-function stopMic(sendAfter){
-  const wasRecording=micState!=='idle';
-  micState='idle';
-  voiceInterim='';
   if(recog){try{recog.abort();}catch(e){}recog=null;}
   updateMicBtn();
   hideBanner();
