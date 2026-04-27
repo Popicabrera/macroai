@@ -1003,7 +1003,7 @@ function enterApp(){
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#f5f0e8',theme_color:'#f5f0e8',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
-  const BUILD_VERSION='macroai-1777219968';
+  const BUILD_VERSION='macroai-1777303975';
   const sw=`
     const CACHE='${BUILD_VERSION}';
     // Al instalar: cachear recursos y activar inmediatamente
@@ -2007,8 +2007,11 @@ function removeTyping(){const t=document.getElementById('typingMsg');if(t)t.remo
 // ── CALL AI ──
 async function callAI(userMsg){
   S.historial.push({role:'user',content:userMsg});
+  // Limitar historial a los últimos 6 mensajes (3 pares) para reducir coste de tokens
+  // El contexto nutricional completo ya va en el system prompt, no se pierde nada importante
+  const histReciente=S.historial.slice(-6);
   const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+    body:JSON.stringify({system:sysPrompt(),messages:histReciente})});
   const data=await res.json();
   const raw=data.content?.[0]?.text||'Error de conexión.';
   S.historial.push({role:'assistant',content:raw});
@@ -2242,15 +2245,9 @@ async function doCrearCliente(){
   const msg=document.getElementById('crearClienteMsg');const btn=document.getElementById('crearClienteBtn');
   if(!nombre||!email){msg.style.display='block';msg.style.cssText+='background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';msg.textContent='Rellena nombre y email.';return;}
   btn.disabled=true;btn.textContent='Creando...';
-  const codigo='POPI-'+Math.random().toString(36).substring(2,7).toUpperCase();
   try{
-    const pwTemp=codigo+'#'+Math.floor(Math.random()*9000+1000);
-    const res=await fetch(SUPA_URL+'/auth/v1/signup',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY},body:JSON.stringify({email,password:pwTemp})});
-    const data=await res.json();
-    if(!res.ok){msg.style.display='block';msg.textContent=data.error_description||data.message||'Error.';btn.disabled=false;btn.textContent='Crear cliente';return;}
-    const uid=data.user?.id||data.id;
-    await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,email,nombre,codigo_invitacion:codigo,activo:true})});
-    _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado.\n\n📲 Entra aquí:\nhttps://popicabrera.github.io/macroai/\n\n📧 Tu email: ${email}\n🔑 Tu código de acceso: ${codigo}\n\nPasos:\n1. Abre el enlace\n2. Pulsa "Crear cuenta nueva"\n3. Pon tu email y elige tu contraseña\n4. Introduce el código cuando te lo pida\n\n¡Cualquier duda me dices! 💪`;
+    await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({email,nombre,activo:true})});
+    _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado 🥗\n\n📲 Entra aquí y crea tu cuenta:\nhttps://popicabrera.github.io/macroai/\n\nPasos:\n1. Abre el enlace\n2. Pulsa "Crear cuenta nueva"\n3. Pon tu email (${email}) y elige tu propia contraseña\n\n¡Cualquier duda me dices! 💪`;
     document.getElementById('whatsappBox').textContent=_ultimoWhatsapp;
     document.getElementById('whatsappBox').style.display='block';
     document.getElementById('copiarBtnWrap').style.display='block';
