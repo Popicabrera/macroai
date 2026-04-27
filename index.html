@@ -845,11 +845,18 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const CODIGO_VALIDO='POPI2025';
 const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
+const SUPA_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEzOTEwMSwiZXhwIjoyMDkyNzE1MTAxfQ.BFH-QFpbkP9hlfr6kWTgeTT3JcopXQfR2dM-yu7B9Gc';
 
 let SUPA_TOKEN=null,CURRENT_USER=null;
 
 async function supaFetch(path,opts={}){
   const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
+  return fetch(SUPA_URL+path,{...opts,headers});
+}
+
+// Solo para operaciones de admin — bypassa RLS con service key
+async function supaAdmin(path,opts={}){
+  const headers={'Content-Type':'application/json','apikey':SUPA_SERVICE_KEY,'Authorization':'Bearer '+SUPA_SERVICE_KEY,...(opts.headers||{})};
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
@@ -2150,10 +2157,10 @@ async function loadAdminUsers(){
   const body=document.getElementById('adminBody');
   body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;">Cargando...</div>';
   try{
-    const res=await supaFetch('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
+    const res=await supaAdmin('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
     const users=await res.json();
     let apiCounts={};
-    try{const apiRes=await supaFetch('/rest/v1/historial_macroai?select=usuario_id');const apiRows=await apiRes.json();if(Array.isArray(apiRows))apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});}catch(e){}
+    try{const apiRes=await supaAdmin('/rest/v1/historial_macroai?select=usuario_id');const apiRows=await apiRes.json();if(Array.isArray(apiRows))apiRows.forEach(r=>{apiCounts[r.usuario_id]=(apiCounts[r.usuario_id]||0)+1;});}catch(e){}
 
     body.innerHTML=`
       <div style="padding:0 0 12px;">
@@ -2234,16 +2241,25 @@ async function doCrearCliente(){
   const nombre=document.getElementById('newClientNombre').value.trim();
   const email=document.getElementById('newClientEmail').value.trim();
   const msg=document.getElementById('crearClienteMsg');const btn=document.getElementById('crearClienteBtn');
-  if(!nombre||!email){msg.style.display='block';msg.style.cssText+='background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';msg.textContent='Rellena nombre y email.';return;}
+  function showErr(txt){
+    msg.style.display='block';
+    msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:#ff6b6b;';
+    msg.textContent=txt;
+    btn.disabled=false;btn.textContent='Crear cliente';
+  }
+  if(!nombre||!email){showErr('Rellena nombre y email.');return;}
   btn.disabled=true;btn.textContent='Creando...';
+  msg.style.display='none';
   try{
-    // Guardar cliente en tabla (sin tocar Supabase Auth — el cliente se registra solo)
-    const chk=await supaFetch('/rest/v1/usuarios_macroai?select=id&email=eq.'+encodeURIComponent(email));
-    const rows=await chk.json();
+    const chkRes=await supaAdmin('/rest/v1/usuarios_macroai?select=id&email=eq.'+encodeURIComponent(email));
+    if(!chkRes.ok){const e=await chkRes.json();showErr('Error: '+(e.message||JSON.stringify(e)));return;}
+    const rows=await chkRes.json();
     if(Array.isArray(rows)&&rows.length>0){
-      await supaFetch('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre,activo:true})});
+      const patchRes=await supaAdmin('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre,activo:true})});
+      if(!patchRes.ok){const e=await patchRes.json();showErr('Error al actualizar: '+(e.message||JSON.stringify(e)));return;}
     } else {
-      await supaFetch('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({email,nombre,activo:true})});
+      const postRes=await supaAdmin('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({email,nombre,activo:true})});
+      if(!postRes.ok){const e=await postRes.json();showErr('Error al insertar: '+(e.message||e.hint||e.details||JSON.stringify(e)));return;}
     }
     _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado 🥗\n\n📲 Entra aquí:\nhttps://popicabrera.github.io/macroai/\n\nPasos:\n1. Abre el enlace\n2. Pulsa "Crear cuenta"\n3. Usa este email: ${email}\n4. Elige tu contraseña\n\n¡Cualquier duda me dices! 💪`;
     document.getElementById('whatsappBox').textContent=_ultimoWhatsapp;
@@ -2253,13 +2269,13 @@ async function doCrearCliente(){
     msg.style.display='block';msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.2);color:var(--accent);';
     msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
     setTimeout(()=>loadAdminUsers(),1500);
-  }catch(e){msg.style.display='block';msg.textContent='Error de conexión.';btn.disabled=false;btn.textContent='Crear cliente';}
+  }catch(e){showErr('Error de conexión: '+e.message);}
 }
 
 async function eliminarCliente(id, nombre){
   if(!confirm('¿Eliminar a '+nombre+'? Esta acción no se puede deshacer.'))return;
   try{
-    await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+    await supaAdmin('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
     showToast('🗑️ Cliente eliminado');
     loadAdminUsers();
   }catch(e){showToast('Error al eliminar');}
@@ -2273,7 +2289,7 @@ async function toggleUsuario(id,activo){
   status.className='admin-card-status '+(nuevoEstado?'active':'inactive');
   status.textContent=nuevoEstado?'✅ Activo':'❌ Desactivado';
   toggle.onclick=()=>toggleUsuario(id,nuevoEstado);
-  try{await supaFetch('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({activo:nuevoEstado})});}
+  try{await supaAdmin('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({activo:nuevoEstado})});}
   catch(e){toggle.className='admin-toggle '+(activo?'on':'off');status.className='admin-card-status '+(activo?'active':'inactive');status.textContent=activo?'✅ Activo':'❌ Desactivado';toggle.onclick=()=>toggleUsuario(id,activo);}
 }
 
