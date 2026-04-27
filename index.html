@@ -305,6 +305,10 @@ body{
 .cfg2-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
   font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 .cfg2-daytoggle{display:flex;gap:10px;padding:12px 14px;}
+.cfg2-weekrow{display:flex;gap:6px;padding:10px 14px 14px;justify-content:space-between;}
+.cfg2-weekbtn{flex:1;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--s3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);transition:all 0.2s;}
+.cfg2-weekbtn.active{background:var(--accent-dim);border-color:rgba(90,138,0,0.4);color:var(--accent);}
+.cfg2-weekbtn.hoy{box-shadow:0 0 0 2px var(--accent);}
 .cfg2-daybtn{flex:1;padding:12px 8px;border-radius:11px;border:1px solid var(--border);background:var(--s3);
   display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all 0.2s;}
 .cfg2-daybtn.active{background:var(--accent-dim);border-color:rgba(212,240,74,0.4);}
@@ -752,6 +756,16 @@ body{
   </div>
   <div class="cfg-body">
     <div class="cfg2-sec">
+      <div class="cfg2-title">Días de entreno semanales</div>
+      <div class="cfg2-weekrow" id="weekRow">
+        <div class="cfg2-weekbtn" id="wd1" onclick="toggleWeekDay(1)">L</div>
+        <div class="cfg2-weekbtn" id="wd2" onclick="toggleWeekDay(2)">M</div>
+        <div class="cfg2-weekbtn" id="wd3" onclick="toggleWeekDay(3)">X</div>
+        <div class="cfg2-weekbtn" id="wd4" onclick="toggleWeekDay(4)">J</div>
+        <div class="cfg2-weekbtn" id="wd5" onclick="toggleWeekDay(5)">V</div>
+        <div class="cfg2-weekbtn" id="wd6" onclick="toggleWeekDay(6)">S</div>
+        <div class="cfg2-weekbtn" id="wd0" onclick="toggleWeekDay(0)">D</div>
+      </div>
       <div class="cfg2-title">Tipo de día hoy</div>
       <div class="cfg2-daytoggle">
         <div class="cfg2-daybtn active" id="btnEntreno" onclick="setDayType('entreno')">
@@ -1073,6 +1087,37 @@ function loadCFG(){
   try{return Object.assign(def,JSON.parse(localStorage.getItem('macroai_cfg')||'{}'));}catch(e){return def;}
 }
 function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));}
+
+// ── DÍAS DE ENTRENO SEMANALES ──
+function loadWeekDays(){try{return JSON.parse(localStorage.getItem("macroai_weekdays")||"[1,2,3,4,5]");}catch(e){return[1,2,3,4,5];}}
+function saveWeekDays(days){localStorage.setItem("macroai_weekdays",JSON.stringify(days));}
+let WEEK_DAYS=loadWeekDays();
+
+function toggleWeekDay(d){
+  const idx=WEEK_DAYS.indexOf(d);
+  if(idx>=0)WEEK_DAYS.splice(idx,1);else WEEK_DAYS.push(d);
+  saveWeekDays(WEEK_DAYS);
+  renderWeekDays();
+  autoDetectDayType();
+}
+
+function renderWeekDays(){
+  const hoy=new Date().getDay();
+  [0,1,2,3,4,5,6].forEach(d=>{
+    const el=document.getElementById("wd"+d);
+    if(!el)return;
+    el.classList.toggle("active",WEEK_DAYS.includes(d));
+    el.classList.toggle("hoy",d===hoy);
+  });
+}
+
+function autoDetectDayType(){
+  const hoy=new Date().getDay();
+  const tipo=WEEK_DAYS.includes(hoy)?"entreno":"descanso";
+  CFG.tipoDia=tipo;
+  saveCFG(CFG);
+  applyMacros(tipo);
+}
 let CFG=loadCFG();
 
 // ── STATE ──
@@ -1348,6 +1393,7 @@ function loadCfgUI(){
   document.getElementById('cfgChD').value=CFG.descanso.ch;
   document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
   setDayType(CFG.tipoDia,false);
+  renderWeekDays();
   document.getElementById('adminHeaderBtn').style.display=CURRENT_USER?.email===ADMIN_EMAIL?'flex':'none';
 }
 function setDayType(tipo,update=true){
@@ -2797,7 +2843,8 @@ window.addEventListener('load',()=>{
   }
   setTimeout(tryInitDb,200);
 
-  const savedToken=localStorage.getItem('macroai_token');
+  autoDetectDayType();
+  const savedToken=localStorage.getItem("macroai_token");
   const savedUser=localStorage.getItem('macroai_user');
   if(savedToken&&savedUser){
     try{SUPA_TOKEN=savedToken;CURRENT_USER=JSON.parse(savedUser);enterApp();return;}
