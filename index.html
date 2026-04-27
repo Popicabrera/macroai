@@ -1528,7 +1528,7 @@ IMPORTANTE: El tag [REGISTRAR] con los totales exactos es OBLIGATORIO siempre qu
 // ── PARSE AI ──
 function parseAI(raw){
   let text=raw;const elements=[];
-  // Guardar raw original para buscar REGISTRAR/COMIDA aunque text sea modificado
+  let comidaRegistradaIdx=-1;
   const rawOrig=raw;
   // Detectar [AÑADIR_DESPENSA] — SOLO si NO hay [REGISTRAR] en el mismo mensaje
   // (evitar confundir ingredientes de comida con alimentos de despensa)
@@ -1607,6 +1607,7 @@ function parseAI(raw){
         const _ingTexto=ingMatch[1].trim();
         S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
         S.comidas.push({nombre:_nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
+        comidaRegistradaIdx=S.comidas.length-1;
         updateBars();saveToday();
         actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
         saveComidaSupabase({nombre:_nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
@@ -1624,6 +1625,7 @@ function parseAI(raw){
     const nombre=nombreMatch?nombreMatch[1].trim():`Comida ${S.comidas.length+1}`;
     const ingredientesTexto=ingTextMatch?ingTextMatch[1].trim():'';
     S.comidas.push({nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
+    comidaRegistradaIdx=S.comidas.length-1;
     updateBars();saveToday();
     actualizarFrecuenciaDesp(ingredientesTexto+' '+nombre);
     saveComidaSupabase({nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:parseInt(regMatch[1]),prot:parseInt(regMatch[2]),ch:parseInt(regMatch[3]),grasa:parseInt(regMatch[4]),ingredientes:ingredientesTexto});
@@ -1638,7 +1640,7 @@ function parseAI(raw){
   const opM=text.match(/\[OPCIONES\](.*?)\[\/OPCIONES\]/);
   let opciones=[];
   if(opM){opciones=opM[1].split('|').map(o=>o.trim()).filter(Boolean);text=text.replace(opM[0],'').trim();}
-  return{text:text.trim(),elements,opciones,mealIdx:regMatch?S.comidas.length-1:-1,ingredientesRaw:ingMatch?ingMatch[1].trim():''};
+  return{text:text.trim(),elements,opciones,mealIdx:comidaRegistradaIdx,ingredientesRaw:ingMatch?ingMatch[1].trim():''};
 }
 
 // ── CONTEXT MENU (long-press) ──
@@ -1691,7 +1693,7 @@ function showContextMenu(msgDiv,role,textContent,macros,ingredientesRaw=''){
     items.push({type:'sep'});
     items.push({icon:'✏️',label:'Editar comida',action:()=>{
       closeContextMenu();
-      openEditMeal(mealIdx, msgDiv);
+      setTimeout(()=>openEditMeal(mealIdx, msgDiv), 150);
     }});
   }
   items.push({type:'sep'});
@@ -2626,11 +2628,43 @@ function openEditMeal(mealIdx, msgDiv) {
   document.getElementById('editProt').value = meal.prot;
   document.getElementById('editCh').value = meal.ch;
   document.getElementById('editGrasa').value = meal.grasa;
+  // Poblar ingredientes
+  const list = document.getElementById('editIngList');
+  list.innerHTML = '';
+  const ings = meal.ingredientes ? meal.ingredientes.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:')) : [];
+  ings.forEach((l,i) => {
+    const firstColon = l.indexOf(':');
+    const nombre = firstColon>=0 ? l.substring(0,firstColon).trim() : l.trim();
+    const resto = firstColon>=0 ? l.substring(firstColon+1).trim() : '';
+    const cantidad = resto.split(':')[0].trim();
+    list.appendChild(_editIngRow(nombre, cantidad, i));
+  });
   document.getElementById('editMealOverlay').classList.add('open');
+}
+
+function _editIngRow(nombre, cantidad, idx){
+  const row = document.createElement('div');
+  row.style.cssText='display:flex;gap:6px;align-items:center;';
+  row.innerHTML=`
+    <input data-ing-n="${idx}" value="${escapeHtml(nombre)}" placeholder="Ingrediente"
+      style="flex:2;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:12px;">
+    <input data-ing-c="${idx}" value="${escapeHtml(cantidad)}" placeholder="Cantidad"
+      style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:12px;">
+    <button onclick="this.closest('div').remove()" style="padding:6px 9px;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.25);border-radius:8px;color:var(--red);font-size:13px;">✕</button>`;
+  return row;
+}
+
+function editMealAddIng(){
+  const list = document.getElementById('editIngList');
+  list.appendChild(_editIngRow('','', list.children.length));
 }
 
 function closeEditMeal(e) {
   if (e && e.target !== document.getElementById('editMealOverlay')) return;
+  document.getElementById('editMealOverlay').classList.remove('open');
+  _editMealIdx = -1; _editMsgDiv = null;
+}
+function closeEditMealForce(){
   document.getElementById('editMealOverlay').classList.remove('open');
   _editMealIdx = -1; _editMsgDiv = null;
 }
@@ -2643,6 +2677,14 @@ function saveEditMeal() {
   const newCh   = parseInt(document.getElementById('editCh').value)   || 0;
   const newGrasa= parseInt(document.getElementById('editGrasa').value)|| 0;
 
+  // Guardar ingredientes editados
+  const nombresInp = [...document.querySelectorAll('#editIngList [data-ing-n]')];
+  const cantidadesInp = [...document.querySelectorAll('#editIngList [data-ing-c]')];
+  const nuevosIngs = nombresInp.map((inp,i)=>{
+    const n=inp.value.trim(); const c=cantidadesInp[i]?.value.trim()||'';
+    return n ? `${n}:${c}` : null;
+  }).filter(Boolean).join('\n');
+
   // Recalcular totales del día
   S.kcalC  = S.kcalC  - oldMeal.kcal  + newKcal;
   S.protC  = S.protC  - oldMeal.prot  + newProt;
@@ -2654,15 +2696,14 @@ function saveEditMeal() {
   S.comidas[_editMealIdx].prot  = newProt;
   S.comidas[_editMealIdx].ch    = newCh;
   S.comidas[_editMealIdx].grasa = newGrasa;
+  S.comidas[_editMealIdx].ingredientes = nuevosIngs;
 
   updateBars(); saveToday();
 
   // Actualizar badge en el mensaje del chat
   if (_editMsgDiv) {
-    const badge = _editMsgDiv.querySelector('.meal-edit-badge');
-    if (badge) {
-      badge.textContent = newKcal + ' kcal · P' + newProt + 'g · CH' + newCh + 'g · G' + newGrasa + 'g';
-    }
+    const badge = _editMsgDiv.querySelector('.meal-edit-badge span');
+    if (badge) badge.textContent = newKcal + ' kcal · P' + newProt + 'g · CH' + newCh + 'g · G' + newGrasa + 'g';
   }
 
   document.getElementById('editMealOverlay').classList.remove('open');
@@ -2715,8 +2756,16 @@ function saveEditMeal() {
 
 <!-- ══ EDIT MEAL MODAL ══ -->
 <div class="edit-meal-overlay" id="editMealOverlay" onclick="closeEditMeal(event)">
-  <div class="edit-meal-sheet">
+  <div class="edit-meal-sheet" style="max-height:85vh;overflow-y:auto;">
     <div class="edit-meal-title" id="editMealName">Editar comida</div>
+
+    <!-- Ingredientes editables -->
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Ingredientes</div>
+    <div id="editIngList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+    <button id="editAddIng" onclick="editMealAddIng()" style="width:100%;padding:8px;background:rgba(212,240,74,0.06);border:1px dashed rgba(212,240,74,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:14px;cursor:pointer;">+ Añadir ingrediente</button>
+
+    <!-- Macros totales -->
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Macros totales</div>
     <div class="edit-meal-grid">
       <div class="edit-meal-field">
         <span class="edit-meal-lbl">Calorías (kcal)</span>
@@ -2736,7 +2785,7 @@ function saveEditMeal() {
       </div>
     </div>
     <div class="edit-meal-btns">
-      <button class="edit-meal-cancel" onclick="closeEditMeal()">Cancelar</button>
+      <button class="edit-meal-cancel" onclick="closeEditMealForce()">Cancelar</button>
       <button class="edit-meal-save" onclick="saveEditMeal()">✅ Guardar</button>
     </div>
   </div>
