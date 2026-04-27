@@ -1764,7 +1764,7 @@ function borrarDesdeAqui(msgDiv){
     const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
     addTyping();
     callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
-      .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');})
+      .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');})
       .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
   }
   showToast('Conversación recortada');
@@ -1779,17 +1779,19 @@ function recalcMacrosFromDOM(){
       .map(el => parseInt(el.dataset.mealIdx))
       .filter(n => !isNaN(n))
   );
-  // Filtrar S.comidas a solo las que tienen su mensaje visible
-  // Los índices pueden no ser contiguos — recalculamos sumando las que quedan
+  // Eliminar de S.comidas las que ya no están en el DOM
+  S.comidas = S.comidas.filter((_, idx) => presentIdxs.has(idx));
+  // Recalcular totales
   S.kcalC=0; S.protC=0; S.chC=0; S.grasaC=0;
-  S.comidas.forEach((meal, idx) => {
-    if(presentIdxs.has(idx)){
-      S.kcalC  += meal.kcal  || 0;
-      S.protC  += meal.prot  || 0;
-      S.chC    += meal.ch    || 0;
-      S.grasaC += meal.grasa || 0;
-    }
+  S.comidas.forEach(meal => {
+    S.kcalC  += meal.kcal  || 0;
+    S.protC  += meal.prot  || 0;
+    S.chC    += meal.ch    || 0;
+    S.grasaC += meal.grasa || 0;
   });
+  // Reasignar mealIdx en el DOM para que coincidan con los nuevos índices de S.comidas
+  const domMsgs = Array.from(document.querySelectorAll('.msg[data-meal-idx]'));
+  domMsgs.forEach((el, newIdx) => { el.dataset.mealIdx = newIdx; });
   updateBars(); saveToday();
 }
 
@@ -1917,7 +1919,7 @@ function handlePhoto(e){
       S.historial.push({role:'assistant',content:raw});removeTyping();
       const match=raw.match(/\[DESPENSA\]([\s\S]*?)\[\/DESPENSA\]/);
       if(match){const nuevos=match[1].split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>1);addToDesp(nuevos);}
-      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error analizando la imagen.');}
     e.target.value='';
   };reader.readAsDataURL(file);
@@ -1933,7 +1935,7 @@ async function handleFotoPlato(e){
       const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar el plato.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
-      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error al analizar el plato.');}
   };reader.readAsDataURL(file);
 }
@@ -1948,7 +1950,7 @@ async function handleFotoEtiqueta(e){
       const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
-      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error al leer la etiqueta.');}
   };reader.readAsDataURL(file);
 }
@@ -1978,7 +1980,7 @@ async function handleFotoTicket(e){
         const n=addToDesp(nuevos);
         if(n>0)showToast(`🧾 ${n} productos añadidos a la despensa`);
       }
-      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');
+      const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');
     }catch(err){removeTyping();addMsg('ai','Error al leer el ticket. Inténtalo de nuevo.');}
   };reader.readAsDataURL(file);
 }
@@ -2142,7 +2144,7 @@ function borrarConversacion(){
   addTyping();
   const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
   callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');})
+    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');})
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
 }
 
@@ -2179,7 +2181,7 @@ function initApp(){
       }
       const texto=`✅ ${c.nombre}${c.hora?' · '+c.hora:''}`;
       const macros={kcal:c.kcal,prot:c.prot,ch:c.ch,grasa:c.grasa};
-      addMsg('ai',texto,[{type:'html',content:ingHtml}],[],macros,idx,-1,c.ingredientes||'');
+      addMsg('ai',texto,[{type:'html',content:ingHtml}],[],macros,idx,c.ingredientes||'');
     });
   }
 
@@ -2191,7 +2193,7 @@ function initApp(){
     ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
     :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Dile que puede registrar sus comidas contándoselas o preguntarle lo que necesite. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`;
   callAI(ctx)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,-1,ir||'');})
+    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');})
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. Usa el Diario para anotar o pregúntame lo que necesites.`,[],[]);});
 }
 
