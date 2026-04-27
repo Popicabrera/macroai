@@ -1825,78 +1825,40 @@ function updateBars(){
 }
 
 // ══════════════════════════════════════════
-// ── VOZ — FIX COMPLETO ──
-// PROBLEMA: onresult itera desde i=0 siempre → los finals anteriores
-// se vuelven a concatenar → duplicados/triplicados.
-// SOLUCIÓN: usar e.resultIndex para iterar solo desde el nuevo resultado,
-// y acumular finals en voiceFinalText separado del interino.
+// ── VOZ — SIN BEEPS, SIN RESTART ──
+// continuous:true → el navegador gestiona solo, sin recrear instancias
 // ══════════════════════════════════════════
 let micState='idle', recog=null;
-let voiceFinalText='';   // solo resultados finales confirmados
-let voiceInterim='';     // resultado parcial actual (no final)
+let voiceFinalText='';
+let voiceInterim='';
 
 function toggleMic(){
   if(micState==='idle')startMic();
-  else if(micState==='recording')pauseMic();
-  else if(micState==='paused')resumeMic();
-}
-
-// Suprimir beep del sistema: ocupar canal de audio con oscilador silencioso
-let _audioCtx=null,_gainNode=null,_oscNode=null;
-function silenciarBeep(){
-  try{
-    if(!_audioCtx){
-      _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-      _gainNode=_audioCtx.createGain();
-      _gainNode.gain.value=0.00001; // prácticamente inaudible
-      _gainNode.connect(_audioCtx.destination);
-    }
-    if(_audioCtx.state==='suspended')_audioCtx.resume();
-    // Detener oscilador previo si lo hay
-    if(_oscNode){try{_oscNode.stop();_oscNode.disconnect();}catch(e){}}
-    // Crear oscilador silencioso de corta duración
-    _oscNode=_audioCtx.createOscillator();
-    _oscNode.frequency.value=1; // 1Hz, inaudible
-    _oscNode.connect(_gainNode);
-    _oscNode.start(0);
-    _oscNode.stop(_audioCtx.currentTime+0.5);
-  }catch(e){}
-}
-function mantenerAudioActivo(){
-  // Mantener el AudioContext vivo mientras grabamos
-  if(!_audioCtx||micState==='idle')return;
-  silenciarBeep();
-  setTimeout(mantenerAudioActivo,400);
+  else stopMic(false);
 }
 
 function startMic(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){setHint('⚠️ Sin soporte de voz en este navegador.');return;}
-  silenciarBeep();
-  // Recuperar texto ya escrito en el campo como base
   voiceFinalText=document.getElementById('inputField').value||'';
   voiceInterim='';
+  if(recog){try{recog.abort();}catch(e){} recog=null;}
   recog=new SR();
   recog.lang='es-ES';
   recog.continuous=true;
   recog.interimResults=true;
+  recog.maxAlternatives=1;
 
   recog.onresult=function(e){
-    // ── FIX CLAVE: iterar solo desde resultIndex ──
-    let newFinals='';
-    let newInterim='';
+    let newFinals=''; let newInterim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal){
-        newFinals+=e.results[i][0].transcript;
-      }else{
-        newInterim+=e.results[i][0].transcript;
-      }
+      if(e.results[i].isFinal) newFinals+=e.results[i][0].transcript;
+      else newInterim+=e.results[i][0].transcript;
     }
-    // Acumular finals
-    if(newFinals)voiceFinalText+=(voiceFinalText&&!voiceFinalText.endsWith(' ')?' ':'')+newFinals;
+    if(newFinals){
+      voiceFinalText+=(voiceFinalText&&!voiceFinalText.endsWith(' ')?' ':'')+newFinals;
+    }
     voiceInterim=newInterim;
-
-    // Actualizar campo y banner
     const combined=(voiceFinalText+(voiceInterim?' '+voiceInterim:'')).trim();
     document.getElementById('inputField').value=combined;
     autoResize(document.getElementById('inputField'));
@@ -1904,16 +1866,18 @@ function startMic(){
   };
 
   recog.onerror=function(e){
-    if(e.error==='aborted')return; // pausado intencionalmente
-    if(e.error==='no-speech')return; // silencio normal
+    if(e.error==='aborted'||e.error==='no-speech')return;
     stopMic(false);
-    setHint('⚠️ Error de micrófono: '+e.error);
+    setHint('⚠️ Error: '+e.error);
   };
 
-  // Auto-restart: SIEMPRE nueva instancia para evitar duplicados en Android
+  // NO auto-restart — cada restart genera un beep en Android
   recog.onend=function(){
     if(micState==='recording'){
-      setTimeout(()=>{if(micState==='recording')startMicFresh();},50);
+      micState='idle';
+      updateMicBtn();
+      hideBanner();
+      setHint('');
     }
   };
 
@@ -1922,69 +1886,16 @@ function startMic(){
   updateMicBtn();
   updateVoiceBanner();
   setHint('');
-  mantenerAudioActivo();
 }
 
-function startMicFresh(){
-  // Restart limpio manteniendo el texto acumulado
-  if(recog){try{recog.abort();}catch(e){}}
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR)return;
-  silenciarBeep();
-  recog=new SR();
-  recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
-  // Reasignar handlers
-  recog.onresult=recog_onresult_handler;
-  recog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopMic(false);};
-  recog.onend=function(){
-    if(micState==='recording'){setTimeout(()=>{if(micState==='recording')startMicFresh();},50);}
-  };
-  try{recog.start();}catch(e){}
-}
-
-// Handler separado para poder reasignarlo
-function recog_onresult_handler(e){
-  let newFinals='';let newInterim='';
-  for(let i=e.resultIndex;i<e.results.length;i++){
-    if(e.results[i].isFinal)newFinals+=e.results[i][0].transcript;
-    else newInterim+=e.results[i][0].transcript;
-  }
-  if(newFinals)voiceFinalText+=(voiceFinalText&&!voiceFinalText.endsWith(' ')?' ':'')+newFinals;
-  voiceInterim=newInterim;
-  const combined=(voiceFinalText+(voiceInterim?' '+voiceInterim:'')).trim();
-  document.getElementById('inputField').value=combined;
-  autoResize(document.getElementById('inputField'));
-  updateVoiceBanner();
-}
-
-function pauseMic(){
-  micState='paused';
-  voiceInterim=''; // descartar interino al pausar
-  if(recog){try{recog.abort();}catch(e){}}
+function stopMic(sendAfter){
+  const wasRecording=micState!=='idle';
+  micState='idle';
+  voiceInterim='';
+  if(recog){try{recog.stop();}catch(e){}recog=null;}
   updateMicBtn();
-  updateVoiceBanner();
-  setHint('⏸ Pausado · pulsa ▶ para continuar');
-}
-
-function resumeMic(){
-  micState='recording';
-  silenciarBeep();
-  // Reiniciar recog con nueva instancia para evitar estados corruptos
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR)return;
-  recog=new SR();
-  recog.lang='es-ES';recog.continuous=true;recog.interimResults=true;
-  recog.onresult=recog_onresult_handler;
-  recog.onerror=function(e){if(e.error!=='aborted'&&e.error!=='no-speech')stopMic(false);};
-  recog.onend=function(){
-    if(micState==='recording'){setTimeout(()=>{if(micState==='recording')startMicFresh();},50);}
-  };
-  try{recog.start();}catch(e){micState='idle';updateMicBtn();return;}
-  updateMicBtn();
-  updateVoiceBanner();
+  hideBanner();
   setHint('');
-}
-
 function stopMic(sendAfter){
   const wasRecording=micState!=='idle';
   micState='idle';
