@@ -1298,16 +1298,37 @@ function renderFavoritos(){
 
 function usarFavorito(id){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
-  // Construir mensaje con ingredientes guardados para registrar directamente
-  let msg;
-  if(f.ingredientes&&f.ingredientes.length){
-    const lista=f.ingredientes.map(i=>`${i.cantidad} de ${i.nombre.replace(/^[^\w]+/,'')}`).join(', ');
-    msg=`Registra este favorito: ${f.nombre}. Ingredientes: ${lista}`;
-  } else {
-    msg=`Registra este favorito: ${f.nombre}`;
-  }
   showView('viewMain');
-  setTimeout(()=>sendDirect(msg),300);
+  // Si tiene macros guardados — registrar directamente sin llamar a la IA
+  if(f.kcal>0){
+    setTimeout(()=>{
+      const kcalN=f.kcal||0,protN=f.prot||0,chN=f.ch||0,grasaN=f.grasa||0;
+      S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
+      // Reconstruir texto de ingredientes desde array guardado
+      let ingTexto='';
+      if(f.ingredientes&&f.ingredientes.length){
+        ingTexto=f.ingredientes.map(i=>`${i.nombre}:${i.cantidad}`).join('\n');
+      }
+      S.comidas.push({nombre:f.nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+      const mealIdx=S.comidas.length-1;
+      updateBars();saveToday();
+      saveComidaSupabase({nombre:f.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+      // Construir tarjeta de ingredientes
+      let ingHtml='';
+      if(f.ingredientes&&f.ingredientes.length){
+        ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
+        f.ingredientes.forEach(i=>{ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(i.nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(i.cantidad)}</div></div></div>`;});
+        ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
+        ingHtml+='</div>';
+      }
+      addMsg('ai','✅ '+f.nombre+' registrado desde favoritos',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN},mealIdx,ingTexto);
+      showToast('⭐ '+f.nombre+' registrado · '+kcalN+' kcal');
+    },300);
+  } else {
+    // Sin macros guardados — pedir a la IA que calcule
+    const lista=f.ingredientes&&f.ingredientes.length?f.ingredientes.map(i=>`${i.cantidad} de ${i.nombre.replace(/^[^\w]+/,'')}`).join(', '):f.nombre;
+    setTimeout(()=>sendDirect(`Registra este favorito: ${f.nombre}. Ingredientes: ${lista}`),300);
+  }
 }
 
 function editarFavorito(id){
