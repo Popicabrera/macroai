@@ -1018,6 +1018,8 @@ function enterApp(){
     s.classList.remove('active');
     s.style.display='none';
   });
+  // Ping al Worker para despertarlo antes de que el usuario lo necesite
+  fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
   initApp();
 }
 
@@ -2144,15 +2146,25 @@ function removeTyping(){const t=document.getElementById('typingMsg');if(t)t.remo
 // ── CALL AI ──
 async function callAI(userMsg){
   S.historial.push({role:'user',content:userMsg});
-  // Limitar historial a los últimos 6 mensajes (3 pares) para reducir coste de tokens
-  // El contexto nutricional completo ya va en el system prompt, no se pierde nada importante
   const histReciente=S.historial.slice(-6);
-  const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({system:sysPrompt(),messages:histReciente})});
-  const data=await res.json();
-  const raw=data.content?.[0]?.text||'Error de conexión.';
-  S.historial.push({role:'assistant',content:raw});
-  return raw;
+  const body=JSON.stringify({system:sysPrompt(),messages:histReciente});
+  // Intentar hasta 3 veces con espera progresiva
+  let lastErr;
+  for(let intento=0;intento<3;intento++){
+    try{
+      if(intento>0)await new Promise(r=>setTimeout(r,1500*intento));
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const data=await res.json();
+      const raw=data.content?.[0]?.text||'';
+      if(!raw)throw new Error('respuesta vacía');
+      S.historial.push({role:'assistant',content:raw});
+      return raw;
+    }catch(e){lastErr=e;}
+  }
+  // Los 3 intentos fallaron
+  S.historial.pop(); // quitar el mensaje del usuario que no se procesó
+  throw lastErr;
 }
 
 async function sendMessage(){
