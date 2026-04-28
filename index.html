@@ -1607,6 +1607,7 @@ function histComidaMenu(card){
     overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
     overlay.innerHTML=`<div style="background:#f0ebe0;border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;color:#222;">${escapeHtml(c.nombre||'Comida')}</div>
+      <button onclick="histUsarHoy('${fecha}',${ci})" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:12px;font-size:14px;color:#080810;font-weight:700;margin-bottom:8px;cursor:pointer;text-align:left;">↩ Usar hoy</button>
       <button onclick="histGuardarFav('${fecha}',${ci})" style="width:100%;padding:13px;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.25);border-radius:12px;font-size:14px;color:#5a7a00;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
       <button onclick="histCopiarComida('${fecha}',${ci})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:#444;margin-bottom:12px;cursor:pointer;text-align:left;">📋 Copiar datos</button>
       <button onclick="this.closest('[data-hist-overlay]').remove()" style="width:100%;padding:13px;background:#e8e0d0;border:none;border-radius:12px;font-size:14px;color:#888;cursor:pointer;">Cancelar</button>
@@ -1615,6 +1616,43 @@ function histComidaMenu(card){
     overlay.addEventListener('click',(e)=>{if(e.target===overlay)overlay.remove();});
     document.body.appendChild(overlay);
   }catch(e){}
+}
+
+function histUsarHoy(fecha,ci){
+  document.querySelectorAll('[data-hist-overlay]').forEach(el=>el.parentElement?.remove());
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(!d||!d.comidas[ci])return;
+    const c=d.comidas[ci];
+    const kcalN=c.kcal||0,protN=c.prot||0,chN=c.ch||0,grasaN=c.grasa||0;
+    S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
+    const ingTexto=c.ingredientes||'';
+    S.comidas.push({nombre:c.nombre||'Comida',hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+    const mealIdx=S.comidas.length-1;
+    updateBars();saveToday();
+    saveComidaSupabase({nombre:c.nombre||'Comida',fecha:getToday(),tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+    // Mostrar en el chat
+    showView('viewMain');
+    let ingHtml='';
+    if(ingTexto){
+      const lines=ingTexto.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:'));
+      if(lines.length){
+        ingHtml='<div class="plan-card"><div class="plan-hdr">📋 '+escapeHtml(c.nombre||'Comida')+' — Ingredientes</div>';
+        lines.forEach(l=>{
+          const fc=l.indexOf(':');
+          const nom=fc>=0?l.substring(0,fc).trim():l.trim();
+          const cant=fc>=0?l.substring(fc+1).split(':')[0].trim():'';
+          ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(nom)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(cant)}</div></div></div>`;
+        });
+        ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
+        ingHtml+='</div>';
+      }
+    }
+    setTimeout(()=>{
+      addMsg('ai','✅ '+escapeHtml(c.nombre||'Comida')+' registrado desde historial',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN},mealIdx,ingTexto);
+      showToast('↩ '+escapeHtml(c.nombre||'Comida')+' · '+kcalN+' kcal');
+    },300);
+  }catch(e){showToast('Error al registrar');}
 }
 
 function histGuardarFav(fecha,ci){
