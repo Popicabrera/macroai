@@ -3002,6 +3002,36 @@ function closeEditMealForce(){
   _editMealIdx = -1; _editMsgDiv = null;
 }
 
+async function recalcularMacrosEditados(){
+  const btn=document.getElementById('editRecalcBtn');
+  // Leer ingredientes actuales del modal
+  const nombresInp=[...document.querySelectorAll('#editIngList [data-ing-n]')];
+  const cantidadesInp=[...document.querySelectorAll('#editIngList [data-ing-c]')];
+  const ings=nombresInp.map((inp,i)=>{
+    const n=inp.value.trim();const c=cantidadesInp[i]?.value.trim()||'';
+    return n?(c?c+' de '+n:n):null;
+  }).filter(Boolean);
+  if(!ings.length){showToast('Añade ingredientes primero');return;}
+  btn.disabled=true;btn.innerHTML='<span style="width:12px;height:12px;border:2px solid rgba(90,138,0,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;"></span>Calculando...';
+  const mealName=document.getElementById('editMealName').textContent.replace('✏️ ','').trim();
+  try{
+    const prompt=`Calcula los macros totales de esta comida y devuelve SOLO el tag REGISTRAR sin texto extra:
+Comida: ${mealName}
+Ingredientes: ${ings.join(', ')}
+[REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]`;
+    const raw=await callAI(prompt);
+    const regM=raw.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
+    if(regM){
+      document.getElementById('editKcal').value=regM[1];
+      document.getElementById('editProt').value=regM[2];
+      document.getElementById('editCh').value=regM[3];
+      document.getElementById('editGrasa').value=regM[4];
+      showToast('✅ Macros recalculados');
+    }else{showToast('No pude calcular, revisa los ingredientes');}
+  }catch(e){showToast('Error de conexión');}
+  btn.disabled=false;btn.innerHTML='✨ Recalcular macros con IA';
+}
+
 function saveEditMeal() {
   if (_editMealIdx < 0 || !S.comidas[_editMealIdx]) return;
   const oldMeal = S.comidas[_editMealIdx];
@@ -3111,6 +3141,9 @@ function saveEditMeal() {
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Ingredientes</div>
     <div id="editIngList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
     <button id="editAddIng" onclick="editMealAddIng()" style="width:100%;padding:8px;background:rgba(212,240,74,0.06);border:1px dashed rgba(212,240,74,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:14px;cursor:pointer;">+ Añadir ingrediente</button>
+
+    <!-- Recalcular con IA -->
+    <button id="editRecalcBtn" onclick="recalcularMacrosEditados()" style="width:100%;padding:11px;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.3);border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px;">✨ Recalcular macros con IA</button>
 
     <!-- Macros totales -->
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Macros totales</div>
