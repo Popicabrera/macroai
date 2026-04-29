@@ -1399,6 +1399,20 @@ function loadToday(){
   try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+getToday())||'null');
     if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}}catch(e){}
 }
+// ── BUSCAR EN FATSECRET POR NOMBRE ──
+async function buscarEnFatSecret(nombre) {
+  try {
+    const res = await fetch(WORKER_URL + '/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: nombre })
+    });
+    const data = await res.json();
+    if (data.found) return data;
+  } catch(e) {}
+  return null;
+}
+
 // ── BUSCAR MACROS POR 100G EN BD PROPIA ──
 async function buscarMacros100g(nombre) {
   if (!CURRENT_USER) return null;
@@ -1417,19 +1431,25 @@ async function buscarMacros100g(nombre) {
   return null;
 }
 
-// ── ENRIQUECER ING100 CON DATOS REALES DE BD ──
+// ── ENRIQUECER ING100 CON DATOS REALES DE BD Y FATSECRET ──
 async function enriquecerIng100(items) {
   const result = [];
   for (const item of items) {
     const gramos = parseFloat((item.grams||'').replace(/[^\d.]/g,''))||0;
-    // Intentar buscar en BD propia primero
+    // 1. Buscar en BD propia primero
     const bdMacros = await buscarMacros100g(item.full);
     if (bdMacros && (bdMacros.p100||bdMacros.hc100||bdMacros.g100)) {
       result.push(`${item.full}:${gramos}:${bdMacros.p100}:${bdMacros.hc100}:${bdMacros.g100}`);
-    } else {
-      // Usar macros de la IA como fallback
-      result.push(`${item.full}:${gramos}:${item.p100||0}:${item.hc100||0}:${item.g100||0}`);
+      continue;
     }
+    // 2. Buscar en FatSecret
+    const fsMacros = await buscarEnFatSecret(item.full.replace(/^[^\w]+/,'').trim());
+    if (fsMacros && (fsMacros.p_100||fsMacros.hc_100||fsMacros.g_100)) {
+      result.push(`${item.full}:${gramos}:${fsMacros.p_100}:${fsMacros.hc_100}:${fsMacros.g_100}`);
+      continue;
+    }
+    // 3. Sin datos — dejar ceros (IA estimó en el total)
+    result.push(`${item.full}:${gramos}:0:0:0`);
   }
   return result.join('\n');
 }
