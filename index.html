@@ -1844,11 +1844,13 @@ cena:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/PLAN_DIA]
 
 [INGREDIENTES]
-emoji Nombre:XXXg:XXXkcal
+emoji Nombre:XXXg:XXXkcal:p100=XX,hc100=XX,g100=XX
 TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/INGREDIENTES]
 [COMIDA]Nombre descriptivo de la comida[/COMIDA]
 [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
+
+IMPORTANTE: en cada línea de ingrediente incluye siempre p100, hc100 y g100 (macros por 100g del alimento). Si no los conoces exactamente estímalos. Son necesarios para que el cliente pueda editar cantidades.
 
 IMPORTANTE: El tag [REGISTRAR] con los totales exactos es OBLIGATORIO siempre que calcules una comida. Sin él los macros no se registran.
 [AVISO_WARN]texto[/AVISO_WARN]
@@ -1910,7 +1912,18 @@ function parseAI(raw){
       let kcalPart,notePart;
       if(thirdColon>=0){kcalPart=kcalNote.substring(0,thirdColon).trim();notePart=kcalNote.substring(thirdColon+1).trim();}
       else{kcalPart=kcalNote;notePart='';}
-      if(namePart)items.push({full:namePart,grams:grams||'',kcal:kcalPart||'',note:notePart});
+      // Extraer macros por 100g si vienen en la nota: p100=XX,hc100=XX,g100=XX
+      let p100=0,hc100=0,g100=0;
+      if(notePart){
+        const mp=notePart.match(/p100\s*=\s*([\d.]+)/i);
+        const mh=notePart.match(/hc100\s*=\s*([\d.]+)/i);
+        const mg=notePart.match(/g100\s*=\s*([\d.]+)/i);
+        if(mp)p100=parseFloat(mp[1]);
+        if(mh)hc100=parseFloat(mh[1]);
+        if(mg)g100=parseFloat(mg[1]);
+        notePart=notePart.replace(/[phg]100\s*=\s*[\d.]+,?/gi,'').trim().replace(/^,|,$/,'').trim();
+      }
+      if(namePart)items.push({full:namePart,grams:grams||'',kcal:kcalPart||'',note:notePart,p100,hc100,g100});
     });
     let h='<div class="plan-card"><div class="plan-hdr">📋 Ingredientes y cantidades</div>';
     items.forEach(i=>{h+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${i.full}</div>${i.note?`<div class="pi-note">${i.note}</div>`:''}</div><div class="pi-r"><div class="pi-g">${i.grams}</div><div class="pi-k">${i.kcal}</div></div></div>`;});
@@ -1938,7 +1951,9 @@ function parseAI(raw){
         const _nombre=_nombreComida?_nombreComida[1].trim():`Comida ${S.comidas.length+1}`;
         const _ingTexto=ingMatch[1].trim();
         S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
-        S.comidas.push({nombre:_nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
+        // Guardar macros por 100g por ingrediente para edición instantánea
+        const _ing100=items.map(i=>`${i.full}:${i.grams}:${i.p100||0}:${i.hc100||0}:${i.g100||0}`).join('\n');
+        S.comidas.push({nombre:_nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto,ing100:_ing100});
         comidaRegistradaIdx=S.comidas.length-1;
         updateBars();saveToday();
         actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
@@ -3027,30 +3042,78 @@ function openEditMeal(mealIdx, msgDiv) {
   document.getElementById('editProt').value = meal.prot;
   document.getElementById('editCh').value = meal.ch;
   document.getElementById('editGrasa').value = meal.grasa;
-  // Poblar ingredientes
+  // Poblar ingredientes con macros por 100g si están disponibles
   const list = document.getElementById('editIngList');
   list.innerHTML = '';
-  const ings = meal.ingredientes ? meal.ingredientes.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:')) : [];
-  ings.forEach((l,i) => {
-    const firstColon = l.indexOf(':');
-    const nombre = firstColon>=0 ? l.substring(0,firstColon).trim() : l.trim();
-    const resto = firstColon>=0 ? l.substring(firstColon+1).trim() : '';
-    const cantidad = resto.split(':')[0].trim();
-    list.appendChild(_editIngRow(nombre, cantidad, i));
-  });
+  // Intentar usar ing100 (nombre:cantidad:p100:hc100:g100)
+  const ing100Lines = meal.ing100 ? meal.ing100.trim().split('\n').filter(l=>l.trim()) : [];
+  const ingLines = meal.ingredientes ? meal.ingredientes.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:')) : [];
+  if(ing100Lines.length){
+    ing100Lines.forEach((l,i)=>{
+      const parts=l.split(':');
+      const nombre=parts[0]||'';
+      const cantidad=parts[1]||'';
+      const p100=parseFloat(parts[2])||0;
+      const hc100=parseFloat(parts[3])||0;
+      const g100=parseFloat(parts[4])||0;
+      list.appendChild(_editIngRow(nombre,cantidad,i,p100,hc100,g100));
+    });
+  } else {
+    ingLines.forEach((l,i)=>{
+      const firstColon=l.indexOf(':');
+      const nombre=firstColon>=0?l.substring(0,firstColon).trim():l.trim();
+      const resto=firstColon>=0?l.substring(firstColon+1).trim():'';
+      const cantidad=resto.split(':')[0].trim();
+      list.appendChild(_editIngRow(nombre,cantidad,i,0,0,0));
+    });
+  }
   document.getElementById('editMealOverlay').classList.add('open');
 }
 
-function _editIngRow(nombre, cantidad, idx){
+function _editIngRow(nombre, cantidad, idx, p100, hc100, g100){
   const row = document.createElement('div');
   row.style.cssText='display:flex;gap:6px;align-items:center;';
+  row.dataset.p100=p100||0;
+  row.dataset.hc100=hc100||0;
+  row.dataset.g100=g100||0;
   row.innerHTML=`
     <input data-ing-n="${idx}" value="${escapeHtml(nombre)}" placeholder="Ingrediente"
       style="flex:2;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:12px;">
-    <input data-ing-c="${idx}" value="${escapeHtml(cantidad)}" placeholder="Cantidad"
+    <input data-ing-c="${idx}" value="${escapeHtml(cantidad)}" placeholder="Ej: 150g"
+      oninput="recalcEditInstant()"
       style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:12px;">
-    <button onclick="this.closest('div').remove()" style="padding:6px 9px;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.25);border-radius:8px;color:var(--red);font-size:13px;">✕</button>`;
+    <button onclick="this.closest('div').remove();recalcEditInstant();" style="padding:6px 9px;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.25);border-radius:8px;color:var(--red);font-size:13px;">✕</button>`;
   return row;
+}
+
+function recalcEditInstant(){
+  // Recalcular macros en tiempo real si todos los ingredientes tienen macros por 100g
+  const rows=[...document.querySelectorAll('#editIngList > div')];
+  let totalKcal=0,totalProt=0,totalCh=0,totalGrasa=0;
+  let todosConMacros=true;
+  rows.forEach(row=>{
+    const cantInput=row.querySelector('[data-ing-c]');
+    if(!cantInput)return;
+    const cantStr=cantInput.value.trim();
+    const gramos=parseFloat(cantStr);
+    const p100=parseFloat(row.dataset.p100)||0;
+    const hc100=parseFloat(row.dataset.hc100)||0;
+    const g100=parseFloat(row.dataset.g100)||0;
+    if(!gramos||(!p100&&!hc100&&!g100)){todosConMacros=false;return;}
+    const factor=gramos/100;
+    // kcal = prot*4 + hc*4 + grasa*9
+    const kcal100=(p100*4)+(hc100*4)+(g100*9);
+    totalKcal+=Math.round(kcal100*factor);
+    totalProt+=Math.round(p100*factor);
+    totalCh+=Math.round(hc100*factor);
+    totalGrasa+=Math.round(g100*factor);
+  });
+  if(todosConMacros&&rows.length>0){
+    document.getElementById('editKcal').value=totalKcal;
+    document.getElementById('editProt').value=totalProt;
+    document.getElementById('editCh').value=totalCh;
+    document.getElementById('editGrasa').value=totalGrasa;
+  }
 }
 
 function editMealAddIng(){
