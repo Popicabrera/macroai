@@ -1950,7 +1950,8 @@ function parseAI(raw){
       const kcalDisplay=kcalRaw.replace(/[|,]\s*[a-zA-Z0-9]+(?:100)?=[\d.]+/g,'').replace(/\|/g,'').trim();
       if(namePart)items.push({full:namePart,grams:grams||'',kcal:kcalDisplay||'',note:'',p100:0,hc100:0,g100:0});
     });
-    let h='<div class="plan-card"><div class="plan-hdr">📋 Ingredientes y cantidades</div>';
+    const _cardId='card-'+Date.now();
+    let h=`<div class="plan-card" data-card-id="${_cardId}"><div class="plan-hdr">📋 Ingredientes y cantidades</div>`;
     items.forEach(i=>{h+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${i.full}</div>${i.note?`<div class="pi-note">${i.note}</div>`:''}</div><div class="pi-r"><div class="pi-g">${i.grams}</div><div class="pi-k">${i.kcal}</div></div></div>`;});
     if(tot){
       // Parser robusto del TOTAL: acepta espacios, mayúsculas, orden variable
@@ -1976,15 +1977,53 @@ function parseAI(raw){
         const _nombre=_nombreComida?_nombreComida[1].trim():`Comida ${S.comidas.length+1}`;
         const _ingTexto=ingMatch[1].trim();
         S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
-        S.comidas.push({nombre:_nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto,ing100:''});
+        S.comidas.push({nombre:_nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto,ing100:'',_cardId:_cardId});
         comidaRegistradaIdx=S.comidas.length-1;
         updateBars();saveToday();
         actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
         saveComidaSupabase({nombre:_nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
-        // Enriquecer con macros reales de BD en segundo plano
+        // Enriquecer con macros reales de BD+FatSecret y recalcular TOTAL exacto
         enriquecerIng100(items).then(ing100=>{
           const idx=S.comidas.findIndex(c=>c.nombre===_nombre&&c.kcal===kcalN);
-          if(idx>=0){S.comidas[idx].ing100=ing100;saveToday();}
+          if(idx<0)return;
+          S.comidas[idx].ing100=ing100;
+          // Recalcular TOTAL matemáticamente con macros reales
+          const lineas=ing100.split('\n').filter(l=>l.trim());
+          let newKcal=0,newProt=0,newCh=0,newGrasa=0;
+          let todosConDatos=true;
+          lineas.forEach(l=>{
+            const p=l.split(':');
+            const g=parseFloat(p[1])||0;
+            const p100=parseFloat(p[2])||0;
+            const hc100=parseFloat(p[3])||0;
+            const g100=parseFloat(p[4])||0;
+            if(!p100&&!hc100&&!g100){todosConDatos=false;return;}
+            const f=g/100;
+            newKcal+=Math.round(((p100*4)+(hc100*4)+(g100*9))*f);
+            newProt+=Math.round(p100*f);
+            newCh+=Math.round(hc100*f);
+            newGrasa+=Math.round(g100*f);
+          });
+          if(todosConDatos&&newKcal>0){
+            // Actualizar contador del día con la diferencia
+            const diff={kcal:newKcal-S.comidas[idx].kcal,prot:newProt-S.comidas[idx].prot,ch:newCh-S.comidas[idx].ch,grasa:newGrasa-S.comidas[idx].grasa};
+            S.kcalC+=diff.kcal;S.protC+=diff.prot;S.chC+=diff.ch;S.grasaC+=diff.grasa;
+            S.comidas[idx].kcal=newKcal;S.comidas[idx].prot=newProt;S.comidas[idx].ch=newCh;S.comidas[idx].grasa=newGrasa;
+            updateBars();
+            // Actualizar tarjeta visible en el chat
+            // Actualizar tarjeta usando cardId guardado en la comida
+            const _cid=S.comidas[idx]._cardId;
+            if(_cid){
+              const planTot=document.querySelector(`.plan-card[data-card-id="${_cid}"] .plan-tot`);
+              if(planTot){
+                planTot.innerHTML=`<div class="pt-lbl">Total ✓ BD</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${newProt}g</span><span class="ptm" style="color:var(--yellow)">CH ${newCh}g</span><span class="ptm" style="color:var(--blue)">G ${newGrasa}g</span><span class="ptm" style="color:var(--accent)">${newKcal} kcal ✓</span></div>`;
+              }
+            }
+            // Actualizar badge
+            const badges=document.querySelectorAll('.meal-edit-badge span');
+            badges.forEach(b=>{if(b.textContent.includes(_nombre.substring(0,10)))b.textContent=`${newKcal} kcal · P${newProt}g · CH${newCh}g · G${newGrasa}g`;});
+          }
+          saveToday();
         });
       }
     }
