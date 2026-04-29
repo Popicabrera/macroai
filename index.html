@@ -528,6 +528,7 @@ body{
 .edit-meal-cancel{padding:14px 18px;background:var(--s2);border:1px solid var(--border);border-radius:13px;
   font-size:14px;color:var(--muted);cursor:pointer;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.19.1/zxing.min.js"></script>
 </head>
 <body>
 <div class="ambient"></div>
@@ -707,6 +708,20 @@ body{
         🧾 <span>Foto ticket de compra</span>
         <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoTicket(event);document.getElementById('attachMenu').classList.remove('open')">
       </label>
+      <div class="attach-item" onclick="abrirEscaner();document.getElementById('attachMenu').classList.remove('open')">
+        📦 <span>Escanear código de barras</span>
+      </div>
+    </div>
+    <!-- Modal escáner -->
+    <div id="scannerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+      <div style="color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">📦 Escanea el código de barras</div>
+      <div style="position:relative;width:300px;height:220px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);">
+        <video id="scannerVideo" style="width:100%;height:100%;object-fit:cover;" playsinline></video>
+        <div style="position:absolute;inset:0;border:2px solid rgba(90,138,0,0.6);border-radius:14px;pointer-events:none;"></div>
+        <div style="position:absolute;top:50%;left:10%;right:10%;height:2px;background:var(--accent);opacity:0.8;transform:translateY(-50%);"></div>
+      </div>
+      <div id="scannerStatus" style="color:var(--muted2);font-size:13px;">Apunta al código de barras del producto</div>
+      <button onclick="cerrarEscaner()" style="padding:12px 28px;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Cancelar</button>
     </div>
 
     <div class="hint" id="hint"></div>
@@ -2285,7 +2300,7 @@ async function handleFotoPlato(e){
     const b64=ev.target.result.split(',')[1];addMsg('user','🍽️ Analizando este plato...');addTyping();
     try{
       S.historial.push({role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:`Analiza este plato. Estima los macronutrientes (kcal, proteínas, carbohidratos, grasas). Avisa que es una estimación visual. Pregunta si quiero registrarlo. Macros restantes: ${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g. Usa [OPCIONES]Sí, registrar|Ajustar cantidad|No registrar`}]});
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial,model:'claude-sonnet-4-6'})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude analizar el plato.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
       const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');
@@ -2300,7 +2315,7 @@ async function handleFotoEtiqueta(e){
     const b64=ev.target.result.split(',')[1];addMsg('user','🏷️ Leyendo etiqueta nutricional...');addTyping();
     try{
       S.historial.push({role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:`Lee esta etiqueta nutricional. Extrae: nombre, kcal por 100g/porción, proteínas, carbohidratos, grasas, fibra. Dime si encaja con mis macros restantes (${S.kcalObj-S.kcalC}kcal, Prot ${S.prot-S.protC}g, CH ${S.ch-S.chC}g, Grasa ${S.grasa-S.grasaC}g). Usa [OPCIONES] para sugerir cantidades típicas.`}]});
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial,model:'claude-sonnet-4-6'})});
       const data=await res.json();const raw=data.content?.[0]?.text||'No pude leer la etiqueta.';
       S.historial.push({role:'assistant',content:raw});removeTyping();
       const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');
@@ -2321,7 +2336,7 @@ async function handleFotoTicket(e){
         {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
         {type:'text',text:`Analiza este ticket de compra. Extrae TODOS los productos alimenticios que aparecen (ignora productos de limpieza, higiene u otros no alimenticios). Lista los alimentos encontrados y añádelos a la despensa usando el formato [DESPENSA]. Luego dime en texto los productos que has detectado y pregunta si quiero generar el menú con ellos.`}
       ]});
-      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial})});
+      const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt(),messages:S.historial,model:'claude-sonnet-4-6'})});
       const data=await res.json();
       const raw=data.content?.[0]?.text||'No pude leer el ticket.';
       S.historial.push({role:'assistant',content:raw});
@@ -3139,6 +3154,100 @@ function saveEditMeal() {
   document.getElementById('editMealOverlay').classList.remove('open');
   showToast('✅ Comida actualizada');
   _editMealIdx = -1; _editMsgDiv = null;
+}
+
+
+// ══ ESCÁNER CÓDIGO DE BARRAS ══
+let _scannerStream = null;
+let _codeReader = null;
+
+async function abrirEscaner() {
+  const overlay = document.getElementById('scannerOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('scannerStatus').textContent = 'Iniciando cámara...';
+  try {
+    _scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('scannerVideo');
+    video.srcObject = _scannerStream;
+    await video.play();
+    document.getElementById('scannerStatus').textContent = 'Apunta al código de barras del producto';
+    _escanearFrame();
+  } catch(e) {
+    document.getElementById('scannerStatus').textContent = 'Error al acceder a la cámara';
+  }
+}
+
+function cerrarEscaner() {
+  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
+  document.getElementById('scannerOverlay').style.display = 'none';
+  _scanning = false;
+}
+
+let _scanning = false;
+async function _escanearFrame() {
+  if (!_scannerStream) return;
+  _scanning = true;
+  const video = document.getElementById('scannerVideo');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const loop = async () => {
+    if (!_scanning || !_scannerStream) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Usar ZXing si está disponible
+        if (window.ZXing) {
+          const hints = new window.ZXing.Map();
+          const reader = new window.ZXing.MultiFormatReader();
+          reader.setHints(hints);
+          try {
+            const luminanceSource = new window.ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
+            const binaryBitmap = new window.ZXing.BinaryBitmap(new window.ZXing.HybridBinarizer(luminanceSource));
+            const result = reader.decode(binaryBitmap);
+            if (result) { await _procesarCodigoBarras(result.getText()); return; }
+          } catch(e2) {}
+        }
+      } catch(e) {}
+    }
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+async function _procesarCodigoBarras(codigo) {
+  _scanning = false;
+  cerrarEscaner();
+  document.getElementById('scannerStatus').textContent = 'Buscando producto...';
+  addMsg('user', '📦 Escaneando código: ' + codigo);
+  addTyping();
+  try {
+    const res = await fetch('https://world.openfoodfacts.org/api/v2/product/' + codigo + '.json');
+    const data = await res.json();
+    if (data.status === 1 && data.product) {
+      const p = data.product;
+      const nombre = p.product_name_es || p.product_name || 'Producto desconocido';
+      const n = p.nutriments || {};
+      const kcal = Math.round(n['energy-kcal_100g'] || n['energy_100g'] / 4.184 || 0);
+      const prot = Math.round(n['proteins_100g'] || 0);
+      const hc = Math.round(n['carbohydrates_100g'] || 0);
+      const grasa = Math.round(n['fat_100g'] || 0);
+      removeTyping();
+      const prompt = `El cliente ha escaneado este producto: "${nombre}". Valores por 100g: ${kcal} kcal, P ${prot}g, HC ${hc}g, G ${grasa}g. Pregúntale cuántos gramos va a consumir y calcula los macros totales. Usa [OPCIONES] con cantidades típicas como sugerencia. Si confirma, registra con [REGISTRAR].`;
+      const raw = await callAI(prompt);
+      const {text: t, elements, opciones, mealIdx, ingredientesRaw: ir} = parseAI(raw);
+      addMsg('ai', t, elements, opciones, null, mealIdx ?? -1, ir || '');
+    } else {
+      removeTyping();
+      addMsg('ai', '❌ No encontré ese producto en la base de datos. Puedes escribir el nombre manualmente y te ayudo a calcular los macros.');
+    }
+  } catch(e) {
+    removeTyping();
+    addMsg('ai', 'Error al buscar el producto. Comprueba tu conexión e inténtalo de nuevo.');
+  }
 }
 
 </script>
