@@ -3026,7 +3026,8 @@ Ingredientes: ${ings.join(', ')}
       document.getElementById('editProt').value=regM[2];
       document.getElementById('editCh').value=regM[3];
       document.getElementById('editGrasa').value=regM[4];
-      showToast('✅ Macros recalculados');
+      showToast('✅ Macros recalculados y guardados');
+      setTimeout(() => saveEditMeal(), 300);
     }else{showToast('No pude calcular, revisa los ingredientes');}
   }catch(e){showToast('Error de conexión');}
   btn.disabled=false;btn.innerHTML='✨ Recalcular macros con IA';
