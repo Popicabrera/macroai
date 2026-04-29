@@ -3293,24 +3293,22 @@ async function _procesarCodigoBarras(codigo) {
   addMsg('user', '📦 Código escaneado: ' + codigo);
   addTyping();
   try {
-    const res = await fetch('https://world.openfoodfacts.org/api/v2/product/' + codigo + '.json');
+    // Buscar en FatSecret via Worker
+    const res = await fetch(WORKER_URL + '/barcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode: codigo })
+    });
     const data = await res.json();
-    if (data.status === 1 && data.product) {
-      const p = data.product;
-      const nombre = p.product_name_es || p.product_name || 'Producto';
-      const n = p.nutriments || {};
-      const kcal = Math.round(n['energy-kcal_100g'] || (n['energy_100g'] ? n['energy_100g'] / 4.184 : 0));
-      const prot = Math.round((n['proteins_100g'] || 0) * 10) / 10;
-      const hc = Math.round((n['carbohydrates_100g'] || 0) * 10) / 10;
-      const grasa = Math.round((n['fat_100g'] || 0) * 10) / 10;
+    if (data.found) {
       removeTyping();
-      const prompt = `El cliente ha escaneado este producto: "${nombre}". Valores por 100g según el fabricante: ${kcal} kcal, P ${prot}g, HC ${hc}g, G ${grasa}g. Pregúntale cuántos gramos va a consumir y calcula los macros totales. Usa [OPCIONES] con cantidades típicas. Si confirma, registra con [INGREDIENTES]+[COMIDA]+[REGISTRAR].`;
+      const prompt = `El cliente ha escaneado este producto: "${data.nombre}". Valores exactos por 100g según el fabricante: ${data.kcal_100} kcal, P ${data.p_100}g, HC ${data.hc_100}g, G ${data.g_100}g. Pregúntale cuántos gramos va a consumir y calcula los macros totales proporcionalmente. Usa [OPCIONES] con cantidades típicas. Si confirma, registra con [INGREDIENTES]+[COMIDA]+[REGISTRAR].`;
       const raw = await callAI(prompt);
       const {text: t, elements, opciones, mealIdx, ingredientesRaw: ir} = parseAI(raw);
       addMsg('ai', t, elements, opciones, null, mealIdx ?? -1, ir || '');
     } else {
       removeTyping();
-      addMsg('ai', '❌ Producto no encontrado. Escríbelo manualmente y te ayudo a calcular los macros.');
+      addMsg('ai', '❌ Producto no encontrado en la base de datos. Escríbelo manualmente y te ayudo a calcular los macros.');
     }
   } catch(e) {
     removeTyping();
