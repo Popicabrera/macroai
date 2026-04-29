@@ -1406,6 +1406,28 @@ function saveToday(){
   localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d));
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
   if(!idx.includes(getToday())){idx.push(getToday());localStorage.setItem('macroai_dias',JSON.stringify(idx));}
+  // Guardar en Supabase
+  if(CURRENT_USER){
+    supaFetch('/rest/v1/registros_macroai',{
+      method:'POST',
+      headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({
+        usuario_id:CURRENT_USER.id,
+        fecha:getToday(),
+        kcal_consumidas:S.kcalC,
+        prot_consumidas:S.protC,
+        ch_consumidas:S.chC,
+        grasa_consumidas:S.grasaC,
+        kcal_objetivo:S.kcalObj,
+        prot_objetivo:S.prot,
+        ch_objetivo:S.ch,
+        grasa_objetivo:S.grasa,
+        tipo_dia:S.tipoDia,
+        comidas:S.comidas,
+        updated_at:new Date().toISOString()
+      })
+    }).catch(()=>{});
+  }
 }
 function getYesterdayComidas(){
   try{const ayer=new Date();ayer.setDate(ayer.getDate()-1);const ayerStr=ayer.toISOString().split('T')[0];
@@ -1474,8 +1496,24 @@ function toggleDayType(){
 let _histDias=[];
 let _histIdx=0;
 
-function renderHistorial(){
+async function renderHistorial(){
   const body=document.getElementById('histBody');
+  body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)"><div style="font-size:28px;margin-bottom:10px;">⏳</div>Cargando historial...</div>';
+  document.getElementById('histFechaLabel').textContent='';
+  // Cargar desde Supabase
+  try{
+    if(CURRENT_USER){
+      const res=await supaFetch('/rest/v1/registros_macroai?select=fecha&usuario_id=eq.'+CURRENT_USER.id+'&order=fecha.desc');
+      const rows=await res.json();
+      if(Array.isArray(rows)&&rows.length){
+        _histDias=rows.map(r=>r.fecha);
+        _histIdx=0;
+        renderHistorialDia();
+        return;
+      }
+    }
+  }catch(e){}
+  // Fallback a localStorage
   _histDias=JSON.parse(localStorage.getItem('macroai_dias')||'[]').sort().reverse();
   if(!_histDias.length){
     body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)"><div style="font-size:44px;margin-bottom:14px;">📅</div>Todavía no hay días registrados.</div>';
@@ -1495,7 +1533,7 @@ function histNavegar(dir){
   renderHistorialDia();
 }
 
-function renderHistorialDia(){
+async function renderHistorialDia(){
   const body=document.getElementById('histBody');
   const fecha=_histDias[_histIdx];
   const prevBtn=document.getElementById('histPrevBtn');
@@ -1509,8 +1547,21 @@ function renderHistorialDia(){
   const fmtF=new Date(fecha+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('histFechaLabel').textContent=fmtF.charAt(0).toUpperCase()+fmtF.slice(1);
 
+  // Intentar cargar desde Supabase primero
+  let d=null;
   try{
-    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(CURRENT_USER){
+      const res=await supaFetch('/rest/v1/registros_macroai?select=*&usuario_id=eq.'+CURRENT_USER.id+'&fecha=eq.'+fecha);
+      const rows=await res.json();
+      if(Array.isArray(rows)&&rows.length){
+        const r=rows[0];
+        d={fecha:r.fecha,tipoDia:r.tipo_dia,kcalObj:r.kcal_objetivo,protObj:r.prot_objetivo,chObj:r.ch_objetivo,grasaObj:r.grasa_objetivo,kcalC:r.kcal_consumidas,protC:r.prot_consumidas,chC:r.ch_consumidas,grasaC:r.grasa_consumidas,comidas:r.comidas||[]};
+      }
+    }
+  }catch(e){}
+  // Fallback localStorage
+  if(!d) d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+  try{
     if(!d){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">Sin datos para este día.</div>';return;}
     const pK=Math.round(Math.min(100,(d.kcalC/(d.kcalObj||1))*100));
     const pP=Math.round(Math.min(100,(d.protC/(d.protObj||1))*100));
