@@ -3070,6 +3070,8 @@ function closeEditMealForce(){
 
 async function recalcularMacrosEditados(){
   const btn=document.getElementById('editRecalcBtn');
+  const savedIdx=_editMealIdx;
+  const savedMsgDiv=_editMsgDiv;
   // Leer ingredientes actuales del modal
   const nombresInp=[...document.querySelectorAll('#editIngList [data-ing-n]')];
   const cantidadesInp=[...document.querySelectorAll('#editIngList [data-ing-c]')];
@@ -3084,16 +3086,23 @@ async function recalcularMacrosEditados(){
     const prompt=`Calcula los macros totales de esta comida y devuelve SOLO el tag REGISTRAR sin texto extra:
 Comida: ${mealName}
 Ingredientes: ${ings.join(', ')}
-[REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]`;
-    const raw=await callAI(prompt);
+Responde ÚNICAMENTE con este formato exacto: [REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]`;
+    // Llamada directa al worker SIN tocar S.historial
+    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sysPrompt(),messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const raw=data.content?.[0]?.text||'';
     const regM=raw.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
     if(regM){
       document.getElementById('editKcal').value=regM[1];
       document.getElementById('editProt').value=regM[2];
       document.getElementById('editCh').value=regM[3];
       document.getElementById('editGrasa').value=regM[4];
-      showToast('✅ Macros recalculados y guardados');
-      setTimeout(() => saveEditMeal(), 300);
+      // Guardar con los índices preservados
+      _editMealIdx=savedIdx;
+      _editMsgDiv=savedMsgDiv;
+      saveEditMeal();
+      showToast('✅ Comida actualizada');
     }else{showToast('No pude calcular, revisa los ingredientes');}
   }catch(e){showToast('Error de conexión');}
   btn.disabled=false;btn.innerHTML='✨ Recalcular macros con IA';
