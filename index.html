@@ -1983,10 +1983,15 @@ function parseAI(raw){
         actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
         saveComidaSupabase({nombre:_nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
         // Enriquecer con macros reales de BD+FatSecret y recalcular TOTAL exacto
+        const _savedCardId=_cardId; // capturar para el closure
+        const _savedComidaIdx=S.comidas.length-1; // índice justo ahora — fiable
         enriquecerIng100(items).then(ing100=>{
-          const idx=S.comidas.findIndex(c=>c.nombre===_nombre&&c.kcal===kcalN);
-          if(idx<0)return;
+          // Buscar por _cardId primero (más fiable), luego por índice guardado
+          let idx=S.comidas.findIndex(c=>c._cardId===_savedCardId);
+          if(idx<0)idx=_savedComidaIdx;
+          if(idx<0||idx>=S.comidas.length)return;
           S.comidas[idx].ing100=ing100;
+          saveToday(); // persistir ing100 para edición instantánea
           // Recalcular TOTAL matemáticamente con macros reales
           const lineas=ing100.split('\n').filter(l=>l.trim());
           let newKcal=0,newProt=0,newCh=0,newGrasa=0;
@@ -3112,7 +3117,7 @@ function _editIngRow(nombre, cantidad, idx, p100, hc100, g100){
 function recalcEditInstant(){
   const rows=[...document.querySelectorAll('#editIngList > div')];
   let totalKcal=0,totalProt=0,totalCh=0,totalGrasa=0;
-  let todosConMacros=true;
+  let todosConMacros=true,algunoConMacros=false;
   rows.forEach(row=>{
     const cantInput=row.querySelector('[data-ing-c]');
     if(!cantInput)return;
@@ -3120,14 +3125,17 @@ function recalcEditInstant(){
     const p100=parseFloat(row.dataset.p100)||0;
     const hc100=parseFloat(row.dataset.hc100)||0;
     const g100=parseFloat(row.dataset.g100)||0;
-    if(!gramos||(p100===0&&hc100===0&&g100===0)){todosConMacros=false;return;}
-    const factor=gramos/100;
-    totalKcal+=Math.round(((p100*4)+(hc100*4)+(g100*9))*factor);
-    totalProt+=Math.round(p100*factor);
-    totalCh+=Math.round(hc100*factor);
-    totalGrasa+=Math.round(g100*factor);
+    if(gramos&&(p100||hc100||g100)){
+      algunoConMacros=true;
+      const factor=gramos/100;
+      totalKcal+=Math.round(((p100*4)+(hc100*4)+(g100*9))*factor);
+      totalProt+=Math.round(p100*factor);
+      totalCh+=Math.round(hc100*factor);
+      totalGrasa+=Math.round(g100*factor);
+    }else{todosConMacros=false;}
   });
-  if(todosConMacros&&rows.length>0){
+  // Solo actualizar si TODOS los ingredientes tienen macros reales por 100g
+  if(todosConMacros&&rows.length>0&&algunoConMacros){
     document.getElementById('editKcal').value=totalKcal;
     document.getElementById('editProt').value=totalProt;
     document.getElementById('editCh').value=totalCh;
@@ -3256,32 +3264,93 @@ async function abrirEscaner() {
   const overlay = document.getElementById('scannerOverlay');
   overlay.style.display = 'flex';
   document.getElementById('scannerStatus').textContent = 'Iniciando cámara...';
-  // Limpiar div del lector
   document.getElementById('qr-reader').innerHTML = '';
 
+  // Función auxiliar: fallback con input file (funciona en todos los Android)
+  function _usarFallbackFoto(msg) {
+    document.getElementById('scannerStatus').textContent = msg || '📸 Toca el botón para fotografiar el código';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;';
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+    inp.style.display = 'none';
+    inp.id = '_scanFotoInp';
+    inp.onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      document.getElementById('scannerStatus').textContent = 'Analizando imagen...';
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const b64 = ev.target.result.split(',')[1];
+        await cerrarEscaner();
+        addMsg('user', '📦 Leyendo código de barras...');
+        addTyping();
+        try {
+          const res = await fetch(WORKER_URL, {method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({system: 'Eres un lector de códigos de barras. Extrae SOLO el número del código de barras EAN de la imagen. Responde únicamente con el número, sin texto adicional.',
+              messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'¿Cuál es el número del código de barras?'}]}],
+              model:'claude-sonnet-4-6'})});
+          const data = await res.json();
+          const codigo = (data.content?.[0]?.text||'').replace(/[^0-9]/g,'').trim();
+          if (codigo.length >= 8) {
+            await _procesarCodigoBarras(codigo);
+          } else {
+            removeTyping();
+            addMsg('ai', 'No pude leer el código. Intenta escribir el nombre del producto manualmente.');
+          }
+        } catch(e) { removeTyping(); addMsg('ai', 'Error al leer el código.'); }
+      };
+      reader.readAsDataURL(file);
+    };
+    const btn = document.createElement('button');
+    btn.textContent = '📸 Fotografiar código de barras';
+    btn.style.cssText = 'padding:14px 24px;background:var(--accent);border:none;border-radius:12px;color:#080810;font-size:15px;font-weight:700;cursor:pointer;';
+    btn.onclick = () => { inp.value=''; inp.click(); };
+    wrap.appendChild(inp);
+    wrap.appendChild(btn);
+    document.getElementById('qr-reader').appendChild(wrap);
+  }
+
+  // Comprobar si el navegador soporta getUserMedia
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    _usarFallbackFoto('Tu navegador no soporta cámara directa.');
+    return;
+  }
+
   try {
-    _scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
+    // Intentar con cámara trasera primero, luego cualquier cámara
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+    } catch(e1) {
+      // Segundo intento sin restricción de facingMode (algunos Android lo requieren)
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    }
+    _scanStream = stream;
     const video = document.createElement('video');
     video.srcObject = _scanStream;
-    video.setAttribute('playsinline', true);
+    video.setAttribute('playsinline', '');
+    video.setAttribute('autoplay', '');
+    video.muted = true;
     video.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:14px;';
     document.getElementById('qr-reader').appendChild(video);
-    await video.play();
+    await video.play().catch(()=>{});
     document.getElementById('scannerStatus').textContent = 'Apunta al código de barras del producto';
     _scanActive = true;
 
-    // Usar BarcodeDetector nativo si está disponible
+    // Usar BarcodeDetector nativo si está disponible (Chrome Android 83+)
     if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a','upc_e','code_39'] });
+      let formats = ['ean_13','ean_8','code_128','upc_a','upc_e','code_39'];
+      try { formats = await BarcodeDetector.getSupportedFormats(); } catch(e) {}
+      const detector = new BarcodeDetector({ formats });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const scan = async () => {
         if (!_scanActive) return;
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+        if (video.readyState >= 2) { // HAVE_CURRENT_DATA o superior
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
           ctx.drawImage(video, 0, 0);
           try {
             const barcodes = await detector.detect(canvas);
@@ -3291,51 +3360,17 @@ async function abrirEscaner() {
             }
           } catch(e) {}
         }
-        setTimeout(scan, 200);
+        if (_scanActive) setTimeout(scan, 200);
       };
-      scan();
+      setTimeout(scan, 500); // pequeño delay para que el video arranque
     } else {
-      // Fallback: input file para capturar foto y detectar código
-      document.getElementById('scannerStatus').textContent = 'Tu navegador no soporta escáner directo. Toma una foto del código.';
-      const btn = document.createElement('button');
-      btn.textContent = '📸 Fotografiar código';
-      btn.style.cssText = 'margin-top:10px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;';
-      const inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
-      inp.style.display = 'none';
-      inp.onchange = async (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        document.getElementById('scannerStatus').textContent = 'Analizando imagen...';
-        // Usar IA para leer el código de barras de la imagen
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-          const b64 = ev.target.result.split(',')[1];
-          await cerrarEscaner();
-          addMsg('user', '📦 Leyendo código de barras...');
-          addTyping();
-          try {
-            const res = await fetch(WORKER_URL, {method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({system: 'Eres un lector de códigos de barras. Extrae SOLO el número del código de barras EAN de la imagen. Responde únicamente con el número, sin texto adicional.',
-                messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'¿Cuál es el número del código de barras?'}]}],
-                model:'claude-sonnet-4-6'})});
-            const data = await res.json();
-            const codigo = (data.content?.[0]?.text||'').replace(/[^0-9]/g,'').trim();
-            if (codigo.length >= 8) {
-              await _procesarCodigoBarras(codigo);
-            } else {
-              removeTyping();
-              addMsg('ai', 'No pude leer el código. Intenta escribir el nombre del producto manualmente.');
-            }
-          } catch(e) { removeTyping(); addMsg('ai', 'Error al leer el código.'); }
-        };
-        reader.readAsDataURL(file);
-      };
-      btn.onclick = () => inp.click();
-      document.getElementById('qr-reader').appendChild(inp);
-      document.getElementById('qr-reader').appendChild(btn);
+      // Fallback con foto (navegadores sin BarcodeDetector)
+      _usarFallbackFoto('Cámara activa. Toca el botón para fotografiar el código.');
     }
   } catch(e) {
-    document.getElementById('scannerStatus').textContent = 'Error al acceder a la cámara. Verifica los permisos.';
+    // getUserMedia fallido — usar fallback directo sin video
+    console.warn('Camera error:', e.name, e.message);
+    _usarFallbackFoto('No se pudo acceder a la cámara. Toca el botón para fotografiar.');
   }
 }
 
