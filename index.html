@@ -1431,24 +1431,63 @@ async function buscarMacros100g(nombre) {
   return null;
 }
 
+// ── TRADUCCIÓN BÁSICA ESPAÑOL→INGLÉS PARA FATSECRET ──
+const _fsTraduccion = {
+  'avena':'oats','copos de avena':'oats','avena integral':'oats',
+  'leche':'milk','leche desnatada':'skim milk','leche semidesnatada':'semi skimmed milk','leche entera':'whole milk',
+  'anacardos':'cashews','almendras':'almonds','nueces':'walnuts','pistachos':'pistachios',
+  'platano':'banana','plátano':'banana','manzana':'apple','naranja':'orange','pera':'pear',
+  'arroz':'rice','arroz blanco':'white rice','arroz integral':'brown rice',
+  'pasta':'pasta','macarrones':'macaroni','espaguetis':'spaghetti',
+  'pan':'bread','pan integral':'whole wheat bread',
+  'huevo':'egg','huevos':'eggs','clara de huevo':'egg white',
+  'pollo':'chicken','pechuga de pollo':'chicken breast','muslo de pollo':'chicken thigh',
+  'ternera':'beef','cerdo':'pork','salmon':'salmon','salmón':'salmon','atun':'tuna','atún':'tuna',
+  'yogur':'yogurt','yogur griego':'greek yogurt',
+  'queso':'cheese','queso cottage':'cottage cheese',
+  'brocoli':'broccoli','brócoli':'broccoli','espinacas':'spinach','zanahoria':'carrot',
+  'aceite de oliva':'olive oil','mantequilla':'butter',
+  'proteina de suero':'whey protein','proteína de suero':'whey protein',
+};
+function _traducirParaFS(nombre) {
+  const n = nombre.toLowerCase().trim();
+  // Buscar coincidencia exacta primero
+  if (_fsTraduccion[n]) return _fsTraduccion[n];
+  // Buscar si contiene alguna clave
+  for (const [es, en] of Object.entries(_fsTraduccion)) {
+    if (n.includes(es)) return en;
+  }
+  return nombre; // devolver original si no hay traducción
+}
+
 // ── ENRIQUECER ING100 CON DATOS REALES DE BD Y FATSECRET ──
 async function enriquecerIng100(items) {
   const result = [];
   for (const item of items) {
     const gramos = parseFloat((item.grams||'').replace(/[^\d.]/g,''))||0;
+    const nombreLimpio = item.full.replace(/^[^\w]+/,'').trim();
+
     // 1. Buscar en BD propia primero
     const bdMacros = await buscarMacros100g(item.full);
     if (bdMacros && (bdMacros.p100||bdMacros.hc100||bdMacros.g100)) {
       result.push(`${item.full}:${gramos}:${bdMacros.p100}:${bdMacros.hc100}:${bdMacros.g100}`);
       continue;
     }
-    // 2. Buscar en FatSecret
-    const fsMacros = await buscarEnFatSecret(item.full.replace(/^[^\w]+/,'').trim());
+
+    // 2. Buscar en FatSecret — primero en español, luego traducido al inglés
+    let fsMacros = await buscarEnFatSecret(nombreLimpio);
+    if (!fsMacros || (!fsMacros.p_100 && !fsMacros.hc_100 && !fsMacros.g_100)) {
+      const nombreEN = _traducirParaFS(nombreLimpio);
+      if (nombreEN !== nombreLimpio) {
+        fsMacros = await buscarEnFatSecret(nombreEN);
+      }
+    }
     if (fsMacros && (fsMacros.p_100||fsMacros.hc_100||fsMacros.g_100)) {
       result.push(`${item.full}:${gramos}:${fsMacros.p_100}:${fsMacros.hc_100}:${fsMacros.g_100}`);
       continue;
     }
-    // 3. Sin datos — dejar ceros (IA estimó en el total)
+
+    // 3. Sin datos — dejar ceros
     result.push(`${item.full}:${gramos}:0:0:0`);
   }
   return result.join('\n');
@@ -1983,33 +2022,36 @@ function parseAI(raw){
         actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
         saveComidaSupabase({nombre:_nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
         // Enriquecer con macros reales de BD+FatSecret y recalcular TOTAL exacto
-        const _savedCardId=_cardId; // capturar para el closure
-        const _savedComidaIdx=S.comidas.length-1; // índice justo ahora — fiable
         enriquecerIng100(items).then(ing100=>{
-          // Buscar por _cardId primero (más fiable), luego por índice guardado
-          let idx=S.comidas.findIndex(c=>c._cardId===_savedCardId);
-          if(idx<0)idx=_savedComidaIdx;
-          if(idx<0||idx>=S.comidas.length)return;
+          const idx=S.comidas.findIndex(c=>c.nombre===_nombre&&c.kcal===kcalN);
+          if(idx<0)return;
           S.comidas[idx].ing100=ing100;
-          saveToday(); // persistir ing100 para edición instantánea
           // Recalcular TOTAL matemáticamente con macros reales
           const lineas=ing100.split('\n').filter(l=>l.trim());
           let newKcal=0,newProt=0,newCh=0,newGrasa=0;
-          let todosConDatos=true;
+          let algunoConDatos=false;
+          let sinDatosKcal=0; // kcal estimadas por IA de ingredientes sin BD
           lineas.forEach(l=>{
             const p=l.split(':');
             const g=parseFloat(p[1])||0;
             const p100=parseFloat(p[2])||0;
             const hc100=parseFloat(p[3])||0;
             const g100=parseFloat(p[4])||0;
-            if(!p100&&!hc100&&!g100){todosConDatos=false;return;}
+            if(!p100&&!hc100&&!g100){
+              // Sin datos reales — no sumar (ya está en el total de IA)
+              return;
+            }
+            algunoConDatos=true;
             const f=g/100;
             newKcal+=Math.round(((p100*4)+(hc100*4)+(g100*9))*f);
             newProt+=Math.round(p100*f);
             newCh+=Math.round(hc100*f);
             newGrasa+=Math.round(g100*f);
           });
-          if(todosConDatos&&newKcal>0){
+          // Actualizar si TODOS tienen datos reales (recálculo completo)
+          // o si al menos hay uno — en ese caso mostrar los datos reales disponibles
+          const todosConDatos = lineas.every(l=>{const p=l.split(':');return parseFloat(p[2])||parseFloat(p[3])||parseFloat(p[4]);});
+          if(algunoConDatos&&newKcal>0){
             // Actualizar contador del día con la diferencia
             const diff={kcal:newKcal-S.comidas[idx].kcal,prot:newProt-S.comidas[idx].prot,ch:newCh-S.comidas[idx].ch,grasa:newGrasa-S.comidas[idx].grasa};
             S.kcalC+=diff.kcal;S.protC+=diff.prot;S.chC+=diff.ch;S.grasaC+=diff.grasa;
@@ -3117,7 +3159,7 @@ function _editIngRow(nombre, cantidad, idx, p100, hc100, g100){
 function recalcEditInstant(){
   const rows=[...document.querySelectorAll('#editIngList > div')];
   let totalKcal=0,totalProt=0,totalCh=0,totalGrasa=0;
-  let todosConMacros=true,algunoConMacros=false;
+  let todosConMacros=true;
   rows.forEach(row=>{
     const cantInput=row.querySelector('[data-ing-c]');
     if(!cantInput)return;
@@ -3125,17 +3167,14 @@ function recalcEditInstant(){
     const p100=parseFloat(row.dataset.p100)||0;
     const hc100=parseFloat(row.dataset.hc100)||0;
     const g100=parseFloat(row.dataset.g100)||0;
-    if(gramos&&(p100||hc100||g100)){
-      algunoConMacros=true;
-      const factor=gramos/100;
-      totalKcal+=Math.round(((p100*4)+(hc100*4)+(g100*9))*factor);
-      totalProt+=Math.round(p100*factor);
-      totalCh+=Math.round(hc100*factor);
-      totalGrasa+=Math.round(g100*factor);
-    }else{todosConMacros=false;}
+    if(!gramos||(p100===0&&hc100===0&&g100===0)){todosConMacros=false;return;}
+    const factor=gramos/100;
+    totalKcal+=Math.round(((p100*4)+(hc100*4)+(g100*9))*factor);
+    totalProt+=Math.round(p100*factor);
+    totalCh+=Math.round(hc100*factor);
+    totalGrasa+=Math.round(g100*factor);
   });
-  // Solo actualizar si TODOS los ingredientes tienen macros reales por 100g
-  if(todosConMacros&&rows.length>0&&algunoConMacros){
+  if(todosConMacros&&rows.length>0){
     document.getElementById('editKcal').value=totalKcal;
     document.getElementById('editProt').value=totalProt;
     document.getElementById('editCh').value=totalCh;
@@ -3264,93 +3303,32 @@ async function abrirEscaner() {
   const overlay = document.getElementById('scannerOverlay');
   overlay.style.display = 'flex';
   document.getElementById('scannerStatus').textContent = 'Iniciando cámara...';
+  // Limpiar div del lector
   document.getElementById('qr-reader').innerHTML = '';
 
-  // Función auxiliar: fallback con input file (funciona en todos los Android)
-  function _usarFallbackFoto(msg) {
-    document.getElementById('scannerStatus').textContent = msg || '📸 Toca el botón para fotografiar el código';
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;';
-    const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
-    inp.style.display = 'none';
-    inp.id = '_scanFotoInp';
-    inp.onchange = async (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      document.getElementById('scannerStatus').textContent = 'Analizando imagen...';
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const b64 = ev.target.result.split(',')[1];
-        await cerrarEscaner();
-        addMsg('user', '📦 Leyendo código de barras...');
-        addTyping();
-        try {
-          const res = await fetch(WORKER_URL, {method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({system: 'Eres un lector de códigos de barras. Extrae SOLO el número del código de barras EAN de la imagen. Responde únicamente con el número, sin texto adicional.',
-              messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'¿Cuál es el número del código de barras?'}]}],
-              model:'claude-sonnet-4-6'})});
-          const data = await res.json();
-          const codigo = (data.content?.[0]?.text||'').replace(/[^0-9]/g,'').trim();
-          if (codigo.length >= 8) {
-            await _procesarCodigoBarras(codigo);
-          } else {
-            removeTyping();
-            addMsg('ai', 'No pude leer el código. Intenta escribir el nombre del producto manualmente.');
-          }
-        } catch(e) { removeTyping(); addMsg('ai', 'Error al leer el código.'); }
-      };
-      reader.readAsDataURL(file);
-    };
-    const btn = document.createElement('button');
-    btn.textContent = '📸 Fotografiar código de barras';
-    btn.style.cssText = 'padding:14px 24px;background:var(--accent);border:none;border-radius:12px;color:#080810;font-size:15px;font-weight:700;cursor:pointer;';
-    btn.onclick = () => { inp.value=''; inp.click(); };
-    wrap.appendChild(inp);
-    wrap.appendChild(btn);
-    document.getElementById('qr-reader').appendChild(wrap);
-  }
-
-  // Comprobar si el navegador soporta getUserMedia
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    _usarFallbackFoto('Tu navegador no soporta cámara directa.');
-    return;
-  }
-
   try {
-    // Intentar con cámara trasera primero, luego cualquier cámara
-    let stream = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-    } catch(e1) {
-      // Segundo intento sin restricción de facingMode (algunos Android lo requieren)
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    }
-    _scanStream = stream;
+    _scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
     const video = document.createElement('video');
     video.srcObject = _scanStream;
-    video.setAttribute('playsinline', '');
-    video.setAttribute('autoplay', '');
-    video.muted = true;
+    video.setAttribute('playsinline', true);
     video.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:14px;';
     document.getElementById('qr-reader').appendChild(video);
-    await video.play().catch(()=>{});
+    await video.play();
     document.getElementById('scannerStatus').textContent = 'Apunta al código de barras del producto';
     _scanActive = true;
 
-    // Usar BarcodeDetector nativo si está disponible (Chrome Android 83+)
+    // Usar BarcodeDetector nativo si está disponible
     if ('BarcodeDetector' in window) {
-      let formats = ['ean_13','ean_8','code_128','upc_a','upc_e','code_39'];
-      try { formats = await BarcodeDetector.getSupportedFormats(); } catch(e) {}
-      const detector = new BarcodeDetector({ formats });
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a','upc_e','code_39'] });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const scan = async () => {
         if (!_scanActive) return;
-        if (video.readyState >= 2) { // HAVE_CURRENT_DATA o superior
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 480;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0);
           try {
             const barcodes = await detector.detect(canvas);
@@ -3360,17 +3338,51 @@ async function abrirEscaner() {
             }
           } catch(e) {}
         }
-        if (_scanActive) setTimeout(scan, 200);
+        setTimeout(scan, 200);
       };
-      setTimeout(scan, 500); // pequeño delay para que el video arranque
+      scan();
     } else {
-      // Fallback con foto (navegadores sin BarcodeDetector)
-      _usarFallbackFoto('Cámara activa. Toca el botón para fotografiar el código.');
+      // Fallback: input file para capturar foto y detectar código
+      document.getElementById('scannerStatus').textContent = 'Tu navegador no soporta escáner directo. Toma una foto del código.';
+      const btn = document.createElement('button');
+      btn.textContent = '📸 Fotografiar código';
+      btn.style.cssText = 'margin-top:10px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;';
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+      inp.style.display = 'none';
+      inp.onchange = async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        document.getElementById('scannerStatus').textContent = 'Analizando imagen...';
+        // Usar IA para leer el código de barras de la imagen
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const b64 = ev.target.result.split(',')[1];
+          await cerrarEscaner();
+          addMsg('user', '📦 Leyendo código de barras...');
+          addTyping();
+          try {
+            const res = await fetch(WORKER_URL, {method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({system: 'Eres un lector de códigos de barras. Extrae SOLO el número del código de barras EAN de la imagen. Responde únicamente con el número, sin texto adicional.',
+                messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'¿Cuál es el número del código de barras?'}]}],
+                model:'claude-sonnet-4-6'})});
+            const data = await res.json();
+            const codigo = (data.content?.[0]?.text||'').replace(/[^0-9]/g,'').trim();
+            if (codigo.length >= 8) {
+              await _procesarCodigoBarras(codigo);
+            } else {
+              removeTyping();
+              addMsg('ai', 'No pude leer el código. Intenta escribir el nombre del producto manualmente.');
+            }
+          } catch(e) { removeTyping(); addMsg('ai', 'Error al leer el código.'); }
+        };
+        reader.readAsDataURL(file);
+      };
+      btn.onclick = () => inp.click();
+      document.getElementById('qr-reader').appendChild(inp);
+      document.getElementById('qr-reader').appendChild(btn);
     }
   } catch(e) {
-    // getUserMedia fallido — usar fallback directo sin video
-    console.warn('Camera error:', e.name, e.message);
-    _usarFallbackFoto('No se pudo acceder a la cámara. Toca el botón para fotografiar.');
+    document.getElementById('scannerStatus').textContent = 'Error al acceder a la cámara. Verifica los permisos.';
   }
 }
 
