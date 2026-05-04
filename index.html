@@ -491,6 +491,46 @@ body{
 .voice-banner-text em{color:var(--text);font-style:normal;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── FOOD SEARCH MODAL ── */
+.fsm-overlay{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);
+  display:none;align-items:flex-end;justify-content:center;}
+.fsm-overlay.open{display:flex;}
+.fsm-sheet{width:100%;max-width:430px;background:var(--s1);border-radius:22px 22px 0 0;
+  border-top:1px solid var(--border);padding:16px 16px 36px;
+  display:flex;flex-direction:column;gap:10px;animation:slideUp 0.25s ease;max-height:80vh;}
+.fsm-handle{width:36px;height:4px;background:var(--muted2);border-radius:4px;margin:0 auto 6px;}
+.fsm-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:0.5px;}
+.fsm-subtitle{font-size:12px;color:var(--muted);margin-top:-4px;}
+.fsm-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;}
+.fsm-item{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);
+  border-radius:13px;padding:10px 12px;cursor:pointer;transition:all 0.15s;}
+.fsm-item:active{background:var(--accent-dim);border-color:rgba(90,138,0,0.4);}
+.fsm-item-img{width:44px;height:44px;border-radius:9px;object-fit:cover;background:var(--s3);flex-shrink:0;}
+.fsm-item-img-placeholder{width:44px;height:44px;border-radius:9px;background:var(--s3);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.fsm-item-info{flex:1;min-width:0;}
+.fsm-item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fsm-item-brand{font-size:10px;color:var(--muted);margin-top:1px;}
+.fsm-item-macros{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;}
+.fsm-macro{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:600;}
+.fsm-macro.k{background:rgba(90,138,0,0.12);color:var(--accent);}
+.fsm-macro.p{background:rgba(255,107,107,0.12);color:var(--red);}
+.fsm-macro.c{background:rgba(255,211,61,0.12);color:var(--yellow);}
+.fsm-macro.g{background:rgba(107,184,246,0.12);color:var(--blue);}
+.fsm-source{font-size:9px;color:var(--muted2);margin-top:2px;}
+.fsm-gram-row{display:flex;gap:8px;align-items:center;margin-top:4px;}
+.fsm-gram-input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+  padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;outline:none;}
+.fsm-gram-input:focus{border-color:rgba(90,138,0,0.5);}
+.fsm-register-btn{padding:11px 18px;background:var(--accent);border:none;border-radius:11px;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;white-space:nowrap;}
+.fsm-cancel{text-align:center;font-size:13px;color:var(--muted);padding:6px;cursor:pointer;margin-top:2px;}
+.fsm-not-found{text-align:center;padding:20px;color:var(--muted);font-size:13px;line-height:1.6;}
+.fsm-loading{text-align:center;padding:24px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.fsm-selected{background:rgba(90,138,0,0.07);border-color:rgba(90,138,0,0.4)!important;}
+
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
 @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.4);}50%{box-shadow:0 0 0 6px rgba(255,107,107,0);}}
@@ -1892,6 +1932,8 @@ function sysPrompt(){
   if(ayer&&ayer.comidas.length)comidasAyer='\nCOMIDAS DE AYER ('+ayer.fecha+'):\n'+ayer.comidas.map(c=>`- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g`).join('\n');
   return `Eres MacroAI, asistente de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora. LÍMITE ESTRICTO: Solo respondes sobre nutrición, alimentación, macros, calorías, recetas, despensa e historial de comidas. Si preguntan algo fuera de este ámbito responde: "Soy MacroAI, solo puedo ayudarte con nutrición y tus macros 😊".
 
+⚠️ REGLA CRÍTICA: NUNCA calcules ni inventes los macros de ningún alimento específico. Los macros se obtienen SIEMPRE de la base de datos real (Open Food Facts / FatSecret). Si el cliente pregunta por los macros de un alimento, dile que lo busque usando el buscador o escaneando el código de barras. La IA solo sirve para: consejos nutricionales, planificación general, análisis del día, sugerencias y responder preguntas de nutrición.
+
 PERFIL HOY (${S.tipoDia==='entreno'?'DÍA DE ENTRENO':'DÍA DE DESCANSO'}):
 - Objetivo: ${S.kcalObj} kcal | Prot ${S.prot}g | CH ${S.ch}g | Grasa ${S.grasa}g
 - Consumido: ${S.kcalC} kcal | Prot ${S.protC}g | CH ${S.chC}g | Grasa ${S.grasaC}g
@@ -1902,11 +1944,10 @@ REGLAS:
 - Usa siempre los alimentos de la despensa si están disponibles
 - Usa la memoria semanal para sugerir alimentos/menús que ya conoce el cliente
 - Cuando generes un menú completo, usa el formato PLAN_DIA
-- Cuando calcules ingredientes de una comida, usa SIEMPRE los tres tags juntos en este orden exacto: [INGREDIENTES]...[/INGREDIENTES] luego [COMIDA]...[/COMIDA] luego [REGISTRAR]...[/REGISTRAR]. NUNCA omitas [REGISTRAR] si has calculado ingredientes.
 - Actúa como consejera: si falta proteína sugiere añadir, si sobra grasa avisa
 - Máximo 2-3 frases de texto + datos. Termina con pregunta o acción.
 - Español siempre.
-- Si el cliente menciona alimentos que tiene en casa (frases como "tengo X", "acabo de comprar X", "en casa tengo X"), usa [AÑADIR_DESPENSA]. NUNCA uses [AÑADIR_DESPENSA] cuando estés calculando o registrando una comida — en ese caso usa solo [INGREDIENTES]+[COMIDA]+[REGISTRAR].
+- Si el cliente menciona alimentos que tiene en casa (frases como "tengo X", "acabo de comprar X", "en casa tengo X"), usa [AÑADIR_DESPENSA]. NUNCA uses [AÑADIR_DESPENSA] cuando estés calculando o registrando una comida.
 
 Si el cliente manda una foto de nevera o ticket de compra, detecta todos los alimentos visibles y responde con:
 [DESPENSA]alimento1,alimento2,alimento3[/DESPENSA]
@@ -1920,18 +1961,6 @@ merienda:kcal=XXX,prot=XX,ch=XX,grasa=XX
 cena:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [/PLAN_DIA]
 
-[INGREDIENTES]
-emoji Nombre:XXXg:XXXkcal
-TOTAL:kcal=XXX,prot=XX,ch=XX,grasa=XX
-[/INGREDIENTES]
-[COMIDA]Nombre descriptivo de la comida[/COMIDA]
-[REGISTRAR]kcal=XXX,prot=XX,ch=XX,grasa=XX[/REGISTRAR]
-
-REGLA INGREDIENTES: cada línea DEBE tener exactamente este formato:
-emoji Nombre:CANTIDADg:KCALkcal
-Ejemplo: 🍗 Pechuga de pollo:150g:180kcal
-
-IMPORTANTE: El tag [REGISTRAR] con los totales exactos es OBLIGATORIO siempre que calcules una comida. Sin él los macros no se registran.
 [AVISO_WARN]texto[/AVISO_WARN]
 [AVISO_OK]texto[/AVISO_OK]
 [OPCIONES]op1|op2|op3[/OPCIONES]
@@ -2354,13 +2383,235 @@ async function sendMessage(){
   const field=document.getElementById('inputField');const text=field.value.trim();if(!text)return;
   field.value='';field.style.height='auto';await sendDirect(text);
 }
+// ══════════════════════════════════════════
+// SISTEMA DE BÚSQUEDA DE ALIMENTOS (sin IA para macros)
+// ══════════════════════════════════════════
+
+let _fsmProductoSeleccionado = null;
+let _fsmMealNombre = '';
+
+// Detecta si el mensaje del usuario es una búsqueda de alimento
+function esConsultaAlimento(text) {
+  const t = text.toLowerCase().trim();
+  // Patrones: "100g de X", "Xg X", "quiero X", "he comido X", "voy a comer X", "añadir X"
+  const patronesGramos = /\d+\s*g\b|\d+\s*ml\b/i;
+  const patronesAccion = /^(quiero|he comido|comi|voy a comer|añadir|añade|registrar|busca|busco|cuánto tiene|cuantos macros|macros de|calorías de|buscar)\s/i;
+  const palabrasExcluir = /^(hola|buenos|que|cuando|cuándo|por qué|porqué|cómo|como|ayuda|gracias|ok|sí|no |dame|cuéntame|explica|qué es|qué son)/i;
+  // Si tiene gramos específicos → casi seguro es alimento
+  if (patronesGramos.test(t) && t.length < 80) return true;
+  // Si empieza con acción de alimento
+  if (patronesAccion.test(t)) return true;
+  // Excluir preguntas genéricas
+  if (palabrasExcluir.test(t)) return false;
+  // Si es texto corto (< 40 chars) sin signos de pregunta → probablemente un alimento
+  if (t.length < 40 && !t.includes('?') && !t.includes('¿')) return true;
+  return false;
+}
+
+// Extrae query de búsqueda y gramos del texto del usuario
+function extraerQueryYGramos(text) {
+  const t = text.trim();
+  // Detectar gramos: "150g de pechuga" → query="pechuga", gramos=150
+  const matchG = t.match(/^(\d+)\s*g(?:ramos?)?\s+(?:de\s+)?(.+)$/i) ||
+                 t.match(/^(.+?)\s+(\d+)\s*g(?:ramos?)?$/i);
+  if (matchG) {
+    const gramos = parseInt(matchG[1]) || parseInt(matchG[2]);
+    const nombre = (matchG[2] || matchG[1] || '').replace(/^de\s+/i, '').trim();
+    return { query: nombre, gramos };
+  }
+  // Sin gramos: limpiar prefijos de acción
+  const query = t
+    .replace(/^(quiero|he comido|comi|voy a comer|añadir|añade|registrar|busca|busco|cuánto tiene|cuantos macros|macros de|calorías de|buscar)\s+/i, '')
+    .replace(/^de\s+/i, '')
+    .trim();
+  return { query, gramos: null };
+}
+
+// Abre el modal de búsqueda con resultados de la BD
+async function abrirFSM(query, gramosInicial = null) {
+  const overlay = document.getElementById('fsmOverlay');
+  const list = document.getElementById('fsmList');
+  const gramStep = document.getElementById('fsmGramStep');
+
+  _fsmProductoSeleccionado = null;
+  document.getElementById('fsmTitle').textContent = '🔍 Selecciona el producto';
+  document.getElementById('fsmSubtitle').textContent = `Resultados para: "${query}"`;
+  gramStep.style.display = 'none';
+  list.innerHTML = `<div class="fsm-loading"><div class="auth-spinner"></div><span>Buscando en la base de datos...</span></div>`;
+  overlay.classList.add('open');
+
+  try {
+    const res = await fetch(WORKER_URL + '/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+
+    if (!data.found || !data.resultados || !data.resultados.length) {
+      list.innerHTML = `<div class="fsm-not-found">
+        😕 No encontré "<strong>${query}</strong>" en la base de datos.<br><br>
+        Prueba con otro nombre o escríbelo de forma diferente.
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    data.resultados.forEach((p, i) => {
+      const item = document.createElement('div');
+      item.className = 'fsm-item';
+      const fuenteLabel = p.fuente === 'openfoodfacts' ? '🌍 Open Food Facts' : '📊 FatSecret';
+      const marca = p.marca ? `<div class="fsm-item-brand">${p.marca}</div>` : '';
+      const imgHtml = p.imagen
+        ? `<img class="fsm-item-img" src="${p.imagen}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"><div class="fsm-item-img-placeholder" style="display:none;">🥦</div>`
+        : `<div class="fsm-item-img-placeholder">🥦</div>`;
+      item.innerHTML = `
+        ${imgHtml}
+        <div class="fsm-item-info">
+          <div class="fsm-item-name">${p.nombre}</div>
+          ${marca}
+          <div class="fsm-item-macros">
+            <span class="fsm-macro k">${p.kcal_100} kcal</span>
+            <span class="fsm-macro p">P ${p.p_100}g</span>
+            <span class="fsm-macro c">HC ${p.hc_100}g</span>
+            <span class="fsm-macro g">G ${p.g_100}g</span>
+          </div>
+          <div class="fsm-source">${fuenteLabel} · por 100g</div>
+        </div>`;
+      item.onclick = () => fsmSeleccionarProducto(p, item, gramosInicial);
+      list.appendChild(item);
+    });
+
+    // Si solo hay 1 resultado, seleccionarlo automáticamente
+    if (data.resultados.length === 1) {
+      setTimeout(() => fsmSeleccionarProducto(data.resultados[0], list.firstChild, gramosInicial), 300);
+    }
+  } catch (e) {
+    list.innerHTML = `<div class="fsm-not-found">❌ Error buscando. Comprueba tu conexión.</div>`;
+  }
+}
+
+function fsmSeleccionarProducto(producto, itemEl, gramosInicial = null) {
+  // Marcar seleccionado visualmente
+  document.querySelectorAll('.fsm-item').forEach(el => el.classList.remove('fsm-selected'));
+  if (itemEl) itemEl.classList.add('fsm-selected');
+
+  _fsmProductoSeleccionado = producto;
+  document.getElementById('fsmSelectedName').textContent = producto.nombre;
+  document.getElementById('fsmPer100').textContent = `· ${producto.kcal_100} kcal / 100g`;
+
+  // Mostrar paso de gramos
+  const gramStep = document.getElementById('fsmGramStep');
+  gramStep.style.display = 'flex';
+
+  const inp = document.getElementById('fsmGramos');
+  inp.value = gramosInicial || '';
+  fsmActualizarPreview();
+
+  // Scroll al paso de gramos
+  setTimeout(() => {
+    gramStep.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    inp.focus();
+  }, 100);
+}
+
+function fsmSetGrams(g) {
+  document.getElementById('fsmGramos').value = g;
+  fsmActualizarPreview();
+}
+
+function fsmActualizarPreview() {
+  if (!_fsmProductoSeleccionado) return;
+  const g = parseFloat(document.getElementById('fsmGramos').value) || 0;
+  const p = _fsmProductoSeleccionado;
+  if (!g) { document.getElementById('fsmPreview').textContent = ''; return; }
+  const f = g / 100;
+  const kcal = Math.round(p.kcal_100 * f);
+  const prot = Math.round(p.p_100 * f * 10) / 10;
+  const hc   = Math.round(p.hc_100 * f * 10) / 10;
+  const grasa= Math.round(p.g_100  * f * 10) / 10;
+  document.getElementById('fsmPreview').innerHTML =
+    `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · P${prot}g · HC${hc}g · G${grasa}g`;
+}
+
+function fsmRegistrar() {
+  if (!_fsmProductoSeleccionado) return;
+  const g = parseFloat(document.getElementById('fsmGramos').value);
+  if (!g || g <= 0) { showToast('Indica los gramos'); return; }
+  const p = _fsmProductoSeleccionado;
+  const f = g / 100;
+  const kcal = Math.round(p.kcal_100 * f);
+  const prot = Math.round(p.p_100 * f * 10) / 10;
+  const hc   = Math.round(p.hc_100 * f * 10) / 10;
+  const grasa= Math.round(p.g_100  * f * 10) / 10;
+
+  const nombre = `${p.nombre} (${g}g)`;
+  const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
+
+  // Registrar en el estado del día
+  S.kcalC += kcal; S.protC += prot; S.chC += hc; S.grasaC += grasa;
+  const mealIdx = S.comidas.length;
+  S.comidas.push({
+    nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+    kcal, prot, ch: hc, grasa, ingredientes: ingTexto
+  });
+  updateBars(); saveToday();
+  saveComidaSupabase({ nombre, fecha: TODAY, tipoDia: S.tipoDia, kcal, prot, ch: hc, grasa, ingredientes: ingTexto });
+
+  // Mostrar en el chat
+  const ingHtml = `<div class="plan-card">
+    <div class="plan-hdr">📋 ${p.nombre}</div>
+    <div class="plan-item">
+      <div class="pi-l"><div class="pi-name">🥦 ${p.nombre}</div><div class="pi-note">${p.marca||''}</div></div>
+      <div class="pi-r"><div class="pi-g">${g}g</div><div class="pi-k">${kcal} kcal</div></div>
+    </div>
+    <div class="plan-tot">
+      <div class="pt-lbl">Total ✓ BD</div>
+      <div class="pt-ms">
+        <span class="ptm" style="color:var(--red)">P ${prot}g</span>
+        <span class="ptm" style="color:var(--yellow)">CH ${hc}g</span>
+        <span class="ptm" style="color:var(--blue)">G ${grasa}g</span>
+        <span class="ptm" style="color:var(--accent)">${kcal} kcal ✓</span>
+      </div>
+    </div>
+  </div>`;
+
+  addMsg('ai', `✅ ${nombre} registrado`, [{type:'html',content:ingHtml}], [], {kcal,prot,ch:hc,grasa}, mealIdx, ingTexto);
+
+  // Añadir al historial para contexto de IA
+  S.historial.push({role:'assistant', content:`✅ Registrado: ${nombre} · ${kcal} kcal · P${prot}g · HC${hc}g · G${grasa}g (datos reales de BD)`});
+
+  fsmCerrar();
+  showToast(`✅ ${kcal} kcal añadidas`);
+}
+
+function fsmCerrar() {
+  document.getElementById('fsmOverlay').classList.remove('open');
+  _fsmProductoSeleccionado = null;
+}
+
+// ── sendDirect MEJORADO: intercepta búsquedas de alimentos ──
 async function sendDirect(text){
   removeQR();closeContextMenu();document.getElementById('sendBtn').disabled=true;
-  addMsg('user',text);addTyping();
+  addMsg('user',text);
+
+  // ¿Es una consulta de alimento? → buscar en BD directamente
+  if (esConsultaAlimento(text)) {
+    const { query, gramos } = extraerQueryYGramos(text);
+    if (query && query.length > 1) {
+      document.getElementById('sendBtn').disabled=false;
+      // Añadir al historial para contexto
+      S.historial.push({role:'user', content: text});
+      await abrirFSM(query, gramos);
+      return;
+    }
+  }
+
+  // Flujo normal: IA
+  addTyping();
   try{
     const raw=await callAI(text);removeTyping();
     const{text:t,elements,opciones,ingredientesRaw}=parseAI(raw);
-    // Extraer macros si hay REGISTRAR para favoritos
     const regMatch=raw.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
     const macros=regMatch?{kcal:+regMatch[1],prot:+regMatch[2],ch:+regMatch[3],grasa:+regMatch[4]}:null;
     addMsg('ai',t,elements,opciones,macros,-1,ingredientesRaw||'');
@@ -3399,28 +3650,82 @@ async function _procesarCodigoBarras(codigo) {
   addMsg('user', '📦 Código escaneado: ' + codigo);
   addTyping();
   try {
-    // Buscar en FatSecret via Worker
+    // Buscar en FatSecret → Open Food Facts via Worker
     const res = await fetch(WORKER_URL + '/barcode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ barcode: codigo })
     });
     const data = await res.json();
+    removeTyping();
     if (data.found) {
-      removeTyping();
-      const prompt = `El cliente ha escaneado este producto: "${data.nombre}". Valores exactos por 100g según el fabricante: ${data.kcal_100} kcal, P ${data.p_100}g, HC ${data.hc_100}g, G ${data.g_100}g. Pregúntale cuántos gramos va a consumir y calcula los macros totales proporcionalmente. Usa [OPCIONES] con cantidades típicas. Si confirma, registra con [INGREDIENTES]+[COMIDA]+[REGISTRAR].`;
-      const raw = await callAI(prompt);
-      const {text: t, elements, opciones, mealIdx, ingredientesRaw: ir} = parseAI(raw);
-      addMsg('ai', t, elements, opciones, null, mealIdx ?? -1, ir || '');
+      // Mostrar producto encontrado y pedir gramos mediante el modal
+      const fuenteLabel = data.fuente === 'openfoodfacts' ? 'Open Food Facts' : 'FatSecret';
+      addMsg('ai', `✅ Producto encontrado (${fuenteLabel}). ¿Cuántos gramos vas a consumir?`, [], []);
+      // Abrir modal pre-cargado con el producto del código de barras
+      _fsmProductoSeleccionado = data;
+      document.getElementById('fsmTitle').textContent = '📦 ' + data.nombre;
+      document.getElementById('fsmSubtitle').textContent = (data.marca || '') + ' · Datos del fabricante';
+      document.getElementById('fsmList').innerHTML = `
+        <div class="fsm-item fsm-selected">
+          ${data.imagen ? `<img class="fsm-item-img" src="${data.imagen}" onerror="this.style.display='none'" loading="lazy">` : '<div class="fsm-item-img-placeholder">📦</div>'}
+          <div class="fsm-item-info">
+            <div class="fsm-item-name">${data.nombre}</div>
+            ${data.marca ? `<div class="fsm-item-brand">${data.marca}</div>` : ''}
+            <div class="fsm-item-macros">
+              <span class="fsm-macro k">${data.kcal_100} kcal</span>
+              <span class="fsm-macro p">P ${data.p_100}g</span>
+              <span class="fsm-macro c">HC ${data.hc_100}g</span>
+              <span class="fsm-macro g">G ${data.g_100}g</span>
+            </div>
+            <div class="fsm-source">por 100g · datos reales del fabricante</div>
+          </div>
+        </div>`;
+      document.getElementById('fsmSelectedName').textContent = data.nombre;
+      document.getElementById('fsmPer100').textContent = `· ${data.kcal_100} kcal / 100g`;
+      document.getElementById('fsmGramStep').style.display = 'flex';
+      document.getElementById('fsmGramos').value = '';
+      document.getElementById('fsmPreview').textContent = '';
+      document.getElementById('fsmOverlay').classList.add('open');
+      setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
     } else {
-      removeTyping();
-      addMsg('ai', '❌ Producto no encontrado en la base de datos. Escríbelo manualmente y te ayudo a calcular los macros.');
+      addMsg('ai', '❌ Producto no encontrado. Escribe el nombre del producto para buscarlo.', [], []);
     }
   } catch(e) {
     removeTyping();
     addMsg('ai', 'Error al buscar el producto. Comprueba tu conexión.');
   }
 }</script>
+<!-- ══ FOOD SEARCH MODAL ══ -->
+<div class="fsm-overlay" id="fsmOverlay">
+  <div class="fsm-sheet" id="fsmSheet">
+    <div class="fsm-handle"></div>
+    <div class="fsm-title" id="fsmTitle">🔍 Selecciona el producto</div>
+    <div class="fsm-subtitle" id="fsmSubtitle">Datos reales de la base de datos</div>
+    <div class="fsm-list" id="fsmList"></div>
+    <!-- Paso 2: gramos -->
+    <div id="fsmGramStep" style="display:none;flex-direction:column;gap:10px;">
+      <div style="font-size:12px;color:var(--muted);">
+        <span id="fsmSelectedName" style="font-weight:600;color:var(--text);"></span>
+        <span id="fsmPer100" style="margin-left:6px;"></span>
+      </div>
+      <div class="fsm-gram-row">
+        <input class="fsm-gram-input" id="fsmGramos" type="number" inputmode="numeric"
+          placeholder="Cantidad en gramos" min="1" max="2000"
+          oninput="fsmActualizarPreview()">
+        <button class="fsm-register-btn" onclick="fsmRegistrar()">✅ Añadir</button>
+      </div>
+      <div id="fsmPreview" style="font-size:12px;color:var(--muted);min-height:18px;"></div>
+      <!-- Quick gram options -->
+      <div style="display:flex;gap:6px;">
+        <div onclick="fsmSetGrams(1)" style="padding:5px 16px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;">1g</div>
+        <div onclick="fsmSetGrams(100)" style="padding:5px 16px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;">100g</div>
+      </div>
+    </div>
+    <div class="fsm-cancel" onclick="fsmCerrar()">✕ Cancelar</div>
+  </div>
+</div>
+
 <!-- ══ QUICK ADD MODAL — MULTI ITEM ══ -->
 <div class="qam-overlay" id="qamOverlay" onclick="closeQAM(event)">
   <div class="qam-sheet" id="qamSheet">
