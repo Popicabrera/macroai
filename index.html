@@ -2976,46 +2976,6 @@ function initApp(){
     .catch(() => { removeTyping(); addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Usa el diario para registrar tus comidas o cuéntame qué necesitas.`,[],[]); });
 }
 
-  // ── RECONSTRUIR COMIDAS DEL DÍA EN EL CHAT ──
-  if(S.comidas.length>0){
-    S.comidas.forEach((c,idx)=>{
-      // Construir tarjeta de ingredientes si los hay
-      let ingHtml='';
-      if(c.ingredientes){
-        const lines=c.ingredientes.trim().split('\n').filter(l=>l.trim()&&!l.trim().startsWith('TOTAL:'));
-        if(lines.length>0){
-          ingHtml='<div class="plan-card"><div class="plan-hdr">📋 '+(c.tipo?c.tipo+' — ':'')+'Ingredientes y cantidades</div>';
-          lines.forEach(l=>{
-            const firstColon=l.indexOf(':');if(firstColon<0)return;
-            const namePart=l.substring(0,firstColon).trim();
-            const rest=l.substring(firstColon+1);
-            const secondColon=rest.indexOf(':');
-            const grams=secondColon>=0?rest.substring(0,secondColon).trim():rest.trim();
-            const kcalNote=secondColon>=0?rest.substring(secondColon+1).split(':')[0].trim():'';
-            ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(namePart)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(grams)}</div><div class="pi-k">${escapeHtml(kcalNote)}</div></div></div>`;
-          });
-          ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${c.prot}g</span><span class="ptm" style="color:var(--yellow)">CH ${c.ch}g</span><span class="ptm" style="color:var(--blue)">G ${c.grasa}g</span><span class="ptm" style="color:var(--accent)">${c.kcal} kcal ✓</span></div></div>`;
-          ingHtml+='</div>';
-        }
-      }
-      const texto=`✅ ${c.nombre}${c.hora?' · '+c.hora:''}`;
-      const macros={kcal:c.kcal,prot:c.prot,ch:c.ch,grasa:c.grasa};
-      addMsg('ai',texto,[{type:'html',content:ingHtml}],[],macros,idx,c.ingredientes||'');
-    });
-  }
-
-  // Iniciar chat en background
-  addTyping();
-  const despStr=DESP.length?` Tengo en mi despensa: ${despNombres().join(', ')}.`:'';
-  const nombreUsuario=CURRENT_USER?.nombre||CURRENT_USER?.email?.split('@')[0]||'';
-  const ctx=S.comidas.length>0
-    ?`El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
-    :`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal.${despStr} Dile que puede registrar sus comidas contándoselas o preguntarle lo que necesite. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`;
-  callAI(ctx)
-    .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');})
-    .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. Usa el Diario para anotar o pregúntame lo que necesites.`,[],[]);});
-}
-
 function setMainMode(mode){ /* legacy — no-op */ }
 
 // ══════════════════════════════════════════
