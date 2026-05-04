@@ -669,6 +669,7 @@ body{
 <!-- ══ VISTA PRINCIPAL ══ -->
 <div class="view" id="viewMain">
 <div class="aw">
+  <!-- HEADER -->
   <div class="header">
     <div class="logo" onclick="logoTap()">Macro<em>AI</em></div>
     <div class="hbtns">
@@ -681,22 +682,22 @@ body{
         <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:#f0ebe0;border:1px solid #d8d0bc;border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
+          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();abrirChatIA()">🤖 Asistente IA</div>
           <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
           <div style="height:1px;background:#d8d0bc;margin:4px 0;"></div>
-          <div class="nav-menu-item" style="color:var(--red);" onclick="event.stopPropagation();borrarConversacion();closeNavMenu()">🗑️ Borrar conversación</div>
           <div class="nav-menu-item" style="color:var(--muted);" onclick="event.stopPropagation();closeNavMenu();doLogout()">🚪 Cerrar sesión</div>
         </div>
       </div>
       <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
     </div>
   </div>
+
+  <!-- PANEL MACROS -->
   <div class="macro-panel">
-    <!-- Fila superior: kcal consumidas / objetivo -->
     <div class="mp-kcal-row">
       <div class="mp-kcal-label">Nutrientes restantes</div>
-      <div class="mp-kcal-val"><span id="kcalResta" class="mp-kcal-big">2000</span> <span class="mp-kcal-unit">kcal</span> <span class="mp-kcal-sep">/</span> <span id="kcalObj" class="mp-kcal-obj">2000</span></div>
+      <div class="mp-kcal-val"><span id="kcalResta" class="mp-kcal-big">2000</span><span class="mp-kcal-unit">kcal</span><span class="mp-kcal-sep">/</span><span id="kcalObj" class="mp-kcal-obj">2000</span></div>
     </div>
-    <!-- Fila macros: CH · Proteína · Grasa -->
     <div class="mp-macros-row">
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="chFill" style="background:var(--yellow);width:0%"></div></div>
@@ -714,43 +715,123 @@ body{
       </div>
     </div>
   </div>
-  <!-- ── CHAT VIEW ── -->
-  <div id="chatViewWrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
-  <div class="messages" id="messages"></div>
-  <div class="input-area">
-    <div class="input-wrap">
-      <div class="icon-btn" onclick="document.getElementById('attachMenu').classList.toggle('open')" style="background:none;border:none;color:var(--muted);font-size:20px;width:32px;">＋</div>
-      <textarea class="input-field" id="inputField" placeholder="Escribe aquí..." rows="1"
-        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-      <div class="ibtns">
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-    <div class="attach-menu" id="attachMenu">
-      <label class="attach-item">
-        🍽️ <span>Foto plato</span>
-        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoPlato(event);document.getElementById('attachMenu').classList.remove('open')">
-      </label>
-      <div class="attach-item" onclick="abrirEscaner();document.getElementById('attachMenu').classList.remove('open')">
-        📦 <span>Escanear código de barras</span>
-      </div>
-    </div>
-    <!-- Modal escáner -->
-    <div id="scannerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-      <div style="color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">📦 Escanea el código de barras</div>
-      <div id="qr-reader" style="width:300px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);"></div>
-      <div id="scannerStatus" style="color:var(--muted2);font-size:13px;text-align:center;padding:0 20px;">Apunta al código de barras del producto</div>
-      <button onclick="cerrarEscaner()" style="padding:12px 28px;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Cancelar</button>
-    </div>
 
-    <div class="hint" id="hint"></div>
+  <!-- DIARIO TIPO MFP -->
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0;">
+    <div id="mfpDiario"></div>
+    <!-- Botón IA flotante -->
+    <div onclick="abrirChatIA()" style="margin:12px 14px 24px;padding:13px;background:var(--accent-dim);border:1px solid rgba(90,138,0,0.3);border-radius:13px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+      <span style="font-size:20px;">🤖</span>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">Asistente IA</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px;">Sugerencias, análisis y consejos</div>
+      </div>
+      <span style="margin-left:auto;color:var(--accent);font-size:16px;">›</span>
+    </div>
   </div>
-  </div><!-- /chatViewWrap -->
 </div>
+</div>
+
+<!-- ══ VISTA CHAT IA ══ -->
+<div class="view" id="viewChat">
+<div class="aw">
+  <div class="sub-hdr">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <div class="sub-hdr-title">🤖 Asistente IA</div>
+  </div>
+  <div id="chatViewWrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <div class="input-wrap">
+        <div class="icon-btn" onclick="document.getElementById('attachMenu').classList.toggle('open')" style="background:none;border:none;color:var(--muted);font-size:20px;width:32px;">＋</div>
+        <textarea class="input-field" id="inputField" placeholder="Escribe aquí..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <div class="ibtns">
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="attach-menu" id="attachMenu">
+        <label class="attach-item">🍽️ <span>Foto plato</span>
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFotoPlato(event);document.getElementById('attachMenu').classList.remove('open')">
+        </label>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ VISTA BUSCADOR ALIMENTO ══ -->
+<div class="view" id="viewBuscador">
+<div class="aw">
+  <div class="sub-hdr">
+    <div class="back-btn" onclick="cerrarBuscador()">‹</div>
+    <div class="sub-hdr-title" id="buscadorTitle">Añadir alimento</div>
+  </div>
+  <!-- Barra búsqueda + escáner -->
+  <div style="padding:10px 12px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);">
+    <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 12px;">
+      <span style="color:var(--muted);font-size:16px;">🔍</span>
+      <input id="buscadorInput" type="text" placeholder="Busca un alimento..."
+        style="flex:1;background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);padding:11px 0;"
+        oninput="buscadorOnInput(this.value)"
+        onkeydown="if(event.key==='Enter')buscarAlimentoMFP(this.value)">
+    </div>
+    <div onclick="abrirEscaner()" style="width:42px;height:42px;background:var(--s2);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;">📷</div>
+  </div>
+  <!-- Tabs: Todos / Mis alimentos -->
+  <div style="display:flex;border-bottom:1px solid var(--border);">
+    <div id="tabTodos" onclick="setTabBuscador('todos')" style="flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--accent);color:var(--accent);">TODOS</div>
+    <div id="tabMisAlimentos" onclick="setTabBuscador('mis')" style="flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);">MIS ALIMENTOS</div>
+    <div onclick="abrirCrearAlimento()" style="flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--accent);">＋ CREAR</div>
+  </div>
+  <!-- Resultados -->
+  <div id="buscadorResultados" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;"></div>
+</div>
+</div>
+
+<!-- Modal escáner (compartido) -->
+<div id="scannerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">📦 Escanea el código de barras</div>
+  <div id="qr-reader" style="width:300px;height:220px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);position:relative;"></div>
+  <div id="scannerStatus" style="color:var(--muted2);font-size:13px;text-align:center;padding:0 20px;">Apunta al código de barras</div>
+  <button onclick="cerrarEscaner()" style="padding:12px 28px;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Cancelar</button>
+</div>
+
+<!-- Modal crear alimento -->
+<div id="crearAlimentoOverlay" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;">
+  <div style="width:100%;max-width:430px;background:var(--s1);border-radius:22px 22px 0 0;padding:20px 20px 40px;animation:slideUp 0.25s ease;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">＋ Crear alimento</div>
+    <div style="font-size:12px;color:var(--muted);">Se guardará en tu base de datos personal</div>
+    <input id="caName" type="text" placeholder="Nombre del alimento *" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--text);font-size:14px;outline:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Calorías / 100g *</div>
+        <input id="caKcal" type="number" inputmode="numeric" placeholder="120" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 12px;color:var(--text);font-size:15px;font-weight:700;outline:none;">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Proteína (g)</div>
+        <input id="caProt" type="number" inputmode="numeric" placeholder="0" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 12px;color:var(--text);font-size:15px;font-weight:700;outline:none;">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Carbohidratos (g)</div>
+        <input id="caHc" type="number" inputmode="numeric" placeholder="0" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 12px;color:var(--text);font-size:15px;font-weight:700;outline:none;">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Grasas (g)</div>
+        <input id="caGrasa" type="number" inputmode="numeric" placeholder="0" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 12px;color:var(--text);font-size:15px;font-weight:700;outline:none;">
+      </div>
+    </div>
+    <div id="caMsg" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="cerrarCrearAlimento()" style="flex:1;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+      <button onclick="guardarAlimentoCreado()" style="flex:2;padding:13px;background:var(--accent);border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;">✅ Guardar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══ VISTA FAVORITOS ══ -->
@@ -2641,9 +2722,9 @@ function updateBars(){
   document.getElementById('kcalObj').textContent=S.kcalObj;
   // Color kcal: verde si queda, rojo si pasado
   document.getElementById('kcalResta').style.color=kcalR<=0?'var(--red)':'var(--accent)';
-  // Refrescar diario si está visible
-  if(document.getElementById('diarioView')&&document.getElementById('diarioView').style.display!=='none'){
-    renderDiario();
+  // Refrescar diario MFP si está visible
+  if (document.getElementById('viewMain')?.classList.contains('active')) {
+    renderMFPDiario();
   }
 }
 
@@ -2876,12 +2957,24 @@ function borrarConversacion(){
 
 // ── INIT ──
 function initApp(){
-  loadToday();applyMacros(S.tipoDia);updateBars();
+  loadToday(); applyMacros(S.tipoDia); updateBars();
   showView('viewMain');
-  // Mostrar Admin en menú si es admin
-  const adminItem=document.getElementById('navAdminItem');
-  if(adminItem)adminItem.style.display=CURRENT_USER?.email===ADMIN_EMAIL?'block':'none';
-  setMainMode('chat');
+  const adminItem = document.getElementById('navAdminItem');
+  if (adminItem) adminItem.style.display = CURRENT_USER?.email===ADMIN_EMAIL ? 'block' : 'none';
+
+  // Renderizar diario MFP
+  renderMFPDiario();
+
+  // Iniciar IA en background (para cuando abran el chat)
+  const nombreUsuario = CURRENT_USER?.nombre || CURRENT_USER?.email?.split('@')[0] || '';
+  const ctx = S.comidas.length > 0
+    ? `El cliente ya registró ${S.comidas.length} comida(s) hoy con ${S.kcalC} kcal. Salúdale${nombreUsuario?' (se llama '+nombreUsuario+')':''} y dile cuánto le queda. Usa [OPCIONES] con sugerencias.`
+    : `Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. Dile que puede registrar sus comidas desde el diario o pedir sugerencias aquí. Usa [OPCIONES]: ¿Qué como hoy?|Generar menú completo|Analizar mi día`;
+  addTyping();
+  callAI(ctx)
+    .then(raw => { removeTyping(); const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw); addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||''); })
+    .catch(() => { removeTyping(); addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Usa el diario para registrar tus comidas o cuéntame qué necesitas.`,[],[]); });
+}
 
   // ── RECONSTRUIR COMIDAS DEL DÍA EN EL CHAT ──
   if(S.comidas.length>0){
@@ -2923,11 +3016,433 @@ function initApp(){
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. Usa el Diario para anotar o pregúntame lo que necesites.`,[],[]);});
 }
 
-function setMainMode(mode){
-  // Solo chat, sin diario
-  const chat=document.getElementById('chatViewWrap');
-  if(chat)chat.style.display='flex';
-  setTimeout(()=>{const m=document.getElementById('messages');if(m)m.scrollTop=m.scrollHeight;},50);
+function setMainMode(mode){ /* legacy — no-op */ }
+
+// ══════════════════════════════════════════
+// DIARIO TIPO MFP
+// ══════════════════════════════════════════
+
+const MFP_MEALS = [
+  {id:'desayuno',   name:'Desayuno',   emoji:'🌅'},
+  {id:'almuerzo',   name:'Almuerzo',   emoji:'☕'},
+  {id:'comida',     name:'Comida',     emoji:'☀️'},
+  {id:'merienda',   name:'Merienda',   emoji:'🍎'},
+  {id:'cena',       name:'Cena',       emoji:'🌙'},
+];
+
+function renderMFPDiario() {
+  const container = document.getElementById('mfpDiario');
+  if (!container) return;
+  container.innerHTML = '';
+  MFP_MEALS.forEach(meal => {
+    const items = S.comidas.filter(c => c.mealId === meal.id);
+    const totalKcal = items.reduce((a,c) => a + (c.kcal||0), 0);
+    const totalProt = items.reduce((a,c) => a + (c.prot||0), 0);
+    const totalCh   = items.reduce((a,c) => a + (c.ch||0), 0);
+    const totalGrasa= items.reduce((a,c) => a + (c.grasa||0), 0);
+
+    const block = document.createElement('div');
+    block.style.cssText = 'border-bottom:1px solid var(--border);';
+
+    // Cabecera comida
+    let itemsHtml = '';
+    items.forEach((item, localIdx) => {
+      const globalIdx = S.comidas.indexOf(item);
+      itemsHtml += `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
+            <div onclick="mfpEliminarItem(${globalIdx})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);">✕</div>
+          </div>
+        </div>`;
+    });
+
+    block.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;" onclick="mfpToggleMeal('body-${meal.id}','chev-${meal.id}')">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">${meal.emoji}</span>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `P${totalProt}g · HC${totalCh}g · G${totalGrasa}g` : 'Sin registrar'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
+          <span id="chev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
+        </div>
+      </div>
+      <div id="body-${meal.id}" style="display:none;border-top:1px solid var(--border);">
+        ${itemsHtml}
+        <div onclick="abrirBuscador('${meal.id}','${meal.name}')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;color:var(--accent);">
+          <span style="font-size:18px;font-weight:700;">＋</span>
+          <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.3px;">AÑADIR ALIMENTO</span>
+        </div>
+      </div>`;
+    container.appendChild(block);
+
+    // Abrir si tiene items
+    if (items.length) {
+      const body = document.getElementById(`body-${meal.id}`);
+      const chev = document.getElementById(`chev-${meal.id}`);
+      if (body) body.style.display = 'block';
+      if (chev) chev.style.transform = 'rotate(180deg)';
+    }
+  });
+}
+
+function mfpToggleMeal(bodyId, chevId) {
+  const body = document.getElementById(bodyId);
+  const chev = document.getElementById(chevId);
+  if (!body) return;
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function mfpEliminarItem(globalIdx) {
+  if (globalIdx < 0 || globalIdx >= S.comidas.length) return;
+  const item = S.comidas[globalIdx];
+  S.kcalC  = Math.max(0, S.kcalC  - (item.kcal||0));
+  S.protC  = Math.max(0, S.protC  - (item.prot||0));
+  S.chC    = Math.max(0, S.chC    - (item.ch||0));
+  S.grasaC = Math.max(0, S.grasaC - (item.grasa||0));
+  S.comidas.splice(globalIdx, 1);
+  updateBars(); saveToday(); renderMFPDiario();
+  showToast('🗑️ Eliminado');
+}
+
+function abrirChatIA() {
+  showView('viewChat');
+  setTimeout(() => {
+    const msgs = document.getElementById('messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  }, 50);
+}
+
+// ══════════════════════════════════════════
+// BUSCADOR DE ALIMENTOS
+// ══════════════════════════════════════════
+
+let _buscadorMealId = '';
+let _buscadorMealName = '';
+let _buscadorTab = 'todos';
+let _buscadorTimer = null;
+let _misAlimentosCache = null;
+
+function abrirBuscador(mealId, mealName) {
+  _buscadorMealId = mealId;
+  _buscadorMealName = mealName;
+  _buscadorTab = 'todos';
+  document.getElementById('buscadorTitle').textContent = mealName;
+  document.getElementById('buscadorInput').value = '';
+  document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
+  setTabBuscador('todos');
+  showView('viewBuscador');
+  setTimeout(() => document.getElementById('buscadorInput').focus(), 300);
+}
+
+function cerrarBuscador() { showView('viewMain'); }
+
+function setTabBuscador(tab) {
+  _buscadorTab = tab;
+  const todos = document.getElementById('tabTodos');
+  const mis   = document.getElementById('tabMisAlimentos');
+  todos.style.borderBottomColor = tab==='todos' ? 'var(--accent)' : 'transparent';
+  todos.style.color = tab==='todos' ? 'var(--accent)' : 'var(--muted)';
+  mis.style.borderBottomColor = tab==='mis' ? 'var(--accent)' : 'transparent';
+  mis.style.color = tab==='mis' ? 'var(--accent)' : 'var(--muted)';
+  if (tab === 'mis') {
+    cargarMisAlimentos();
+  } else {
+    const q = document.getElementById('buscadorInput').value.trim();
+    if (q.length > 1) buscarAlimentoMFP(q);
+    else document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
+  }
+}
+
+function buscadorOnInput(val) {
+  clearTimeout(_buscadorTimer);
+  if (_buscadorTab === 'mis') return;
+  if (val.trim().length < 2) {
+    document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
+    return;
+  }
+  _buscadorTimer = setTimeout(() => buscarAlimentoMFP(val.trim()), 400);
+}
+
+async function buscarAlimentoMFP(query) {
+  if (!query || query.length < 2) return;
+  const res = document.getElementById('buscadorResultados');
+  res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
+
+  const resultados = [];
+
+  // 1. Buscar en Supabase primero (BD propia — instantáneo y en español)
+  try {
+    const palabras = query.toLowerCase().split(/\s+/).filter(p=>p.length>1);
+    const filtros = palabras.map(p=>`nombre.ilike.*${encodeURIComponent(p)}*`).join(',');
+    const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&or=(${filtros})&limit=8`);
+    const rows = await r.json();
+    if (Array.isArray(rows)) {
+      rows.forEach(row => resultados.push({
+        fuente: 'supabase', id: row.id,
+        nombre: row.nombre, categoria: row.categoria||'',
+        kcal_100: row.kcal_100||0, p_100: row.p_100||0,
+        hc_100: row.hc_100||0, g_100: row.g_100||0,
+      }));
+    }
+  } catch(e) {}
+
+  // 2. Si hay pocos resultados → Open Food Facts
+  if (resultados.length < 4) {
+    try {
+      const r = await fetch(`https://es.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,product_name_es,brands,nutriments,image_front_small_url`,
+        { headers: { 'User-Agent': 'MacroAI/1.0' } });
+      const d = await r.json();
+      (d.products||[]).forEach(p => {
+        const n = p.nutriments||{};
+        const kcal = Math.round(parseFloat(n['energy-kcal_100g']||0));
+        if (!kcal) return;
+        const nombre = p.product_name_es||p.product_name||'';
+        if (!nombre) return;
+        const ya = resultados.some(r2 => r2.nombre.toLowerCase().slice(0,12) === nombre.toLowerCase().slice(0,12));
+        if (!ya) resultados.push({
+          fuente: 'off', nombre, marca: p.brands||'', imagen: p.image_front_small_url||'',
+          kcal_100: kcal,
+          p_100:   Math.round((parseFloat(n['proteins_100g']||0))*10)/10,
+          hc_100:  Math.round((parseFloat(n['carbohydrates_100g']||0))*10)/10,
+          g_100:   Math.round((parseFloat(n['fat_100g']||0))*10)/10,
+        });
+      });
+    } catch(e) {}
+  }
+
+  renderResultadosBuscador(resultados, query);
+}
+
+async function cargarMisAlimentos() {
+  const res = document.getElementById('buscadorResultados');
+  res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
+  try {
+    const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&creado_por=eq.${CURRENT_USER.id}&order=nombre.asc&limit=50`);
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) {
+      res.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">Aún no has creado alimentos.<br>Pulsa <strong>＋ CREAR</strong> para añadir uno.</div>';
+      return;
+    }
+    const resultados = rows.map(row => ({
+      fuente:'supabase', id:row.id, nombre:row.nombre, categoria:row.categoria||'',
+      kcal_100:row.kcal_100||0, p_100:row.p_100||0, hc_100:row.hc_100||0, g_100:row.g_100||0,
+    }));
+    renderResultadosBuscador(resultados, '');
+  } catch(e) {
+    res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:13px;">Error cargando alimentos.</div>';
+  }
+}
+
+function renderResultadosBuscador(resultados, query) {
+  const res = document.getElementById('buscadorResultados');
+  if (!resultados.length) {
+    res.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">No encontré "<strong>${escapeHtml(query)}</strong>".<br>Prueba otro nombre o créalo manualmente.</div>`;
+    return;
+  }
+  res.innerHTML = '';
+  resultados.forEach(p => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;';
+    item.onclick = () => seleccionarAlimentoBuscador(p);
+    const fuenteColor = p.fuente==='supabase' ? 'var(--accent)' : 'var(--blue)';
+    const fuenteLabel = p.fuente==='supabase' ? '📋 BD' : '🌍 OFF';
+    const imgHtml = p.imagen
+      ? `<img src="${p.imagen}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+      : `<div style="width:40px;height:40px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🥦</div>`;
+    item.innerHTML = `
+      ${imgHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · P${p.p_100}g · HC${p.hc_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
+      </div>
+      <span style="color:var(--accent);font-size:20px;flex-shrink:0;">›</span>`;
+    res.appendChild(item);
+  });
+}
+
+// Producto seleccionado → abrir FSM para cantidad
+function seleccionarAlimentoBuscador(producto) {
+  // Reutilizar el FSM existente
+  _fsmProductoSeleccionado = producto;
+  document.getElementById('fsmTitle').textContent = '📏 ¿Cuánto vas a comer?';
+  document.getElementById('fsmSubtitle').textContent = producto.nombre;
+  document.getElementById('fsmList').innerHTML = `
+    <div class="fsm-item fsm-selected">
+      ${producto.imagen ? `<img class="fsm-item-img" src="${producto.imagen}" onerror="this.style.display='none'">` : '<div class="fsm-item-img-placeholder">🥦</div>'}
+      <div class="fsm-item-info">
+        <div class="fsm-item-name">${escapeHtml(producto.nombre)}</div>
+        <div class="fsm-item-macros">
+          <span class="fsm-macro k">${producto.kcal_100} kcal</span>
+          <span class="fsm-macro p">P ${producto.p_100}g</span>
+          <span class="fsm-macro c">HC ${producto.hc_100}g</span>
+          <span class="fsm-macro g">G ${producto.g_100}g</span>
+        </div>
+        <div class="fsm-source">por 100g</div>
+      </div>
+    </div>`;
+  document.getElementById('fsmSelectedName').textContent = producto.nombre;
+  document.getElementById('fsmPer100').textContent = `· ${producto.kcal_100} kcal / 100g`;
+  document.getElementById('fsmGramStep').style.display = 'flex';
+  document.getElementById('fsmGramos').value = '';
+  document.getElementById('fsmPreview').textContent = '';
+  document.getElementById('fsmOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
+}
+
+// Override fsmRegistrar para asignar mealId correcto
+const _fsmRegistrarOriginal = window.fsmRegistrar;
+
+function fsmRegistrar() {
+  if (!_fsmProductoSeleccionado) return;
+  const g = parseFloat(document.getElementById('fsmGramos').value);
+  if (!g || g <= 0) { showToast('Indica los gramos'); return; }
+  const p = _fsmProductoSeleccionado;
+  const f = g / 100;
+  const kcal = Math.round(p.kcal_100 * f);
+  const prot = Math.round(p.p_100 * f * 10) / 10;
+  const hc   = Math.round(p.hc_100 * f * 10) / 10;
+  const grasa= Math.round(p.g_100  * f * 10) / 10;
+  const nombre = `${p.nombre} (${g}g)`;
+  const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
+  const mealId = _buscadorMealId || '';
+
+  S.kcalC += kcal; S.protC += prot; S.chC += hc; S.grasaC += grasa;
+  S.comidas.push({ nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}), kcal, prot, ch:hc, grasa, ingredientes:ingTexto, mealId });
+  updateBars(); saveToday();
+  saveComidaSupabase({ nombre, fecha:TODAY, tipoDia:S.tipoDia, kcal, prot, ch:hc, grasa, ingredientes:ingTexto });
+
+  // Si el producto vino de Open Food Facts → guardarlo en Supabase para todos
+  if (p.fuente === 'off') {
+    supaFetch('/rest/v1/alimentos_macroai', { method:'POST', headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({ nombre:p.nombre, kcal_100:p.kcal_100, p_100:p.p_100, hc_100:p.hc_100, g_100:p.g_100, categoria:'OTROS', fuente:'openfoodfacts' })
+    }).catch(()=>{});
+  }
+
+  fsmCerrar();
+  renderMFPDiario();
+  showToast(`✅ ${kcal} kcal añadidas`);
+  // Volver al diario si estamos en buscador
+  if (document.getElementById('viewBuscador').classList.contains('active')) {
+    showView('viewMain');
+  }
+}
+
+// ══════════════════════════════════════════
+// CREAR ALIMENTO MANUAL
+// ══════════════════════════════════════════
+
+function abrirCrearAlimento() {
+  ['caName','caKcal','caProt','caHc','caGrasa'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('caMsg').style.display='none';
+  document.getElementById('crearAlimentoOverlay').style.display='flex';
+}
+
+function cerrarCrearAlimento() {
+  document.getElementById('crearAlimentoOverlay').style.display='none';
+}
+
+async function guardarAlimentoCreado() {
+  const nombre = document.getElementById('caName').value.trim();
+  const kcal   = parseFloat(document.getElementById('caKcal').value)||0;
+  const prot   = parseFloat(document.getElementById('caProt').value)||0;
+  const hc     = parseFloat(document.getElementById('caHc').value)||0;
+  const grasa  = parseFloat(document.getElementById('caGrasa').value)||0;
+  const msg    = document.getElementById('caMsg');
+
+  if (!nombre || !kcal) {
+    msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';
+    msg.textContent='Nombre y calorías son obligatorios.'; return;
+  }
+  try {
+    const r = await supaFetch('/rest/v1/alimentos_macroai', {
+      method:'POST', headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({ nombre, kcal_100:kcal, p_100:prot, hc_100:hc, g_100:grasa, categoria:'MIS ALIMENTOS', creado_por:CURRENT_USER?.id||null, fuente:'manual' })
+    });
+    if (r.ok || r.status===201) {
+      msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(90,138,0,0.08);border:1px solid rgba(90,138,0,0.25);color:var(--accent);';
+      msg.textContent='✅ Alimento guardado correctamente.';
+      _misAlimentosCache = null;
+      setTimeout(cerrarCrearAlimento, 1200);
+    } else {
+      throw new Error('Error guardando');
+    }
+  } catch(e) {
+    msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';
+    msg.textContent='Error al guardar. Comprueba tu conexión.';
+  }
+}
+
+// ══════════════════════════════════════════
+// ESCÁNER — html5-qrcode (fiable en Android)
+// ══════════════════════════════════════════
+
+let _html5QrCode = null;
+
+async function _cargarHtml5QrCode() {
+  if (window.Html5Qrcode) return true;
+  return new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+
+async function abrirEscaner() {
+  const overlay = document.getElementById('scannerOverlay');
+  const status  = document.getElementById('scannerStatus');
+  const reader  = document.getElementById('qr-reader');
+  overlay.style.display = 'flex';
+  status.textContent = 'Cargando escáner...';
+  reader.innerHTML = '';
+
+  const ok = await _cargarHtml5QrCode();
+  if (!ok) { status.textContent = 'Error cargando escáner.'; return; }
+
+  try {
+    _html5QrCode = new Html5Qrcode('qr-reader');
+    const config = { fps:10, qrbox:{width:250,height:150}, aspectRatio:1.5,
+      formatsToSupport:[
+        Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E, Html5QrcodeSupportedFormats.CODE_39,
+      ]
+    };
+    await _html5QrCode.start(
+      { facingMode: 'environment' },
+      config,
+      async (decodedText) => { await _procesarCodigoBarras(decodedText); },
+      () => {} // errores de frame normales — ignorar
+    );
+    status.textContent = 'Apunta al código de barras';
+  } catch(e) {
+    console.warn('html5-qrcode error:', e);
+    status.textContent = 'No se pudo acceder a la cámara.';
+  }
+}
+
+async function cerrarEscaner() {
+  if (_html5QrCode) {
+    try { await _html5QrCode.stop(); } catch(e) {}
+    try { _html5QrCode.clear(); } catch(e) {}
+    _html5QrCode = null;
+  }
+  document.getElementById('scannerOverlay').style.display = 'none';
+  document.getElementById('qr-reader').innerHTML = '';
 }
 
 // ── DIARIO — CONFIGURACIÓN COMIDAS ──
