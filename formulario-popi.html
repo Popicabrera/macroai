@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formulario Inicial — POPI Training</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap');
+
+  :root {
+    --red: #E8503A;
+    --dark: #111111;
+    --card: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e0e0e0;
+    --muted: #888;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  header {
+    background: var(--card);
+    border-bottom: 3px solid var(--red);
+    padding: 28px 24px 20px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    color: var(--red);
+    letter-spacing: 3px;
+    line-height: 1;
+  }
+
+  header p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .section-title {
+    background: var(--red);
+    color: white;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    padding: 10px 18px;
+  }
+
+  .fields {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%;
+    background: #222;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.9rem;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .field input:focus,
+  .field textarea:focus,
+  .field select:focus {
+    border-color: var(--red);
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 72px;
+  }
+
+  .field select option {
+    background: #222;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .btn-send {
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    padding: 18px;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .btn-send:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  .btn-send svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+  }
+
+  .note {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: -8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>POPI Training</h1>
+  <p>Formulario de inicio · Toda la información es confidencial</p>
+</header>
+
+<div class="container">
+
+  <div class="section">
+    <div class="section-title">Datos personales</div>
+    <div class="fields">
+      <div class="field">
+        <label>Nombre completo</label>
+        <input type="text" id="nombre" placeholder="Tu nombre y apellidos">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Edad</label>
+          <input type="number" id="edad" placeholder="Años">
+        </div>
+        <div class="field">
+          <label>Sexo</label>
+          <select id="sexo">
+            <option value="">Selecciona</option>
+            <option>Hombre</option>
+            <option>Mujer</option>
+            <option>Prefiero no decirlo</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Peso (kg)</label>
+          <input type="number" id="peso" placeholder="ej: 75">
+        </div>
+        <div class="field">
+          <label>Altura (cm)</label>
+          <input type="number" id="altura" placeholder="ej: 175">
+        </div>
+      </div>
+      <div class="field">
+        <label>Ocupación</label>
+        <select id="ocupacion">
+          <option value="">Selecciona</option>
+          <option>Trabajo sedentario (oficina, teletrabajo)</option>
+          <option>Trabajo de pie</option>
+          <option>Trabajo físico activo</option>
+          <option>Estudiante</option>
+          <option>Otro</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Objetivo</div>
+    <div class="fields">
+      <div class="field">
+        <label>¿Qué quieres conseguir?</label>
+        <select id="objetivo">
+          <option value="">Selecciona</option>
+          <option>Perder grasa</option>
+          <option>Ganar músculo</option>
+          <option>Recomposición corporal</option>
+          <option>Mejorar rendimiento</option>
+          <option>Mejorar salud general</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>¿Has intentado conseguirlo antes? ¿Qué pasó?</label>
+        <textarea id="intentos" placeholder="Cuéntame brevemente..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Entrenamiento</div>
+    <div class="fields">
+      <div class="field">
+        <label>Experiencia entrenando</label>
+        <select id="experiencia">
+          <option value="">Selecciona</option>
+          <option>Sin experiencia</option>
+          <option>Menos de 1 año</option>
+          <option>1–3 años</option>
+          <option>Más de 3 años</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>¿Dónde entrenas?</label>
+        <select id="lugar">
+          <option value="">Selecciona</option>
+          <option>Gimnasio</option>
+          <option>Casa (con material)</option>
+          <option>Casa (sin material)</option>
+          <option>Al aire libre</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Días por semana</label>
+          <select id="dias">
+            <option value="">—</option>
+            <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tiempo por sesión</label>
+          <select id="tiempo">
+            <option value="">—</option>
+            <option>30–45 min</option>
+            <option>45–60 min</option>
+            <option>60–90 min</option>
+            <option>+90 min</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Lesiones o molestias a tener en cuenta</label>
+        <textarea id="lesiones" placeholder="Espalda, rodilla, hombro... o 'ninguna'"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Nutrición</div>
+    <div class="fields">
+      <div class="field">
+        <label>Comidas al día aproximadamente</label>
+        <select id="comidas">
+          <option value="">Selecciona</option>
+          <option>2 o menos</option>
+          <option>3</option>
+          <option>4</option>
+          <option>5 o más</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Intolerancias o alergias</label>
+        <input type="text" id="alergias" placeholder="Gluten, lactosa, frutos secos... o 'ninguna'">
+      </div>
+      <div class="field">
+        <label>Dieta especial</label>
+        <select id="dieta">
+          <option value="">Ninguna</option>
+          <option>Vegetariana</option>
+          <option>Vegana</option>
+          <option>Sin gluten</option>
+          <option>Otra</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Suplementación actual</label>
+        <input type="text" id="suplementos" placeholder="Proteína, creatina, vitaminas... o 'ninguna'">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Estilo de vida</div>
+    <div class="fields">
+      <div class="field">
+        <label>Nivel de estrés (1 bajo — 10 muy alto)</label>
+        <select id="estres">
+          <option value="">Selecciona</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Horas de sueño de media</label>
+        <select id="sueno">
+          <option value="">Selecciona</option>
+          <option>Menos de 5h</option>
+          <option>5–6h</option>
+          <option>6–7h</option>
+          <option>7–8h</option>
+          <option>Más de 8h</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Condición médica o medicación relevante</label>
+        <textarea id="medico" placeholder="O escribe 'ninguna'"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-send" onclick="enviarWhatsApp()">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+    ENVIAR POR WHATSAPP
+  </button>
+  <p class="note">Al pulsar se abrirá WhatsApp con tus respuestas</p>
+
+</div>
+
+<script>
+function enviarWhatsApp() {
+  const v = id => document.getElementById(id)?.value?.trim() || '—';
+
+  const msg =
+`*FORMULARIO INICIAL — POPI Training*
+
+👤 *DATOS PERSONALES*
+• Nombre: ${v('nombre')}
+• Edad: ${v('edad')} años | Sexo: ${v('sexo')}
+• Peso: ${v('peso')} kg | Altura: ${v('altura')} cm
+• Ocupación: ${v('ocupacion')}
+
+🎯 *OBJETIVO*
+• Objetivo: ${v('objetivo')}
+• Intentos previos: ${v('intentos')}
+
+🏋️ *ENTRENAMIENTO*
+• Experiencia: ${v('experiencia')}
+• Lugar: ${v('lugar')}
+• Días/semana: ${v('dias')} | Tiempo/sesión: ${v('tiempo')}
+• Lesiones: ${v('lesiones')}
+
+🥗 *NUTRICIÓN*
+• Comidas/día: ${v('comidas')}
+• Alergias: ${v('alergias')}
+• Dieta especial: ${v('dieta')}
+• Suplementación: ${v('suplementos')}
+
+😴 *ESTILO DE VIDA*
+• Estrés: ${v('estres')}/10
+• Sueño: ${v('sueno')}
+• Médico/medicación: ${v('medico')}`;
+
+  const url = `https://wa.me/34617364929?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+</script>
+</body>
+</html>
