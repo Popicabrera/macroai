@@ -4125,10 +4125,10 @@ let _scannerStream = null;
 let _scannerAnimFrame = null;
 
 async function _cargarJsQR() {
-  if (window.jsQR) return true;
+  if (window.ZXing) return true;
   return new Promise((resolve) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js';
     s.onload = () => resolve(true);
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
@@ -4196,39 +4196,31 @@ async function abrirEscaner() {
   status.textContent = 'Apunta al código de barras';
   _scannerActivo = true;
 
-  const ctx = canvas.getContext('2d');
-
-  if (typeof jsQR === 'undefined') {
-    status.textContent = '❌ ERROR 3: jsQR no está definido tras carga.';
+  if (typeof ZXing === 'undefined') {
+    status.textContent = '❌ ERROR 3: ZXing no está definido tras carga.';
     return;
   }
 
-  function _tick() {
-    if (!_scannerActivo) return;
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width  = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'dontInvert'
-      });
-      if (code) {
+  const codeReader = new ZXing.BrowserMultiFormatReader();
+  try {
+    await codeReader.decodeFromVideoElement(video, (result, err) => {
+      if (!_scannerActivo) return;
+      if (result) {
         _scannerActivo = false;
-        _procesarCodigoBarras(code.data);
-        return;
+        codeReader.reset();
+        _procesarCodigoBarras(result.getText());
       }
-    }
-    _scannerAnimFrame = requestAnimationFrame(_tick);
+    });
+  } catch(e) {
+    status.textContent = '❌ ERROR ZXing: ' + e.message;
   }
-
-  _scannerAnimFrame = requestAnimationFrame(_tick);
 }
 
 async function cerrarEscaner() {
   _scannerActivo = false;
   if (_scannerAnimFrame) { cancelAnimationFrame(_scannerAnimFrame); _scannerAnimFrame = null; }
   if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
+  try { if (window._zxingReader) { _zxingReader.reset(); _zxingReader = null; } } catch(e) {}
   document.getElementById('scannerOverlay').style.display = 'none';
   document.getElementById('qr-reader').innerHTML = '';
   document.getElementById('qr-reader').style.cssText = 'width:300px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);';
