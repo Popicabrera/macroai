@@ -1581,34 +1581,115 @@ function _traducirParaFS(nombre) {
   return nombre; // devolver original si no hay traducción
 }
 
-// ── ENRIQUECER ING100 CON DATOS REALES DE BD Y FATSECRET ──
+// ── CACHÉ EN MEMORIA PARA BÚSQUEDAS DE ALIMENTOS ──
+const _macrosCache = {};
+
+// ── BUSCAR EN OPEN FOOD FACTS POR NOMBRE ──
+async function buscarEnOFF(nombre) {
+  try {
+    const r = await fetch(
+      `https://es.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(nombre)}&search_simple=1&action=process&json=1&page_size=3&fields=product_name,product_name_es,nutriments`,
+      { headers: { 'User-Agent': 'MacroAI/1.0' } }
+    );
+    const d = await r.json();
+    const productos = (d.products||[]).filter(p => {
+      const n = p.nutriments||{};
+      return parseFloat(n['energy-kcal_100g']||0) > 0 &&
+             (parseFloat(n['proteins_100g']||0) > 0 || parseFloat(n['carbohydrates_100g']||0) > 0);
+    });
+    if (!productos.length) return null;
+    const n = productos[0].nutriments||{};
+    return {
+      p_100:  Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
+      hc_100: Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
+      g_100:  Math.round(parseFloat(n['fat_100g']||0)*10)/10,
+      kcal_100: Math.round(parseFloat(n['energy-kcal_100g']||0))
+    };
+  } catch(e) {}
+  return null;
+}
+
+// ── ESTIMAR MACROS CON IA COMO ÚLTIMO RECURSO ──
+async function estimarMacrosIA(nombre) {
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: 'Eres un experto nutricionista. Responde SOLO con JSON, sin texto extra.',
+        messages: [{
+          role: 'user',
+          content: `Macros estándar por 100g de "${nombre}". Responde ÚNICAMENTE con este JSON exacto (sin texto, sin markdown):
+{"p":XX,"hc":XX,"g":XX}
+Usa valores nutricionales estándar conocidos.`
+        }]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    const m = raw.match(/\{"p"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"hc"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"g"\s*:\s*(\d+(?:\.\d+)?)\}/);
+    if (m) {
+      const p = parseFloat(m[1]), hc = parseFloat(m[2]), g = parseFloat(m[3]);
+      return { p_100: p, hc_100: hc, g_100: g, kcal_100: Math.round(p*4 + hc*4 + g*9), estimado: true };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ── ENRIQUECER ING100 CON DATOS REALES DE BD, FATSECRET, OFF Y ESTIMACIÓN IA ──
 async function enriquecerIng100(items) {
   const result = [];
   for (const item of items) {
     const gramos = parseFloat((item.grams||'').replace(/[^\d.]/g,''))||0;
-    const nombreLimpio = item.full.replace(/^[^\w]+/,'').trim();
+    const nombreLimpio = item.full.replace(/^[^\w\sáéíóúüñÁÉÍÓÚÜÑ]+/,'').trim();
+    const cacheKey = nombreLimpio.toLowerCase().slice(0,40);
 
-    // 1. Buscar en BD propia primero
-    const bdMacros = await buscarMacros100g(item.full);
-    if (bdMacros && (bdMacros.p100||bdMacros.hc100||bdMacros.g100)) {
-      result.push(`${item.full}:${gramos}:${bdMacros.p100}:${bdMacros.hc100}:${bdMacros.g100}`);
+    // Usar caché si existe
+    if (_macrosCache[cacheKey]) {
+      const c = _macrosCache[cacheKey];
+      result.push(`${item.full}:${gramos}:${c.p_100}:${c.hc_100}:${c.g_100}`);
       continue;
     }
 
-    // 2. Buscar en FatSecret — primero en español, luego traducido al inglés
+    // 1. BD propia (Supabase) — más rápida y en español
+    const bdMacros = await buscarMacros100g(item.full);
+    if (bdMacros && (bdMacros.p100||bdMacros.hc100||bdMacros.g100)) {
+      const m = { p_100: bdMacros.p100, hc_100: bdMacros.hc100, g_100: bdMacros.g100 };
+      _macrosCache[cacheKey] = m;
+      result.push(`${item.full}:${gramos}:${m.p_100}:${m.hc_100}:${m.g_100}`);
+      continue;
+    }
+
+    // 2. FatSecret en español
     let fsMacros = await buscarEnFatSecret(nombreLimpio);
     if (!fsMacros || (!fsMacros.p_100 && !fsMacros.hc_100 && !fsMacros.g_100)) {
+      // 2b. FatSecret traducido al inglés
       const nombreEN = _traducirParaFS(nombreLimpio);
-      if (nombreEN !== nombreLimpio) {
-        fsMacros = await buscarEnFatSecret(nombreEN);
-      }
+      if (nombreEN !== nombreLimpio) fsMacros = await buscarEnFatSecret(nombreEN);
     }
     if (fsMacros && (fsMacros.p_100||fsMacros.hc_100||fsMacros.g_100)) {
+      _macrosCache[cacheKey] = fsMacros;
       result.push(`${item.full}:${gramos}:${fsMacros.p_100}:${fsMacros.hc_100}:${fsMacros.g_100}`);
       continue;
     }
 
-    // 3. Sin datos — dejar ceros
+    // 3. Open Food Facts (muy bueno para productos españoles)
+    const offMacros = await buscarEnOFF(nombreLimpio);
+    if (offMacros && (offMacros.p_100||offMacros.hc_100||offMacros.g_100)) {
+      _macrosCache[cacheKey] = offMacros;
+      result.push(`${item.full}:${gramos}:${offMacros.p_100}:${offMacros.hc_100}:${offMacros.g_100}`);
+      continue;
+    }
+
+    // 4. Estimación IA como último recurso
+    const iaMacros = await estimarMacrosIA(nombreLimpio);
+    if (iaMacros && (iaMacros.p_100||iaMacros.hc_100||iaMacros.g_100)) {
+      _macrosCache[cacheKey] = iaMacros;
+      result.push(`${item.full}:${gramos}:${iaMacros.p_100}:${iaMacros.hc_100}:${iaMacros.g_100}`);
+      continue;
+    }
+
+    // 5. Sin datos en ninguna fuente
     result.push(`${item.full}:${gramos}:0:0:0`);
   }
   return result.join('\n');
@@ -2013,7 +2094,12 @@ function sysPrompt(){
   if(ayer&&ayer.comidas.length)comidasAyer='\nCOMIDAS DE AYER ('+ayer.fecha+'):\n'+ayer.comidas.map(c=>`- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g`).join('\n');
   return `Eres MacroAI, asistente de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora. LÍMITE ESTRICTO: Solo respondes sobre nutrición, alimentación, macros, calorías, recetas, despensa e historial de comidas. Si preguntan algo fuera de este ámbito responde: "Soy MacroAI, solo puedo ayudarte con nutrición y tus macros 😊".
 
-⚠️ REGLA CRÍTICA: NUNCA calcules ni inventes los macros de ningún alimento específico. Los macros se obtienen SIEMPRE de la base de datos real (Open Food Facts / FatSecret). Si el cliente pregunta por los macros de un alimento, dile que lo busque usando el buscador o escaneando el código de barras. La IA solo sirve para: consejos nutricionales, planificación general, análisis del día, sugerencias y responder preguntas de nutrición.
+MACROS Y BASE DE DATOS:
+- Cuando el cliente registre alimentos desde el chat, usa el formato [INGREDIENTES] con macros estimados por tus conocimientos nutricionales (valores estándar por 100g). El sistema los verificará automáticamente contra la base de datos real y corregirá si es necesario.
+- Para alimentos genéricos españoles (pollo, arroz, huevo, avena…) usa valores estándar conocidos — NO digas que no puedes calcularlos.
+- Para productos de marca (Hacendado, Mercadona, marcas específicas) recomienda usar el buscador o el escáner de código de barras para datos exactos.
+- Si el cliente pregunta macros de un alimento concreto, dáselos como referencia estándar y menciona que para productos envasados es mejor usar el buscador.
+- NUNCA respondas "no puedo calcular eso" para alimentos comunes. Estima con criterio nutricional y marca como ~estimación si hay incertidumbre.
 
 PERFIL HOY (${S.tipoDia==='entreno'?'DÍA DE ENTRENO':'DÍA DE DESCANSO'}):
 - Objetivo: ${S.kcalObj} kcal | Prot ${S.prot}g | CH ${S.ch}g | Grasa ${S.grasa}g
@@ -2160,7 +2246,9 @@ function parseAI(raw){
           });
           // Actualizar si TODOS tienen datos reales (recálculo completo)
           // o si al menos hay uno — en ese caso mostrar los datos reales disponibles
-          const todosConDatos = lineas.every(l=>{const p=l.split(':');return parseFloat(p[2])||parseFloat(p[3])||parseFloat(p[4]);});
+            // Determinar etiqueta según fuente
+            const todosConDatos = lineas.every(l=>{const p=l.split(':');return parseFloat(p[2])||parseFloat(p[3])||parseFloat(p[4]);});
+            const labelTotal = todosConDatos ? 'Total ✓ BD' : 'Total ~estimado';
           if(algunoConDatos&&newKcal>0){
             // Actualizar contador del día con la diferencia
             const diff={kcal:newKcal-S.comidas[idx].kcal,prot:newProt-S.comidas[idx].prot,ch:newCh-S.comidas[idx].ch,grasa:newGrasa-S.comidas[idx].grasa};
@@ -2173,7 +2261,7 @@ function parseAI(raw){
             if(_cid){
               const planTot=document.querySelector(`.plan-card[data-card-id="${_cid}"] .plan-tot`);
               if(planTot){
-                planTot.innerHTML=`<div class="pt-lbl">Total ✓ BD</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${newProt}g</span><span class="ptm" style="color:var(--yellow)">CH ${newCh}g</span><span class="ptm" style="color:var(--blue)">G ${newGrasa}g</span><span class="ptm" style="color:var(--accent)">${newKcal} kcal ✓</span></div>`;
+                planTot.innerHTML=`<div class="pt-lbl">${labelTotal}</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${newProt}g</span><span class="ptm" style="color:var(--yellow)">CH ${newCh}g</span><span class="ptm" style="color:var(--blue)">G ${newGrasa}g</span><span class="ptm" style="color:var(--accent)">${newKcal} kcal ✓</span></div>`;
               }
             }
             // Actualizar badge
@@ -3181,6 +3269,26 @@ async function buscarAlimentoMFP(query) {
     } catch(e) {}
   }
 
+  // 3. Si sigue habiendo pocos → FatSecret
+  if (resultados.length < 3) {
+    try {
+      const fsRes = await buscarEnFatSecret(query);
+      if (fsRes && fsRes.found && (fsRes.p_100||fsRes.hc_100||fsRes.g_100)) {
+        const ya = resultados.some(r2 => r2.nombre.toLowerCase().slice(0,10) === (fsRes.nombre||'').toLowerCase().slice(0,10));
+        if (!ya) resultados.push({
+          fuente: 'fatsecret',
+          nombre: fsRes.nombre || query,
+          marca: '',
+          imagen: '',
+          kcal_100: fsRes.kcal_100 || Math.round((fsRes.p_100||0)*4 + (fsRes.hc_100||0)*4 + (fsRes.g_100||0)*9),
+          p_100: fsRes.p_100||0,
+          hc_100: fsRes.hc_100||0,
+          g_100: fsRes.g_100||0,
+        });
+      }
+    } catch(e) {}
+  }
+
   renderResultadosBuscador(resultados, query);
 }
 
@@ -3215,8 +3323,8 @@ function renderResultadosBuscador(resultados, query) {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;';
     item.onclick = () => seleccionarAlimentoBuscador(p);
-    const fuenteColor = p.fuente==='supabase' ? 'var(--accent)' : 'var(--blue)';
-    const fuenteLabel = p.fuente==='supabase' ? '📋 BD' : '🌍 OFF';
+    const fuenteColor = p.fuente==='supabase' ? 'var(--accent)' : p.fuente==='fatsecret' ? 'var(--teal)' : 'var(--blue)';
+    const fuenteLabel = p.fuente==='supabase' ? '📋 BD' : p.fuente==='fatsecret' ? '📊 FS' : '🌍 OFF';
     const imgHtml = p.imagen
       ? `<img src="${p.imagen}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div style="width:40px;height:40px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🥦</div>`;
