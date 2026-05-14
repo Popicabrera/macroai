@@ -3502,65 +3502,6 @@ async function guardarAlimentoCreado() {
 }
 
 // ══════════════════════════════════════════
-// ESCÁNER — html5-qrcode (fiable en Android)
-// ══════════════════════════════════════════
-
-let _html5QrCode = null;
-
-async function _cargarHtml5QrCode() {
-  if (window.Html5Qrcode) return true;
-  return new Promise(resolve => {
-    const s = document.createElement('script');
-    s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.head.appendChild(s);
-  });
-}
-
-async function abrirEscaner() {
-  const overlay = document.getElementById('scannerOverlay');
-  const status  = document.getElementById('scannerStatus');
-  const reader  = document.getElementById('qr-reader');
-  overlay.style.display = 'flex';
-  status.textContent = 'Cargando escáner...';
-  reader.innerHTML = '';
-
-  const ok = await _cargarHtml5QrCode();
-  if (!ok) { status.textContent = 'Error cargando escáner.'; return; }
-
-  try {
-    _html5QrCode = new Html5Qrcode('qr-reader');
-    const config = { fps:10, qrbox:{width:250,height:150}, aspectRatio:1.5,
-      formatsToSupport:[
-        Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E, Html5QrcodeSupportedFormats.CODE_39,
-      ]
-    };
-    await _html5QrCode.start(
-      { facingMode: 'environment' },
-      config,
-      async (decodedText) => { await _procesarCodigoBarras(decodedText); },
-      () => {} // errores de frame normales — ignorar
-    );
-    status.textContent = 'Apunta al código de barras';
-  } catch(e) {
-    console.warn('html5-qrcode error:', e);
-    status.textContent = 'No se pudo acceder a la cámara.';
-  }
-}
-
-async function cerrarEscaner() {
-  if (_html5QrCode) {
-    try { await _html5QrCode.stop(); } catch(e) {}
-    try { _html5QrCode.clear(); } catch(e) {}
-    _html5QrCode = null;
-  }
-  document.getElementById('scannerOverlay').style.display = 'none';
-  document.getElementById('qr-reader').innerHTML = '';
-}
-
 // ── DIARIO — CONFIGURACIÓN COMIDAS ──
 const MEAL_CONFIG=[
   {id:'desayuno',name:'Desayuno',emoji:'🌅'},
@@ -4179,18 +4120,20 @@ function saveEditMeal() {
 
 // ══ ESCÁNER CÓDIGO DE BARRAS ══
 // ══════════════════════════════════════════
-// ESCÁNER CÓDIGO DE BARRAS — ZXing
+// ESCÁNER CÓDIGO DE BARRAS — jsQR
 // Funciona en Android, iOS y escritorio
 // ══════════════════════════════════════════
 
 let _zxingReader = null;
 let _scannerActivo = false;
+let _scannerStream = null;
+let _scannerAnimFrame = null;
 
-async function _cargarZXing() {
-  if (window.ZXingBrowser) return true;
+async function _cargarJsQR() {
+  if (window.jsQR) return true;
   return new Promise((resolve) => {
     const s = document.createElement('script');
-    s.src = 'https://unpkg.com/@zxing/browser@latest/umd/index.min.js';
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
     s.onload = () => resolve(true);
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
@@ -4199,135 +4142,93 @@ async function _cargarZXing() {
 
 async function abrirEscaner() {
   const overlay = document.getElementById('scannerOverlay');
-  const status = document.getElementById('scannerStatus');
-  const reader = document.getElementById('qr-reader');
+  const status  = document.getElementById('scannerStatus');
+  const reader  = document.getElementById('qr-reader');
   overlay.style.display = 'flex';
   status.textContent = 'Cargando escáner...';
   reader.innerHTML = '';
 
-  // Cargar ZXing si no está cargado
-  const ok = await _cargarZXing();
+  const ok = await _cargarJsQR();
   if (!ok) {
     status.textContent = 'Error cargando el escáner. Usa la búsqueda manual.';
     return;
   }
 
-  try {
-    // Crear elemento video para ZXing
-    const video = document.createElement('video');
-    video.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:14px;';
-    reader.appendChild(video);
-
-    // Línea de escaneo animada
-    const line = document.createElement('div');
-    line.style.cssText = 'position:absolute;left:10%;right:10%;height:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:scanLine 1.5s ease-in-out infinite;border-radius:2px;';
-    reader.style.position = 'relative';
-    reader.appendChild(line);
-
-    // Añadir animación si no existe
-    if (!document.getElementById('scanLineStyle')) {
-      const st = document.createElement('style');
-      st.id = 'scanLineStyle';
-      st.textContent = '@keyframes scanLine{0%,100%{top:15%}50%{top:80%}}';
-      document.head.appendChild(st);
-    }
-
-    status.textContent = 'Apunta al código de barras';
-    _scannerActivo = true;
-
-    // Obtener cámaras disponibles
-    const dispositivos = await ZXingBrowser.BrowserMultiFormatReader.listVideoInputDevices();
-    // Preferir cámara trasera
-    const camara = dispositivos.find(d =>
-      d.label.toLowerCase().includes('back') ||
-      d.label.toLowerCase().includes('rear') ||
-      d.label.toLowerCase().includes('trasera') ||
-      d.label.toLowerCase().includes('environment')
-    ) || dispositivos[dispositivos.length - 1] || dispositivos[0];
-
-    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
-
-    await _zxingReader.decodeFromVideoDevice(
-      camara?.deviceId || undefined,
-      video,
-      async (result, err) => {
-        if (!_scannerActivo) return;
-        if (result) {
-          _scannerActivo = false;
-          await _procesarCodigoBarras(result.getText());
-        }
-        // Ignorar errores de frames sin código — son normales
-      }
-    );
-
-  } catch(e) {
-    // Si falla getUserMedia (Android antiguo, permisos denegados, etc.)
-    // → fallback limpio: input file nativo
-    console.warn('ZXing stream falló, usando input file:', e.message);
-    _mostrarFallbackEscaner();
+  if (!document.getElementById('scanLineStyle')) {
+    const st = document.createElement('style');
+    st.id = 'scanLineStyle';
+    st.textContent = '@keyframes scanLine{0%,100%{top:15%}50%{top:80%}}';
+    document.head.appendChild(st);
   }
-}
 
-function _mostrarFallbackEscaner() {
-  const reader = document.getElementById('qr-reader');
-  const status = document.getElementById('scannerStatus');
-  reader.innerHTML = '';
-  reader.style.cssText = 'width:300px;display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;';
-  status.textContent = 'Fotografía el código de barras';
+  reader.style.position = 'relative';
+  reader.style.overflow = 'hidden';
 
-  // Input file oculto — abre la cámara nativa en Android
-  const inp = document.createElement('input');
-  inp.type = 'file';
-  inp.accept = 'image/*';
-  inp.capture = 'environment';
-  inp.style.display = 'none';
-  inp.id = 'barcodeFileInput';
+  const video = document.createElement('video');
+  video.setAttribute('playsinline', '');
+  video.setAttribute('autoplay', '');
+  video.setAttribute('muted', '');
+  video.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:14px;display:block;';
+  reader.appendChild(video);
 
-  inp.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    status.textContent = 'Leyendo código...';
+  const canvas = document.createElement('canvas');
+  canvas.style.display = 'none';
+  reader.appendChild(canvas);
 
-    try {
-      // Leer con ZXing desde la imagen
-      const ok = await _cargarZXing();
-      if (ok) {
-        const imgUrl = URL.createObjectURL(file);
-        const zx = new ZXingBrowser.BrowserMultiFormatReader();
-        try {
-          const result = await zx.decodeFromImageUrl(imgUrl);
-          URL.revokeObjectURL(imgUrl);
-          await _procesarCodigoBarras(result.getText());
-          return;
-        } catch(decodeErr) {
-          URL.revokeObjectURL(imgUrl);
-          // ZXing no pudo leer → mostrar error
-          cerrarEscaner();
-          addMsg('ai', '❌ No pude leer el código. Asegúrate de que esté bien enfocado e inténtalo de nuevo, o busca el producto por nombre.');
-          return;
-        }
-      }
-    } catch(err) {
-      cerrarEscaner();
-      addMsg('ai', '❌ Error al procesar la imagen. Busca el producto por nombre.');
-    }
+  const line = document.createElement('div');
+  line.style.cssText = 'position:absolute;left:10%;right:10%;height:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:scanLine 1.5s ease-in-out infinite;border-radius:2px;pointer-events:none;';
+  reader.appendChild(line);
+
+  const constraints = {
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
   };
 
-  const btn = document.createElement('button');
-  btn.textContent = '📸 Abrir cámara';
-  btn.style.cssText = 'padding:14px 28px;background:var(--accent);border:none;border-radius:13px;font-family:"Syne",sans-serif;font-size:15px;font-weight:700;color:#080810;cursor:pointer;';
-  btn.onclick = () => inp.click();
+  try {
+    _scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch(e1) {
+    try {
+      _scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    } catch(e2) {
+      status.textContent = 'No se pudo acceder a la cámara. Comprueba los permisos.';
+      console.warn('getUserMedia falló:', e2.message);
+      return;
+    }
+  }
 
-  reader.appendChild(inp);
-  reader.appendChild(btn);
+  video.srcObject = _scannerStream;
+  await video.play().catch(() => {});
+
+  status.textContent = 'Apunta al código de barras';
+  _scannerActivo = true;
+
+  const ctx = canvas.getContext('2d');
+
+  function _tick() {
+    if (!_scannerActivo) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert'
+      });
+      if (code) {
+        _scannerActivo = false;
+        _procesarCodigoBarras(code.data);
+        return;
+      }
+    }
+    _scannerAnimFrame = requestAnimationFrame(_tick);
+  }
+
+  _scannerAnimFrame = requestAnimationFrame(_tick);
 }
 
 async function cerrarEscaner() {
   _scannerActivo = false;
-  if (_zxingReader) {
-    try { _zxingReader.reset(); } catch(e) {}
-    _zxingReader = null;
-  }
+  if (_scannerAnimFrame) { cancelAnimationFrame(_scannerAnimFrame); _scannerAnimFrame = null; }
+  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
   document.getElementById('scannerOverlay').style.display = 'none';
   document.getElementById('qr-reader').innerHTML = '';
   document.getElementById('qr-reader').style.cssText = 'width:300px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);';
