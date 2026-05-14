@@ -3500,8 +3500,6 @@ async function guardarAlimentoCreado() {
     msg.textContent='Error al guardar. Comprueba tu conexión.';
   }
 }
-
-// ══════════════════════════════════════════
 // ── DIARIO — CONFIGURACIÓN COMIDAS ──
 const MEAL_CONFIG=[
   {id:'desayuno',name:'Desayuno',emoji:'🌅'},
@@ -4117,14 +4115,11 @@ function saveEditMeal() {
   _editMealIdx = -1; _editMsgDiv = null;
 }
 
-
-// ══ ESCÁNER CÓDIGO DE BARRAS ══
 // ══════════════════════════════════════════
 // ESCÁNER CÓDIGO DE BARRAS — jsQR
 // Funciona en Android, iOS y escritorio
 // ══════════════════════════════════════════
 
-let _zxingReader = null;
 let _scannerActivo = false;
 let _scannerStream = null;
 let _scannerAnimFrame = null;
@@ -4233,6 +4228,8 @@ async function cerrarEscaner() {
   document.getElementById('qr-reader').innerHTML = '';
   document.getElementById('qr-reader').style.cssText = 'width:300px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);';
 }
+
+
 
 async function _procesarCodigoBarras(codigo) {
   _scanActive = false;
