@@ -3264,10 +3264,9 @@ async function buscarAlimentoMFP(query) {
   res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
 
   const resultados = [];
-  // Buscar con versión normalizada (sin tildes) Y versión original
   const queryNorm = normalizarTexto(query);
 
-  // 1. Buscar en Supabase primero (BD propia — instantáneo y en español, tolerante a tildes)
+  // 1. Supabase — búsqueda tolerante a tildes y mayúsculas
   try {
     const r = await supaFetch(`/rest/v1/rpc/buscar_alimentos`, {
       method: 'POST',
@@ -3285,73 +3284,7 @@ async function buscarAlimentoMFP(query) {
     }
   } catch(e) {}
 
-  // 2. FatSecret — mejor para alimentos genéricos (frutas, carnes, cereales...)
-  if (resultados.length < 4) {
-    try {
-      // Intentar con el query original, normalizado y traducido al inglés — en paralelo
-      const queryOrig = query.trim();
-      const [fsOrig, fsNorm, queryEN] = await Promise.all([
-        buscarEnFatSecret(queryOrig),
-        queryOrig !== queryNorm ? buscarEnFatSecret(queryNorm) : Promise.resolve(null),
-        _traducirParaFS(queryNorm)
-      ]);
-      const fsEN = (queryEN && queryEN !== queryNorm && queryEN !== queryOrig)
-        ? await buscarEnFatSecret(queryEN) : null;
-
-      // Usar el primer resultado válido
-      const fsRes = [fsOrig, fsNorm, fsEN].find(r => r && r.found && (r.p_100||r.hc_100||r.g_100));
-      if (fsRes) {
-        const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,10) === normalizarTexto(fsRes.nombre||'').slice(0,10));
-        if (!ya) resultados.unshift({
-          fuente: 'fatsecret',
-          nombre: fsRes.nombre || query,
-          marca: '',
-          imagen: '',
-          kcal_100: fsRes.kcal_100 || Math.round((fsRes.p_100||0)*4 + (fsRes.hc_100||0)*4 + (fsRes.g_100||0)*9),
-          p_100: fsRes.p_100||0,
-          hc_100: fsRes.hc_100||0,
-          g_100: fsRes.g_100||0,
-        });
-      }
-    } catch(e) {}
-  }
-
-  // 3. Open Food Facts — endpoint global, busca con query original y traducción
-  if (resultados.length < 5) {
-    try {
-      // Obtener traducción (ya cacheada de paso anterior)
-      const queryEN = await _traducirParaFS(queryNorm);
-      // Buscar con original y con traducción al inglés si es distinta
-      const offQueries = [...new Set([query, queryNorm, queryEN].filter(Boolean))];
-      for (const q of offQueries) {
-        if (resultados.length >= 6) break;
-        try {
-          const r = await fetch(
-            `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,product_name_es,brands,nutriments,image_front_small_url`,
-            { headers: { 'User-Agent': 'MacroAI/1.0' } }
-          );
-          const d = await r.json();
-          (d.products||[]).forEach(p => {
-            const n = p.nutriments||{};
-            const kcal = Math.round(parseFloat(n['energy-kcal_100g']||0));
-            if (!kcal) return;
-            const nombre = p.product_name_es||p.product_name||'';
-            if (!nombre || nombre.length < 2) return;
-            const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,12) === normalizarTexto(nombre).slice(0,12));
-            if (!ya) resultados.push({
-              fuente: 'off', nombre, marca: p.brands||'', imagen: p.image_front_small_url||'',
-              kcal_100: kcal,
-              p_100:  Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
-              hc_100: Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
-              g_100:  Math.round(parseFloat(n['fat_100g']||0)*10)/10,
-            });
-          });
-        } catch(e) {}
-      }
-    } catch(e) {}
-  }
-
-  // 4. FALLBACK CLAUDE — solo si no encontró nada en ningún sitio
+  // 2. Claude — si Supabase no encontró nada, Claude estima y guarda para la próxima vez
   if (resultados.length === 0) {
     try {
       const resIA = await fetch(WORKER_URL + '/search', {
@@ -3362,32 +3295,30 @@ async function buscarAlimentoMFP(query) {
       const dataIA = await resIA.json();
       if (dataIA.found && dataIA.resultados?.length) {
         for (const r of dataIA.resultados) {
-          if (r.fuente === 'ia') {
-            resultados.push({
-              fuente: 'ia',
-              nombre: r.nombre,
-              kcal_100: r.kcal_100 || 0,
-              p_100: r.p_100 || 0,
-              hc_100: r.hc_100 || 0,
-              g_100: r.g_100 || 0,
+          resultados.push({
+            fuente: 'ia',
+            nombre: r.nombre,
+            kcal_100: r.kcal_100 || 0,
+            p_100: r.p_100 || 0,
+            hc_100: r.hc_100 || 0,
+            g_100: r.g_100 || 0,
+          });
+          // Guardar en Supabase para la próxima vez
+          try {
+            await supaFetch('/rest/v1/alimentos_macroai', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+              body: JSON.stringify({
+                nombre: r.nombre,
+                kcal_100: r.kcal_100 || 0,
+                p_100: r.p_100 || 0,
+                hc_100: r.hc_100 || 0,
+                g_100: r.g_100 || 0,
+                categoria: 'general',
+                creado_por: CURRENT_USER?.id || null,
+              })
             });
-            // Guardar automáticamente en Supabase para la próxima vez
-            try {
-              await supaFetch('/rest/v1/alimentos_macroai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                body: JSON.stringify({
-                  nombre: r.nombre,
-                  kcal_100: r.kcal_100 || 0,
-                  p_100: r.p_100 || 0,
-                  hc_100: r.hc_100 || 0,
-                  g_100: r.g_100 || 0,
-                  categoria: 'general',
-                  creado_por: CURRENT_USER?.id || null,
-                })
-              });
-            } catch(e) {}
-          }
+          } catch(e) {}
         }
       }
     } catch(e) {}
