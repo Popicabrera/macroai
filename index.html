@@ -4271,6 +4271,7 @@ async function cerrarEscaner() {
 async function _procesarCodigoBarras(codigo) {
   _scanActive = false;
   await cerrarEscaner();
+  showToast('📦 Código: ' + codigo);
 
   // Mostrar spinner en el buscador si estamos ahí
   const resBuscador = document.getElementById('buscadorResultados');
