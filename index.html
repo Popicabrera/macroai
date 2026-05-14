@@ -1583,29 +1583,30 @@ async function buscarMacros100g(nombre) {
 }
 
 // ── TRADUCCIÓN BÁSICA ESPAÑOL→INGLÉS PARA FATSECRET ──
-// ── TRADUCCIÓN ES→EN VÍA IA (caché en memoria) ──
+// ── TRADUCCIÓN ES→EN VÍA IA con caché en memoria ──
 const _traduccionCache = {};
 async function _traducirParaFS(nombre) {
-  const n = nombre.toLowerCase().trim();
+  const n = normalizarTexto(nombre);
   if (_traduccionCache[n]) return _traduccionCache[n];
   try {
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: 'Eres un traductor de alimentos. Responde SOLO con el nombre en inglés, sin explicaciones ni puntuación extra.',
-        messages: [{ role: 'user', content: `Traduce al inglés este alimento para buscar en base de datos nutricional: "${nombre}". Solo el nombre en inglés, nada más.` }]
+        system: 'Food name translator. Reply ONLY with the English food name. No explanations, no punctuation, just the name.',
+        messages: [{ role: 'user', content: `English food name for: "${nombre}"` }]
       })
     });
     const data = await res.json();
-    const traduccion = (data.content?.[0]?.text||'').trim().toLowerCase().replace(/[".]/g,'');
-    if (traduccion && traduccion !== n) {
+    const traduccion = (data.content?.[0]?.text||'').trim().toLowerCase().replace(/[".,']/g,'');
+    if (traduccion && traduccion.length < 60) {
       _traduccionCache[n] = traduccion;
       return traduccion;
     }
   } catch(e) {}
   return nombre;
 }
+
 
 // ── CACHÉ EN MEMORIA PARA BÚSQUEDAS DE ALIMENTOS ──
 const _macrosCache = {};
@@ -1686,13 +1687,17 @@ async function enriquecerIng100(items) {
       continue;
     }
 
-    // 2. FatSecret en español
-    let fsMacros = await buscarEnFatSecret(nombreLimpio);
-    if (!fsMacros || (!fsMacros.p_100 && !fsMacros.hc_100 && !fsMacros.g_100)) {
-      // 2b. FatSecret traducido al inglés
-      const nombreEN = await _traducirParaFS(nombreLimpio);
-      if (nombreEN !== nombreLimpio) fsMacros = await buscarEnFatSecret(nombreEN);
-    }
+    // 2. FatSecret — original, normalizado y traducido al inglés en paralelo
+    const nombreNorm = normalizarTexto(nombreLimpio);
+    const [fsOrig, fsNormRes, enName] = await Promise.all([
+      buscarEnFatSecret(nombreLimpio),
+      nombreNorm !== nombreLimpio ? buscarEnFatSecret(nombreNorm) : Promise.resolve(null),
+      _traducirParaFS(nombreLimpio)
+    ]);
+    const fsEN = (enName && enName !== nombreNorm && enName !== nombreLimpio)
+      ? await buscarEnFatSecret(enName) : null;
+    const fsMacros = [fsOrig, fsNormRes, fsEN].find(r => r && (r.p_100||r.hc_100||r.g_100));
+
     if (fsMacros && (fsMacros.p_100||fsMacros.hc_100||fsMacros.g_100)) {
       _macrosCache[cacheKey] = fsMacros;
       result.push(`${item.full}:${gramos}:${fsMacros.p_100}:${fsMacros.hc_100}:${fsMacros.g_100}`);
@@ -3285,13 +3290,19 @@ async function buscarAlimentoMFP(query) {
   // 2. FatSecret — mejor para alimentos genéricos (frutas, carnes, cereales...)
   if (resultados.length < 4) {
     try {
-      // Buscar en español primero, luego traducido al inglés
-      let fsRes = await buscarEnFatSecret(queryNorm);
-      if (!fsRes || (!fsRes.p_100 && !fsRes.hc_100 && !fsRes.g_100)) {
-        const queryEN = await _traducirParaFS(queryNorm);
-        if (queryEN !== queryNorm) fsRes = await buscarEnFatSecret(queryEN);
-      }
-      if (fsRes && fsRes.found && (fsRes.p_100||fsRes.hc_100||fsRes.g_100)) {
+      // Intentar con el query original, normalizado y traducido al inglés — en paralelo
+      const queryOrig = query.trim();
+      const [fsOrig, fsNorm, queryEN] = await Promise.all([
+        buscarEnFatSecret(queryOrig),
+        queryOrig !== queryNorm ? buscarEnFatSecret(queryNorm) : Promise.resolve(null),
+        _traducirParaFS(queryNorm)
+      ]);
+      const fsEN = (queryEN && queryEN !== queryNorm && queryEN !== queryOrig)
+        ? await buscarEnFatSecret(queryEN) : null;
+
+      // Usar el primer resultado válido
+      const fsRes = [fsOrig, fsNorm, fsEN].find(r => r && r.found && (r.p_100||r.hc_100||r.g_100));
+      if (fsRes) {
         const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,10) === normalizarTexto(fsRes.nombre||'').slice(0,10));
         if (!ya) resultados.unshift({
           fuente: 'fatsecret',
@@ -3307,33 +3318,38 @@ async function buscarAlimentoMFP(query) {
     } catch(e) {}
   }
 
-  // 3. Open Food Facts — bueno para productos envasados de marca
+  // 3. Open Food Facts — endpoint global, busca con query original y traducción
   if (resultados.length < 5) {
     try {
-      const r = await fetch(`https://es.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,product_name_es,brands,nutriments,image_front_small_url`,
-        { headers: { 'User-Agent': 'MacroAI/1.0' } });
-      const d = await r.json();
-      (d.products||[]).forEach(p => {
-        const n = p.nutriments||{};
-        const kcal = Math.round(parseFloat(n['energy-kcal_100g']||0));
-        if (!kcal) return;
-        const nombre = p.product_name_es||p.product_name||'';
-        if (!nombre || nombre.length < 3) return;
-        // Filtrar: preferir resultados con marca (productos envasados)
-        // o que el nombre contenga la query (relevancia mínima)
-        const queryWords = queryNorm.split(/\s+/);
-        const nombreNorm = normalizarTexto(nombre);
-        const esRelevante = queryWords.some(w => w.length > 2 && nombreNorm.includes(w));
-        if (!esRelevante) return;
-        const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,12) === nombreNorm.slice(0,12));
-        if (!ya) resultados.push({
-          fuente: 'off', nombre, marca: p.brands||'', imagen: p.image_front_small_url||'',
-          kcal_100: kcal,
-          p_100:   Math.round((parseFloat(n['proteins_100g']||0))*10)/10,
-          hc_100:  Math.round((parseFloat(n['carbohydrates_100g']||0))*10)/10,
-          g_100:   Math.round((parseFloat(n['fat_100g']||0))*10)/10,
-        });
-      });
+      // Obtener traducción (ya cacheada de paso anterior)
+      const queryEN = await _traducirParaFS(queryNorm);
+      // Buscar con original y con traducción al inglés si es distinta
+      const offQueries = [...new Set([query, queryNorm, queryEN].filter(Boolean))];
+      for (const q of offQueries) {
+        if (resultados.length >= 6) break;
+        try {
+          const r = await fetch(
+            `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,product_name_es,brands,nutriments,image_front_small_url`,
+            { headers: { 'User-Agent': 'MacroAI/1.0' } }
+          );
+          const d = await r.json();
+          (d.products||[]).forEach(p => {
+            const n = p.nutriments||{};
+            const kcal = Math.round(parseFloat(n['energy-kcal_100g']||0));
+            if (!kcal) return;
+            const nombre = p.product_name_es||p.product_name||'';
+            if (!nombre || nombre.length < 2) return;
+            const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,12) === normalizarTexto(nombre).slice(0,12));
+            if (!ya) resultados.push({
+              fuente: 'off', nombre, marca: p.brands||'', imagen: p.image_front_small_url||'',
+              kcal_100: kcal,
+              p_100:  Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
+              hc_100: Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
+              g_100:  Math.round(parseFloat(n['fat_100g']||0)*10)/10,
+            });
+          });
+        } catch(e) {}
+      }
     } catch(e) {}
   }
 
