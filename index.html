@@ -3267,15 +3267,13 @@ async function buscarAlimentoMFP(query) {
   // Buscar con versión normalizada (sin tildes) Y versión original
   const queryNorm = normalizarTexto(query);
 
-  // 1. Buscar en Supabase primero (BD propia — instantáneo y en español)
+  // 1. Buscar en Supabase primero (BD propia — instantáneo y en español, tolerante a tildes)
   try {
-    // Buscar por query original Y por versión sin tildes para máxima cobertura
-    const palabrasOrig = query.toLowerCase().split(/\s+/).filter(p=>p.length>1);
-    const palabrasNorm = queryNorm.split(/\s+/).filter(p=>p.length>1);
-    const todasPalabras = [...new Set([...palabrasOrig, ...palabrasNorm])];
-    const palabras = todasPalabras;
-    const filtros = palabras.map(p=>`nombre.ilike.*${p}*`).join(',');
-    const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&or=(${encodeURIComponent(filtros)})&limit=8`);
+    const r = await supaFetch(`/rest/v1/rpc/buscar_alimentos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: queryNorm })
+    });
     const rows = await r.json();
     if (Array.isArray(rows)) {
       rows.forEach(row => resultados.push({
