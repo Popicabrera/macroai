@@ -4128,7 +4128,7 @@ async function _cargarJsQR() {
   if (window.jsQR) return true;
   return new Promise((resolve) => {
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
     s.onload = () => resolve(true);
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
