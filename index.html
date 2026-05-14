@@ -1572,8 +1572,8 @@ async function buscarMacros100g(nombre) {
     const palabrasNorm = nombreNorm.split(/\s+/).filter(p=>p.length>2);
     const palabras = [...new Set([...palabrasOrig, ...palabrasNorm])];
     if (!palabras.length) return null;
-    const filtros = palabras.map(p=>`nombre.ilike.*${encodeURIComponent(p)}*`).join(',');
-    const res = await supaFetch(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&or=(${filtros})&limit=1`);
+    const filtros = palabras.map(p=>`nombre.ilike.*${p}*`).join(',');
+    const res = await supaFetch(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&or=(${encodeURIComponent(filtros)})&limit=1`);
     const rows = await res.json();
     if (Array.isArray(rows) && rows.length) {
       return { p100: rows[0].p_100||0, hc100: rows[0].hc_100||0, g100: rows[0].g_100||0, kcal100: rows[0].kcal_100||0 };
@@ -3223,12 +3223,7 @@ function abrirBuscador(mealId, mealName) {
   _buscadorTab = 'todos';
   document.getElementById('buscadorTitle').textContent = mealName;
   document.getElementById('buscadorInput').value = '';
-  // Mostrar recientes si hay, si no el hint
-  if (_recientes.length > 0) {
-    renderResultadosBuscador(_recientes.slice(0,5).map(r=>({...r,fuente:'reciente'})), '');
-  } else {
-    document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
-  }
+  document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
   setTabBuscador('todos');
   showView('viewBuscador');
   setTimeout(() => document.getElementById('buscadorInput').focus(), 300);
@@ -3257,27 +3252,10 @@ function buscadorOnInput(val) {
   clearTimeout(_buscadorTimer);
   if (_buscadorTab === 'mis') return;
   if (val.trim().length < 2) {
-    if (_recientes.length > 0) renderResultadosBuscador(_recientes.slice(0,5).map(r=>({...r,fuente:'reciente'})), '');
-    else document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
+    document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
     return;
   }
   _buscadorTimer = setTimeout(() => buscarAlimentoMFP(val.trim()), 400);
-}
-
-// ── RECIENTES: alimentos usados recientemente (estilo MFP) ──
-const _recientes = JSON.parse(localStorage.getItem('macroai_recientes')||'[]');
-function guardarReciente(producto) {
-  const key = normalizarTexto(producto.nombre).slice(0,30);
-  const idx = _recientes.findIndex(r => normalizarTexto(r.nombre).slice(0,30) === key);
-  if (idx >= 0) _recientes.splice(idx, 1);
-  _recientes.unshift({ ...producto, ts: Date.now() });
-  if (_recientes.length > 20) _recientes.length = 20;
-  localStorage.setItem('macroai_recientes', JSON.stringify(_recientes));
-}
-function getRecientesParaQuery(query) {
-  if (!query) return _recientes.slice(0, 5);
-  const q = normalizarTexto(query);
-  return _recientes.filter(r => normalizarTexto(r.nombre).includes(q)).slice(0, 3);
 }
 
 async function buscarAlimentoMFP(query) {
@@ -3285,85 +3263,136 @@ async function buscarAlimentoMFP(query) {
   const res = document.getElementById('buscadorResultados');
   res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
 
-  const queryNorm = normalizarTexto(query);
-  // Traducción en paralelo con las búsquedas
-  const queryEN_promise = _traducirParaFS(queryNorm);
-
-  // ── BÚSQUEDA SIMULTÁNEA EN TODAS LAS FUENTES ──
-  const [supaRows, fsOrig, fsNorm, offData, queryEN] = await Promise.allSettled([
-    // 1. Supabase propia
-    (async () => {
-      const palabras = [...new Set([
-        ...query.toLowerCase().split(/\s+/).filter(p=>p.length>1),
-        ...queryNorm.split(/\s+/).filter(p=>p.length>1)
-      ])];
-      const filtros = palabras.map(p=>`nombre.ilike.*${encodeURIComponent(p)}*`).join(',');
-      const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&or=(${filtros})&limit=6`);
-      return r.json();
-    })(),
-    // 2. FatSecret original
-    buscarEnFatSecret(query),
-    // 3. FatSecret normalizado (sin tildes)
-    queryNorm !== query ? buscarEnFatSecret(queryNorm) : Promise.resolve(null),
-    // 4. Open Food Facts global
-    fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,product_name_es,brands,nutriments,image_front_small_url`,
-      { headers: { 'User-Agent': 'MacroAI/1.0' } }).then(r=>r.json()).catch(()=>null),
-    // 5. Traducción al inglés (para FatSecret EN)
-    queryEN_promise
-  ]);
-
-  // FatSecret en inglés con la traducción ya obtenida
-  const enTerm = queryEN.status === 'fulfilled' ? queryEN.value : null;
-  const fsEN = (enTerm && enTerm !== queryNorm && enTerm !== query)
-    ? await buscarEnFatSecret(enTerm).catch(()=>null) : null;
-
-  // ── MONTAR RESULTADOS SIN DUPLICADOS ──
-  const vistos = new Set();
   const resultados = [];
+  // Buscar con versión normalizada (sin tildes) Y versión original
+  const queryNorm = normalizarTexto(query);
 
-  const addResultado = (item) => {
-    const key = normalizarTexto(item.nombre).slice(0,20);
-    if (vistos.has(key)) return;
-    if (!item.kcal_100 && !item.p_100 && !item.hc_100 && !item.g_100) return;
-    vistos.add(key);
-    resultados.push(item);
-  };
+  // 1. Buscar en Supabase primero (BD propia — instantáneo y en español)
+  try {
+    // Buscar por query original Y por versión sin tildes para máxima cobertura
+    const palabrasOrig = query.toLowerCase().split(/\s+/).filter(p=>p.length>1);
+    const palabrasNorm = queryNorm.split(/\s+/).filter(p=>p.length>1);
+    const todasPalabras = [...new Set([...palabrasOrig, ...palabrasNorm])];
+    const palabras = todasPalabras;
+    const filtros = palabras.map(p=>`nombre.ilike.*${p}*`).join(',');
+    const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&or=(${encodeURIComponent(filtros)})&limit=8`);
+    const rows = await r.json();
+    if (Array.isArray(rows)) {
+      rows.forEach(row => resultados.push({
+        fuente: 'supabase', id: row.id,
+        nombre: row.nombre, categoria: row.categoria||'',
+        kcal_100: row.kcal_100||0, p_100: row.p_100||0,
+        hc_100: row.hc_100||0, g_100: row.g_100||0,
+      }));
+    }
+  } catch(e) {}
 
-  // Recientes primero (marcados)
-  getRecientesParaQuery(query).forEach(r => addResultado({ ...r, fuente: 'reciente' }));
+  // 2. FatSecret — mejor para alimentos genéricos (frutas, carnes, cereales...)
+  if (resultados.length < 4) {
+    try {
+      // Intentar con el query original, normalizado y traducido al inglés — en paralelo
+      const queryOrig = query.trim();
+      const [fsOrig, fsNorm, queryEN] = await Promise.all([
+        buscarEnFatSecret(queryOrig),
+        queryOrig !== queryNorm ? buscarEnFatSecret(queryNorm) : Promise.resolve(null),
+        _traducirParaFS(queryNorm)
+      ]);
+      const fsEN = (queryEN && queryEN !== queryNorm && queryEN !== queryOrig)
+        ? await buscarEnFatSecret(queryEN) : null;
 
-  // Supabase
-  const rows = supaRows.status === 'fulfilled' && Array.isArray(supaRows.value) ? supaRows.value : [];
-  rows.forEach(row => addResultado({
-    fuente:'supabase', id:row.id, nombre:row.nombre, categoria:row.categoria||'',
-    kcal_100:row.kcal_100||0, p_100:row.p_100||0, hc_100:row.hc_100||0, g_100:row.g_100||0,
-  }));
+      // Usar el primer resultado válido
+      const fsRes = [fsOrig, fsNorm, fsEN].find(r => r && r.found && (r.p_100||r.hc_100||r.g_100));
+      if (fsRes) {
+        const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,10) === normalizarTexto(fsRes.nombre||'').slice(0,10));
+        if (!ya) resultados.unshift({
+          fuente: 'fatsecret',
+          nombre: fsRes.nombre || query,
+          marca: '',
+          imagen: '',
+          kcal_100: fsRes.kcal_100 || Math.round((fsRes.p_100||0)*4 + (fsRes.hc_100||0)*4 + (fsRes.g_100||0)*9),
+          p_100: fsRes.p_100||0,
+          hc_100: fsRes.hc_100||0,
+          g_100: fsRes.g_100||0,
+        });
+      }
+    } catch(e) {}
+  }
 
-  // FatSecret (orig, norm, EN) — el primero válido
-  const fsValido = [fsOrig, fsNorm, {value:fsEN}].map(r => r?.status==='fulfilled'?r.value:r?.value).find(r => r?.found && (r.p_100||r.hc_100||r.g_100));
-  if (fsValido) addResultado({
-    fuente:'fatsecret', nombre:fsValido.nombre||query, marca:'', imagen:'',
-    kcal_100: fsValido.kcal_100||Math.round((fsValido.p_100||0)*4+(fsValido.hc_100||0)*4+(fsValido.g_100||0)*9),
-    p_100:fsValido.p_100||0, hc_100:fsValido.hc_100||0, g_100:fsValido.g_100||0,
-  });
+  // 3. Open Food Facts — endpoint global, busca con query original y traducción
+  if (resultados.length < 5) {
+    try {
+      // Obtener traducción (ya cacheada de paso anterior)
+      const queryEN = await _traducirParaFS(queryNorm);
+      // Buscar con original y con traducción al inglés si es distinta
+      const offQueries = [...new Set([query, queryNorm, queryEN].filter(Boolean))];
+      for (const q of offQueries) {
+        if (resultados.length >= 6) break;
+        try {
+          const r = await fetch(
+            `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,product_name_es,brands,nutriments,image_front_small_url`,
+            { headers: { 'User-Agent': 'MacroAI/1.0' } }
+          );
+          const d = await r.json();
+          (d.products||[]).forEach(p => {
+            const n = p.nutriments||{};
+            const kcal = Math.round(parseFloat(n['energy-kcal_100g']||0));
+            if (!kcal) return;
+            const nombre = p.product_name_es||p.product_name||'';
+            if (!nombre || nombre.length < 2) return;
+            const ya = resultados.some(r2 => normalizarTexto(r2.nombre).slice(0,12) === normalizarTexto(nombre).slice(0,12));
+            if (!ya) resultados.push({
+              fuente: 'off', nombre, marca: p.brands||'', imagen: p.image_front_small_url||'',
+              kcal_100: kcal,
+              p_100:  Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
+              hc_100: Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
+              g_100:  Math.round(parseFloat(n['fat_100g']||0)*10)/10,
+            });
+          });
+        } catch(e) {}
+      }
+    } catch(e) {}
+  }
 
-  // Open Food Facts
-  const offJson = offData.status === 'fulfilled' ? offData.value : null;
-  if (offJson?.products) {
-    offJson.products.forEach(p => {
-      const n = p.nutriments||{};
-      const kcal = Math.round(parseFloat(n['energy-kcal_100g']||0));
-      if (!kcal) return;
-      const nombre = p.product_name_es||p.product_name||'';
-      if (!nombre || nombre.length < 2) return;
-      addResultado({
-        fuente:'off', nombre, marca:p.brands||'', imagen:p.image_front_small_url||'',
-        kcal_100:kcal,
-        p_100:Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
-        hc_100:Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
-        g_100:Math.round(parseFloat(n['fat_100g']||0)*10)/10,
+  // 4. FALLBACK CLAUDE — solo si no encontró nada en ningún sitio
+  if (resultados.length === 0) {
+    try {
+      const resIA = await fetch(WORKER_URL + '/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
       });
-    });
+      const dataIA = await resIA.json();
+      if (dataIA.found && dataIA.resultados?.length) {
+        for (const r of dataIA.resultados) {
+          if (r.fuente === 'ia') {
+            resultados.push({
+              fuente: 'ia',
+              nombre: r.nombre,
+              kcal_100: r.kcal_100 || 0,
+              p_100: r.p_100 || 0,
+              hc_100: r.hc_100 || 0,
+              g_100: r.g_100 || 0,
+            });
+            // Guardar automáticamente en Supabase para la próxima vez
+            try {
+              await supaFetch('/rest/v1/alimentos_macroai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({
+                  nombre: r.nombre,
+                  kcal_100: r.kcal_100 || 0,
+                  p_100: r.p_100 || 0,
+                  hc_100: r.hc_100 || 0,
+                  g_100: r.g_100 || 0,
+                  categoria: 'general',
+                  creado_por: CURRENT_USER?.id || null,
+                })
+              });
+            } catch(e) {}
+          }
+        }
+      }
+    } catch(e) {}
   }
 
   renderResultadosBuscador(resultados, query);
@@ -3400,8 +3429,8 @@ function renderResultadosBuscador(resultados, query) {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;';
     item.onclick = () => seleccionarAlimentoBuscador(p);
-    const fuenteColor = p.fuente==='reciente' ? 'var(--yellow)' : p.fuente==='supabase' ? 'var(--accent)' : p.fuente==='fatsecret' ? 'var(--teal)' : 'var(--blue)';
-    const fuenteLabel = p.fuente==='reciente' ? '⏱ Reciente' : p.fuente==='supabase' ? '📋 BD' : p.fuente==='fatsecret' ? '📊 FS' : '🌍 OFF';
+    const fuenteColor = p.fuente==='supabase' ? 'var(--accent)' : p.fuente==='fatsecret' ? 'var(--teal)' : p.fuente==='ia' ? 'var(--yellow)' : 'var(--blue)';
+    const fuenteLabel = p.fuente==='supabase' ? '📋 BD' : p.fuente==='fatsecret' ? '📊 FS' : p.fuente==='ia' ? '🤖 IA' : '🌍 OFF';
     const imgHtml = p.imagen
       ? `<img src="${p.imagen}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div style="width:40px;height:40px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🥦</div>`;
@@ -3418,7 +3447,6 @@ function renderResultadosBuscador(resultados, query) {
 
 // Producto seleccionado → abrir FSM para cantidad
 function seleccionarAlimentoBuscador(producto) {
-  guardarReciente(producto);
   // Reutilizar el FSM existente
   _fsmProductoSeleccionado = producto;
   document.getElementById('fsmTitle').textContent = '📏 ¿Cuánto vas a comer?';
