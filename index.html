@@ -4271,8 +4271,13 @@ async function cerrarEscaner() {
 async function _procesarCodigoBarras(codigo) {
   _scanActive = false;
   await cerrarEscaner();
-  addMsg('user', '📦 Código escaneado: ' + codigo);
-  addTyping();
+
+  // Mostrar spinner en el buscador si estamos ahí
+  const resBuscador = document.getElementById('buscadorResultados');
+  if (resBuscador) {
+    resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando producto...</div>';
+  }
+
   try {
     // Buscar en FatSecret → Open Food Facts via Worker
     const res = await fetch(WORKER_URL + '/barcode', {
@@ -4281,12 +4286,9 @@ async function _procesarCodigoBarras(codigo) {
       body: JSON.stringify({ barcode: codigo })
     });
     const data = await res.json();
-    removeTyping();
+
     if (data.found) {
-      // Mostrar producto encontrado y pedir gramos mediante el modal
-      const fuenteLabel = data.fuente === 'openfoodfacts' ? 'Open Food Facts' : 'FatSecret';
-      addMsg('ai', `✅ Producto encontrado (${fuenteLabel}). ¿Cuántos gramos vas a consumir?`, [], []);
-      // Abrir modal pre-cargado con el producto del código de barras
+      // Abrir modal FSM con el producto encontrado
       _fsmProductoSeleccionado = data;
       document.getElementById('fsmTitle').textContent = '📦 ' + data.nombre;
       document.getElementById('fsmSubtitle').textContent = (data.marca || '') + ' · Datos del fabricante';
@@ -4313,11 +4315,12 @@ async function _procesarCodigoBarras(codigo) {
       document.getElementById('fsmOverlay').classList.add('open');
       setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
     } else {
-      addMsg('ai', '❌ Producto no encontrado. Escribe el nombre del producto para buscarlo.', [], []);
+      showToast('❌ Producto no encontrado. Busca por nombre.');
+      if (resBuscador) resBuscador.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Producto no encontrado.<br>Busca por nombre.</div>';
     }
   } catch(e) {
-    removeTyping();
-    addMsg('ai', 'Error al buscar el producto. Comprueba tu conexión.');
+    showToast('Error al buscar el producto.');
+    if (resBuscador) resBuscador.innerHTML = '';
   }
 }</script>
 <!-- ══ FOOD SEARCH MODAL ══ -->
