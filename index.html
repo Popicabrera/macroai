@@ -4145,7 +4145,7 @@ async function abrirEscaner() {
 
   const ok = await _cargarJsQR();
   if (!ok) {
-    status.textContent = 'Error cargando el escáner. Usa la búsqueda manual.';
+    status.textContent = '❌ ERROR 1: jsQR no cargó desde cdnjs. Comprueba conexión.';
     return;
   }
 
@@ -4181,11 +4181,11 @@ async function abrirEscaner() {
   try {
     _scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
   } catch(e1) {
+    status.textContent = '⚠️ Cámara trasera no disponible, intentando otra...';
     try {
       _scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
     } catch(e2) {
-      status.textContent = 'No se pudo acceder a la cámara. Comprueba los permisos.';
-      console.warn('getUserMedia falló:', e2.message);
+      status.textContent = '❌ ERROR 2: ' + e2.name + ' — ' + e2.message;
       return;
     }
   }
@@ -4197,6 +4197,11 @@ async function abrirEscaner() {
   _scannerActivo = true;
 
   const ctx = canvas.getContext('2d');
+
+  if (typeof jsQR === 'undefined') {
+    status.textContent = '❌ ERROR 3: jsQR no está definido tras carga.';
+    return;
+  }
 
   function _tick() {
     if (!_scannerActivo) return;
