@@ -4125,10 +4125,10 @@ let _scannerStream = null;
 let _scannerAnimFrame = null;
 
 async function _cargarJsQR() {
-  if (window.Quagga) return true;
+  if (window.jsQR) return true;
   return new Promise((resolve) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
     s.onload = () => resolve(true);
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
@@ -4196,50 +4196,75 @@ async function abrirEscaner() {
   status.textContent = 'Apunta al código de barras';
   _scannerActivo = true;
 
-  if (typeof Quagga === 'undefined') {
-    status.textContent = '❌ ERROR 3: Quagga no cargó.';
-    return;
-  }
+  // Decidir método: BarcodeDetector nativo (Android) o jsQR (iOS + PC)
+  const usarNativo = 'BarcodeDetector' in window;
 
-  // Quagga gestiona su propio stream — parar el manual
-  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
-  video.style.display = 'none';
-
-  Quagga.init({
-    inputStream: {
-      type: 'LiveStream',
-      target: reader,
-      constraints: { facingMode: 'environment', width: 1280, height: 720 }
-    },
-    decoder: {
-      readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader']
-    },
-    locate: true
-  }, function(err) {
-    if (err) {
-      status.textContent = '❌ ERROR cámara: ' + err.message;
+  if (!usarNativo) {
+    // iOS / PC: cargar jsQR desde jsdelivr
+    const ok = await _cargarJsQR();
+    if (!ok) {
+      status.textContent = '❌ No se pudo cargar el escáner. Comprueba conexión.';
       return;
     }
-    Quagga.start();
-    status.textContent = 'Apunta al código de barras';
-  });
+  }
 
-  Quagga.onDetected(function(data) {
-    if (!_scannerActivo) return;
-    const code = data.codeResult.code;
-    if (code) {
-      _scannerActivo = false;
-      Quagga.stop();
-      _procesarCodigoBarras(code);
+  status.textContent = 'Apunta al código de barras';
+  _scannerActivo = true;
+  const canvas = document.createElement('canvas');
+  canvas.style.display = 'none';
+  reader.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  if (usarNativo) {
+    // Android Chrome: BarcodeDetector nativo — rápido y preciso
+    const detector = new BarcodeDetector({
+      formats: ['ean_13','ean_8','code_128','upc_a','upc_e','itf']
+    });
+
+    async function _tickNativo() {
+      if (!_scannerActivo) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length > 0) {
+            _scannerActivo = false;
+            _procesarCodigoBarras(codes[0].rawValue);
+            return;
+          }
+        } catch(e) {}
+      }
+      _scannerAnimFrame = requestAnimationFrame(_tickNativo);
     }
-  });
+    _scannerAnimFrame = requestAnimationFrame(_tickNativo);
+
+  } else {
+    // iOS Safari / PC: jsQR con canvas
+    function _tickJsQR() {
+      if (!_scannerActivo) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (code) {
+          _scannerActivo = false;
+          _procesarCodigoBarras(code.data);
+          return;
+        }
+      }
+      _scannerAnimFrame = requestAnimationFrame(_tickJsQR);
+    }
+    _scannerAnimFrame = requestAnimationFrame(_tickJsQR);
+  }
 }
 
 async function cerrarEscaner() {
   _scannerActivo = false;
   if (_scannerAnimFrame) { cancelAnimationFrame(_scannerAnimFrame); _scannerAnimFrame = null; }
   if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
-  try { if (window.Quagga) Quagga.stop(); } catch(e) {}
   document.getElementById('scannerOverlay').style.display = 'none';
   document.getElementById('qr-reader').innerHTML = '';
   document.getElementById('qr-reader').style.cssText = 'width:300px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);';
