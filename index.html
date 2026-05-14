@@ -1154,7 +1154,7 @@ function enterApp(){
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#f5f0e8',theme_color:'#f5f0e8',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
   // Versión basada en timestamp de build — cambia automáticamente cada deploy
-  const BUILD_VERSION='macroai-1777303975';
+  const BUILD_VERSION='macroai-1778775385';
   const sw=`
     const CACHE='${BUILD_VERSION}';
     // Al instalar: cachear recursos y activar inmediatamente
