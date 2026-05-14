@@ -1517,8 +1517,30 @@ function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 
 // ── TODAY DATA ──
 function loadToday(){
-  try{const d=JSON.parse(localStorage.getItem('macroai_dia_'+getToday())||'null');
-    if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}}catch(e){}
+  // Cargar localStorage inmediatamente (respuesta rapida sin esperar red)
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+getToday())||'null');
+    if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}
+  }catch(e){}
+  // Luego sincronizar desde Supabase — fuente de verdad, sobrescribe si tiene mas datos
+  if(CURRENT_USER){
+    supaFetch('/rest/v1/registros_macroai?select=*&usuario_id=eq.'+CURRENT_USER.id+'&fecha=eq.'+getToday())
+      .then(r=>r.json()).then(rows=>{
+        if(!Array.isArray(rows)||!rows.length)return;
+        const r=rows[0];
+        if(!r.comidas||!r.comidas.length)return;
+        const supaKcal=r.kcal_consumidas||0;
+        if(supaKcal>=S.kcalC){
+          S.kcalC=supaKcal;S.protC=r.prot_consumidas||0;
+          S.chC=r.ch_consumidas||0;S.grasaC=r.grasa_consumidas||0;
+          S.comidas=r.comidas||[];
+          const d2={fecha:getToday(),tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
+            kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
+          localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d2));
+          updateBars();renderMFPDiario();
+        }
+      }).catch(()=>{});
+  }
 }
 // ── BUSCAR EN FATSECRET POR NOMBRE ──
 async function buscarEnFatSecret(nombre) {
@@ -1534,13 +1556,21 @@ async function buscarEnFatSecret(nombre) {
   return null;
 }
 
+// ── NORMALIZAR TEXTO (sin tildes) PARA BÚSQUEDAS TOLERANTES ──
+function normalizarTexto(txt){
+  return txt.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+}
+
 // ── BUSCAR MACROS POR 100G EN BD PROPIA ──
 async function buscarMacros100g(nombre) {
   if (!CURRENT_USER) return null;
   try {
-    // Limpiar emojis del nombre para búsqueda
+    // Limpiar emojis y normalizar tildes para búsqueda tolerante
     const nombreLimpio = nombre.replace(/[^\w\sáéíóúüñÁÉÍÓÚÜÑ]/g,'').trim();
-    const palabras = nombreLimpio.split(/\s+/).filter(p=>p.length>2);
+    const nombreNorm = normalizarTexto ? normalizarTexto(nombreLimpio) : nombreLimpio;
+    const palabrasOrig = nombreLimpio.toLowerCase().split(/\s+/).filter(p=>p.length>2);
+    const palabrasNorm = nombreNorm.split(/\s+/).filter(p=>p.length>2);
+    const palabras = [...new Set([...palabrasOrig, ...palabrasNorm])];
     if (!palabras.length) return null;
     const filtros = palabras.map(p=>`nombre.ilike.*${encodeURIComponent(p)}*`).join(',');
     const res = await supaFetch(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&or=(${filtros})&limit=1`);
@@ -2793,16 +2823,21 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
 
 // ── BARS ──
 function updateBars(){
+  // Normalizar acumulados a enteros para evitar decimales flotantes
+  S.protC=Math.round(S.protC*10)/10;
+  S.chC=Math.round(S.chC*10)/10;
+  S.grasaC=Math.round(S.grasaC*10)/10;
+  S.kcalC=Math.round(S.kcalC);
   const p=(v,t)=>Math.min(100,Math.max(0,(v/t)*100));
   // Barras de macros (% consumido → la barra se llena)
   document.getElementById('protFill').style.width=p(S.protC,S.prot)+'%';
   document.getElementById('chFill').style.width=p(S.chC,S.ch)+'%';
   document.getElementById('grasaFill').style.width=p(S.grasaC,S.grasa)+'%';
-  // Restantes
-  const kcalR=Math.max(0,S.kcalObj-S.kcalC);
-  const protR=Math.max(0,S.prot-S.protC);
-  const chR=Math.max(0,S.ch-S.chC);
-  const grasaR=Math.max(0,S.grasa-S.grasaC);
+  // Restantes — mostrar como enteros
+  const kcalR=Math.max(0,Math.round(S.kcalObj-S.kcalC));
+  const protR=Math.max(0,Math.round(S.prot-S.protC));
+  const chR=Math.max(0,Math.round(S.ch-S.chC));
+  const grasaR=Math.max(0,Math.round(S.grasa-S.grasaC));
   document.getElementById('kcalResta').textContent=kcalR;
   document.getElementById('protResta').textContent=protR;
   document.getElementById('chResta').textContent=chR;
@@ -3228,10 +3263,16 @@ async function buscarAlimentoMFP(query) {
   res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
 
   const resultados = [];
+  // Buscar con versión normalizada (sin tildes) Y versión original
+  const queryNorm = normalizarTexto(query);
 
   // 1. Buscar en Supabase primero (BD propia — instantáneo y en español)
   try {
-    const palabras = query.toLowerCase().split(/\s+/).filter(p=>p.length>1);
+    // Buscar por query original Y por versión sin tildes para máxima cobertura
+    const palabrasOrig = query.toLowerCase().split(/\s+/).filter(p=>p.length>1);
+    const palabrasNorm = queryNorm.split(/\s+/).filter(p=>p.length>1);
+    const todasPalabras = [...new Set([...palabrasOrig, ...palabrasNorm])];
+    const palabras = todasPalabras;
     const filtros = palabras.map(p=>`nombre.ilike.*${encodeURIComponent(p)}*`).join(',');
     const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&or=(${filtros})&limit=8`);
     const rows = await r.json();
@@ -3585,7 +3626,7 @@ function renderDiario(){
         <div class="food-right-col">
           <div>
             <div class="food-kcal-txt">${item.kcal}</div>
-            <div class="food-macro-txt">P${item.prot}·CH${item.ch}·G${item.grasa}</div>
+            <div class="food-macro-txt">P${Math.round(item.prot)}·CH${Math.round(item.ch)}·G${Math.round(item.grasa)}</div>
           </div>
           <div class="food-del-btn" onclick="deleteMealItem('${m.id}',${S.comidas.indexOf(item)})">✕</div>
         </div>
@@ -3612,7 +3653,7 @@ function renderDiario(){
           <div class="meal-em">${m.emoji}</div>
           <div>
             <div class="meal-name">${m.name}</div>
-            <div class="meal-sub">${hasItems?`P${totalProt}g · CH${totalCh}g · G${totalGrasa}g`:hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
+            <div class="meal-sub">${hasItems?`P${Math.round(totalProt)}g · CH${Math.round(totalCh)}g · G${Math.round(totalGrasa)}g`:hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
           </div>
         </div>
         <div class="meal-hdr-right">
