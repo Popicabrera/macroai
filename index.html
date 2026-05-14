@@ -4125,10 +4125,10 @@ let _scannerStream = null;
 let _scannerAnimFrame = null;
 
 async function _cargarJsQR() {
-  if (window.ZXing) return true;
+  if (window.Quagga) return true;
   return new Promise((resolve) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js';
     s.onload = () => resolve(true);
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
@@ -4196,31 +4196,50 @@ async function abrirEscaner() {
   status.textContent = 'Apunta al código de barras';
   _scannerActivo = true;
 
-  if (typeof ZXing === 'undefined') {
-    status.textContent = '❌ ERROR 3: ZXing no está definido tras carga.';
+  if (typeof Quagga === 'undefined') {
+    status.textContent = '❌ ERROR 3: Quagga no cargó.';
     return;
   }
 
-  const codeReader = new ZXing.BrowserMultiFormatReader();
-  try {
-    await codeReader.decodeFromVideoElement(video, (result, err) => {
-      if (!_scannerActivo) return;
-      if (result) {
-        _scannerActivo = false;
-        codeReader.reset();
-        _procesarCodigoBarras(result.getText());
-      }
-    });
-  } catch(e) {
-    status.textContent = '❌ ERROR ZXing: ' + e.message;
-  }
+  // Quagga gestiona su propio stream — parar el manual
+  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
+  video.style.display = 'none';
+
+  Quagga.init({
+    inputStream: {
+      type: 'LiveStream',
+      target: reader,
+      constraints: { facingMode: 'environment', width: 1280, height: 720 }
+    },
+    decoder: {
+      readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader']
+    },
+    locate: true
+  }, function(err) {
+    if (err) {
+      status.textContent = '❌ ERROR cámara: ' + err.message;
+      return;
+    }
+    Quagga.start();
+    status.textContent = 'Apunta al código de barras';
+  });
+
+  Quagga.onDetected(function(data) {
+    if (!_scannerActivo) return;
+    const code = data.codeResult.code;
+    if (code) {
+      _scannerActivo = false;
+      Quagga.stop();
+      _procesarCodigoBarras(code);
+    }
+  });
 }
 
 async function cerrarEscaner() {
   _scannerActivo = false;
   if (_scannerAnimFrame) { cancelAnimationFrame(_scannerAnimFrame); _scannerAnimFrame = null; }
   if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
-  try { if (window._zxingReader) { _zxingReader.reset(); _zxingReader = null; } } catch(e) {}
+  try { if (window.Quagga) Quagga.stop(); } catch(e) {}
   document.getElementById('scannerOverlay').style.display = 'none';
   document.getElementById('qr-reader').innerHTML = '';
   document.getElementById('qr-reader').style.cssText = 'width:300px;border-radius:16px;overflow:hidden;border:2px solid var(--accent);';
