@@ -3255,7 +3255,7 @@ function buscadorOnInput(val) {
     document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
     return;
   }
-  _buscadorTimer = setTimeout(() => buscarAlimentoMFP(val.trim()), 400);
+  _buscadorTimer = setTimeout(() => buscarAlimentoMFP(val.trim()), 1500);
 }
 
 async function buscarAlimentoMFP(query) {
