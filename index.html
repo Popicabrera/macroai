@@ -3272,7 +3272,7 @@ async function buscarAlimentoMFP(query) {
     if (dataFS.found && Array.isArray(dataFS.resultados) && dataFS.resultados.length > 0) {
       dataFS.resultados.forEach(r => {
         resultados.push({
-          fuente: 'fatsecret',
+          fuente: r.fuente || 'fatsecret',
           nombre: r.nombre,
           categoria: r.categoria || '',
           kcal_100: r.kcal_100 || 0,
@@ -4127,16 +4127,27 @@ async function handleFotoProducto(e) {
 
   try {
     const base64 = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = rej;
-      r.readAsDataURL(file);
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        res(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+      };
+      img.onerror = rej;
+      img.src = url;
     });
 
     const response = await fetch(WORKER_URL + '/foto-producto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagen: base64, mediaType: file.type })
+      body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg' })
     });
     const data = await response.json();
 
