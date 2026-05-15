@@ -4822,7 +4822,6 @@ async function renderAdminMenuPerfil() {
   const body = document.getElementById('adminMenuBody');
   body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>`;
 
-  // Cargar perfil existente
   let perfil = null;
   try {
     const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
@@ -4833,28 +4832,49 @@ async function renderAdminMenuPerfil() {
   const semana = getLunesSemana(_adminMenuSemanaOffset);
 
   body.innerHTML = `
-    <!-- Macros objetivo -->
+    <!-- Macros día entreno -->
     <div class="am-section">
-      <div class="am-section-hdr">Macros objetivo diario</div>
+      <div class="am-section-hdr">Macros día de entreno</div>
       <div class="am-field">
         <span class="am-field-label">Calorías (kcal)</span>
-        <input class="am-field-input" id="amKcal" type="number" inputmode="numeric" value="${perfil?.kcal_objetivo || 2000}">
+        <input class="am-field-input" id="amKcalE" type="number" inputmode="numeric" value="${perfil?.kcal_objetivo || 2200}">
       </div>
       <div class="am-field">
         <span class="am-field-label">Proteína (g)</span>
-        <input class="am-field-input" id="amProt" type="number" inputmode="numeric" value="${perfil?.p_objetivo || 150}">
+        <input class="am-field-input" id="amProtE" type="number" inputmode="numeric" value="${perfil?.p_objetivo || 160}">
       </div>
       <div class="am-field">
         <span class="am-field-label">Hidratos (g)</span>
-        <input class="am-field-input" id="amHc" type="number" inputmode="numeric" value="${perfil?.hc_objetivo || 200}">
+        <input class="am-field-input" id="amHcE" type="number" inputmode="numeric" value="${perfil?.hc_objetivo || 220}">
       </div>
       <div class="am-field">
         <span class="am-field-label">Grasas (g)</span>
-        <input class="am-field-input" id="amGrasa" type="number" inputmode="numeric" value="${perfil?.g_objetivo || 60}">
+        <input class="am-field-input" id="amGrasaE" type="number" inputmode="numeric" value="${perfil?.g_objetivo || 65}">
       </div>
     </div>
 
-    <!-- Preferencias -->
+    <!-- Macros día descanso -->
+    <div class="am-section">
+      <div class="am-section-hdr">Macros día de descanso</div>
+      <div class="am-field">
+        <span class="am-field-label">Calorías (kcal)</span>
+        <input class="am-field-input" id="amKcalD" type="number" inputmode="numeric" value="${perfil?.kcal_descanso || 1900}">
+      </div>
+      <div class="am-field">
+        <span class="am-field-label">Proteína (g)</span>
+        <input class="am-field-input" id="amProtD" type="number" inputmode="numeric" value="${perfil?.p_descanso || 150}">
+      </div>
+      <div class="am-field">
+        <span class="am-field-label">Hidratos (g)</span>
+        <input class="am-field-input" id="amHcD" type="number" inputmode="numeric" value="${perfil?.hc_descanso || 170}">
+      </div>
+      <div class="am-field">
+        <span class="am-field-label">Grasas (g)</span>
+        <input class="am-field-input" id="amGrasaD" type="number" inputmode="numeric" value="${perfil?.g_descanso || 60}">
+      </div>
+    </div>
+
+    <!-- Configuración -->
     <div class="am-section">
       <div class="am-section-hdr">Configuración</div>
       <div class="am-field">
@@ -4862,8 +4882,8 @@ async function renderAdminMenuPerfil() {
         <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
       </div>
       <div class="am-field" style="flex-direction:column;align-items:flex-start;gap:6px;">
-        <span class="am-field-label">Preferencias / restricciones</span>
-        <input class="am-field-input wide" id="amPrefs" type="text" placeholder="Ej: sin gluten, vegano..." value="${perfil?.preferencias || ''}">
+        <span class="am-field-label">Restricciones</span>
+        <input class="am-field-input wide" id="amPrefs" type="text" placeholder="Ej: sin gluten, sin lactosa..." value="${perfil?.preferencias || ''}">
       </div>
     </div>
 
@@ -4872,75 +4892,138 @@ async function renderAdminMenuPerfil() {
       <div class="am-section-hdr">Semana del menú</div>
       <div class="am-field" style="justify-content:center;">
         <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset--;renderAdminMenuPerfil()">‹</div>
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:0 12px;" id="amSemanaLabel">${formatSemanaLabel(semana)}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:0 12px;">${formatSemanaLabel(semana)}</div>
         <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset++;renderAdminMenuPerfil()">›</div>
       </div>
     </div>
 
-    <!-- Botones -->
-    <div style="padding:0 0 8px;">
-      <button class="am-btn-primary" id="amGenBtn" onclick="guardarPerfilYGenerarMenu()">
-        ✨ Guardar y generar menú
-      </button>
-      <button class="am-btn-secondary" onclick="verMenuGenerado()">
-        📋 Ver menú generado
-      </button>
+    <!-- Guardar perfil -->
+    <button class="am-btn-secondary" onclick="guardarPerfil()" style="margin-bottom:16px;">
+      💾 Guardar perfil
+    </button>
+
+    <!-- Separador generación -->
+    <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú semanal</div>
+
+    <!-- Opción A: IA sugiere -->
+    <div class="am-section" style="margin-bottom:10px;">
+      <div class="am-section-hdr">Opción A — La IA sugiere</div>
+      <div style="padding:10px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
+        La IA elige ingredientes equilibrados de tu BD y calcula las cantidades para cuadrar los macros.
+      </div>
+      <div style="padding:0 14px 14px;">
+        <button class="am-btn-primary" id="amGenBtnA" onclick="generarMenu('sugerir')">
+          ✨ Sugerir menú automático
+        </button>
+      </div>
     </div>
 
-    <!-- Menú generado -->
-    <div id="amMenuPreview"></div>
+    <!-- Opción B: tú mandas ingredientes -->
+    <div class="am-section">
+      <div class="am-section-hdr">Opción B — Tú eliges los ingredientes</div>
+      <div style="padding:10px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
+        Escribe qué ingredientes quieres cada día. La IA busca en tu BD y calcula los gramos exactos.
+      </div>
+      <div style="padding:0 14px;">
+        <textarea id="amTextoMenu" style="width:100%;min-height:140px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
+          placeholder="Lunes: pollo, arroz, brócoli
+Martes: merluza, patata, espinacas
+Miércoles: ternera, pasta, tomate
+Jueves: salmón, quinoa, judías verdes
+Viernes: huevos, avena, plátano
+Sábado: atún, arroz, lechuga
+Domingo: pollo, patata, zanahoria"></textarea>
+      </div>
+      <div style="padding:10px 14px 14px;">
+        <button class="am-btn-primary" id="amGenBtnB" onclick="generarMenu('confirmar')">
+          🥗 Calcular menú con mis ingredientes
+        </button>
+      </div>
+    </div>
+
+    <!-- Ver menú generado -->
+    <button class="am-btn-secondary" onclick="verMenuGenerado()" style="margin-top:8px;">
+      📋 Ver menú generado
+    </button>
+
+    <!-- Preview -->
+    <div id="amMenuPreview" style="margin-top:16px;"></div>
   `;
 }
 
-async function guardarPerfilYGenerarMenu() {
-  const btn = document.getElementById('amGenBtn');
-  const kcal = parseInt(document.getElementById('amKcal').value) || 2000;
-  const prot = parseInt(document.getElementById('amProt').value) || 150;
-  const hc = parseInt(document.getElementById('amHc').value) || 200;
-  const grasa = parseInt(document.getElementById('amGrasa').value) || 60;
+async function guardarPerfil() {
+  const kcalE = parseInt(document.getElementById('amKcalE').value) || 2200;
+  const protE = parseInt(document.getElementById('amProtE').value) || 160;
+  const hcE = parseInt(document.getElementById('amHcE').value) || 220;
+  const grasaE = parseInt(document.getElementById('amGrasaE').value) || 65;
+  const kcalD = parseInt(document.getElementById('amKcalD').value) || 1900;
+  const protD = parseInt(document.getElementById('amProtD').value) || 150;
+  const hcD = parseInt(document.getElementById('amHcD').value) || 170;
+  const grasaD = parseInt(document.getElementById('amGrasaD').value) || 60;
   const comidas = parseInt(document.getElementById('amComidas').value) || 4;
   const prefs = document.getElementById('amPrefs').value.trim();
-  const semana = getLunesSemana(_adminMenuSemanaOffset);
-
-  btn.disabled = true;
-  btn.innerHTML = '<span style="width:16px;height:16px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Generando menú...';
 
   try {
-    // 1. Guardar perfil
     await fetch(WORKER_URL + '/save-profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cliente_email: _adminMenuEmail,
-        kcal_objetivo: kcal, p_objetivo: prot, hc_objetivo: hc, g_objetivo: grasa,
+        kcal_objetivo: kcalE, p_objetivo: protE, hc_objetivo: hcE, g_objetivo: grasaE,
+        kcal_descanso: kcalD, p_descanso: protD, hc_descanso: hcD, g_descanso: grasaD,
         comidas_dia: comidas, preferencias: prefs
       })
     });
+    showToast('✅ Perfil guardado');
+  } catch(e) {
+    showToast('❌ Error guardando perfil');
+  }
+}
 
-    // 2. Generar menú
+async function generarMenu(modo) {
+  const btnId = modo === 'sugerir' ? 'amGenBtnA' : 'amGenBtnB';
+  const btn = document.getElementById(btnId);
+  const kcal = parseInt(document.getElementById('amKcalE').value) || 2200;
+  const prot = parseInt(document.getElementById('amProtE').value) || 160;
+  const hc = parseInt(document.getElementById('amHcE').value) || 220;
+  const grasa = parseInt(document.getElementById('amGrasaE').value) || 65;
+  const comidas = parseInt(document.getElementById('amComidas').value) || 4;
+  const prefs = document.getElementById('amPrefs').value.trim();
+  const texto_menu = modo === 'confirmar' ? document.getElementById('amTextoMenu').value.trim() : '';
+  const semana = getLunesSemana(_adminMenuSemanaOffset);
+
+  if (modo === 'confirmar' && !texto_menu) {
+    showToast('Escribe los ingredientes primero');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="width:14px;height:14px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Generando...';
+
+  try {
     const res = await fetch(WORKER_URL + '/generate-menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cliente_email: _adminMenuEmail,
         kcal_objetivo: kcal, p_objetivo: prot, hc_objetivo: hc, g_objetivo: grasa,
-        comidas_dia: comidas, preferencias: prefs, semana
+        comidas_dia: comidas, preferencias: prefs,
+        semana, modo, texto_menu
       })
     });
     const data = await res.json();
-
     if (data.ok) {
       showToast(`✅ Menú generado (${data.filas} items)`);
       verMenuGenerado();
     } else {
-      showToast('❌ Error generando menú');
+      showToast('❌ ' + (data.error || 'Error generando menú'));
     }
-  } catch (e) {
+  } catch(e) {
     showToast('❌ Error de conexión');
   }
 
   btn.disabled = false;
-  btn.innerHTML = '✨ Guardar y generar menú';
+  btn.innerHTML = modo === 'sugerir' ? '✨ Sugerir menú automático' : '🥗 Calcular menú con mis ingredientes';
 }
 
 async function verMenuGenerado() {
