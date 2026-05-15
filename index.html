@@ -4124,39 +4124,44 @@ function saveEditMeal() {
 
 
 // ══════════════════════════════════════════
-// ESCÁNER DE CÓDIGO DE BARRAS EN TIEMPO REAL
+// ESCÁNER — EAN + FALLBACK VISION EN TIEMPO REAL
 // ══════════════════════════════════════════
 
 let _scannerStream = null;
-let _scannerLoop = null;
+let _scannerLoop  = null;
 let _scannerActivo = false;
+let _scannerModo  = 'barcode'; // 'barcode' | 'vision'
 let _scannerUltimoEAN = null;
+let _visionContador = 0;       // frames estables antes de capturar
 
 async function abrirEscaner() {
   if (!('BarcodeDetector' in window)) {
-    showToast('Tu navegador no soporta el escáner. Actualiza Chrome.');
+    showToast('Actualiza Chrome para usar el escáner.');
     return;
   }
+  _scannerModo = 'barcode';
+  _scannerUltimoEAN = null;
+  _visionContador = 0;
   const overlay = document.getElementById('scannerOverlay');
-  const video = document.getElementById('scannerVideo');
+  const video   = document.getElementById('scannerVideo');
+  const hint    = document.getElementById('scannerHint');
+  hint.textContent = 'Apunta al código de barras';
   overlay.style.display = 'flex';
   _scannerActivo = true;
-  _scannerUltimoEAN = null;
-
   try {
     _scannerStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
     video.srcObject = _scannerStream;
     await video.play();
-    _iniciarLoopEscaner();
-  } catch(err) {
+    _loopEscaner();
+  } catch(e) {
     cerrarEscaner();
     showToast('No se pudo acceder a la cámara.');
   }
 }
 
-function _iniciarLoopEscaner() {
+function _loopEscaner() {
   const detector = new BarcodeDetector({
     formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']
   });
@@ -4165,84 +4170,133 @@ function _iniciarLoopEscaner() {
 
   async function loop() {
     if (!_scannerActivo) return;
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      _scannerLoop = requestAnimationFrame(loop);
+      return;
+    }
+
+    if (_scannerModo === 'barcode') {
+      // ── MODO 1: detectar código de barras ──
       try {
         const codes = await detector.detect(video);
         if (codes.length > 0) {
           const ean = codes[0].rawValue;
           if (ean !== _scannerUltimoEAN) {
             _scannerUltimoEAN = ean;
-            // Vibrar si disponible
             if (navigator.vibrate) navigator.vibrate(60);
-            // Mostrar toast en el visor
             toast.textContent = '📦 ' + ean;
             toast.style.display = 'block';
-            // Esperar 400ms y cerrar
-            setTimeout(async () => {
+            // Buscar en OFF
+            const result = await _buscarEAN(ean);
+            if (result) {
+              // Encontrado — cerrar y mostrar FSM
               cerrarEscaner();
-              await _procesarEAN(ean);
-            }, 400);
-            return;
+              _abrirFSMconResultado(result, ean);
+              return;
+            } else {
+              // No encontrado — cambiar a modo vision
+              _scannerModo = 'vision';
+              _visionContador = 0;
+              toast.style.display = 'none';
+              document.getElementById('scannerHint').textContent = 'Apunta a la etiqueta nutricional';
+              document.getElementById('scannerHint').style.color = '#d4f04a';
+            }
           }
         }
       } catch(e) {}
+
+    } else {
+      // ── MODO 2: capturar etiqueta nutricional con Vision ──
+      _visionContador++;
+      if (_visionContador < 45) { // ~1.5s de estabilización
+        _scannerLoop = requestAnimationFrame(loop);
+        return;
+      }
+      _visionContador = 0;
+      // Capturar frame del video
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      // Mandar a Claude Vision
+      toast.textContent = '🔍 Leyendo etiqueta...';
+      toast.style.display = 'block';
+      try {
+        const res = await fetch(WORKER_URL + '/foto-producto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg' })
+        });
+        const data = await res.json();
+        if (data.found && data.kcal_100 > 0) {
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+          cerrarEscaner();
+          _abrirFSMconResultado({ ...data, fuente: 'vision' }, _scannerUltimoEAN || 'etiqueta');
+          return;
+        } else {
+          // No legible aún — reintentar
+          toast.textContent = 'Acerca más la etiqueta...';
+        }
+      } catch(e) {
+        toast.textContent = 'Acerca más la etiqueta...';
+      }
     }
+
     _scannerLoop = requestAnimationFrame(loop);
   }
   _scannerLoop = requestAnimationFrame(loop);
 }
 
-function cerrarEscaner() {
-  _scannerActivo = false;
-  if (_scannerLoop) { cancelAnimationFrame(_scannerLoop); _scannerLoop = null; }
-  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
-  const overlay = document.getElementById('scannerOverlay');
-  overlay.style.display = 'none';
-  document.getElementById('scannerToast').style.display = 'none';
+async function _buscarEAN(ean) {
+  try {
+    const r = await fetch(WORKER_URL + '/barcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ean })
+    });
+    const d = await r.json();
+    if (d.found && d.nombre && d.nombre !== 'undefined' && (d.kcal_100 > 0 || d.p_100 > 0)) return d;
+  } catch(e) {}
+  return null;
 }
 
-async function _procesarEAN(ean) {
-  const resBuscador = document.getElementById('buscadorResultados');
-  if (resBuscador) resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando ' + ean + '...</div>';
-
-  const fsResult = await buscarEnFatSecret(ean);
-  const offResult = (!fsResult || !fsResult.found) ? await buscarEnOFFporEAN(ean) : null;
-  const result = (fsResult && fsResult.found) ? fsResult : (offResult && offResult.found) ? offResult : null;
-
-  // Validar que los campos existen y son válidos
-  const nombreOk = result && result.found && result.nombre && result.nombre !== 'undefined';
-  const macrosOk = result && (result.kcal_100 > 0 || result.p_100 > 0 || result.hc_100 > 0);
-
-  if (nombreOk && macrosOk) {
-    _fsmProductoSeleccionado = result;
-    document.getElementById('fsmTitle').textContent = '📦 ' + result.nombre;
-    document.getElementById('fsmSubtitle').textContent = 'EAN ' + ean;
-    document.getElementById('fsmList').innerHTML = `
-      <div class="fsm-item fsm-selected">
-        <div class="fsm-item-img-placeholder">📦</div>
-        <div class="fsm-item-info">
-          <div class="fsm-item-name">${result.nombre}</div>
-          <div class="fsm-item-macros">
-            <span class="fsm-macro k">${result.kcal_100} kcal</span>
-            <span class="fsm-macro p">P ${result.p_100}g</span>
-            <span class="fsm-macro c">HC ${result.hc_100}g</span>
-            <span class="fsm-macro g">G ${result.g_100}g</span>
-          </div>
-          <div class="fsm-source">por 100g · código de barras</div>
+function _abrirFSMconResultado(result, ref) {
+  _fsmProductoSeleccionado = result;
+  document.getElementById('fsmTitle').textContent = '📦 ' + result.nombre;
+  document.getElementById('fsmSubtitle').textContent = ref && ref !== 'etiqueta' ? 'EAN ' + ref : 'Etiqueta nutricional';
+  document.getElementById('fsmList').innerHTML = `
+    <div class="fsm-item fsm-selected">
+      <div class="fsm-item-img-placeholder">📦</div>
+      <div class="fsm-item-info">
+        <div class="fsm-item-name">${result.nombre}</div>
+        <div class="fsm-item-macros">
+          <span class="fsm-macro k">${result.kcal_100} kcal</span>
+          <span class="fsm-macro p">P ${result.p_100}g</span>
+          <span class="fsm-macro c">HC ${result.hc_100}g</span>
+          <span class="fsm-macro g">G ${result.g_100}g</span>
         </div>
-      </div>`;
-    document.getElementById('fsmSelectedName').textContent = result.nombre;
-    document.getElementById('fsmPer100').textContent = `· ${result.kcal_100} kcal / 100g`;
-    document.getElementById('fsmGramStep').style.display = 'flex';
-    document.getElementById('fsmGramos').value = '';
-    document.getElementById('fsmPreview').textContent = '';
-    document.getElementById('fsmOverlay').classList.add('open');
-    setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
-    if (resBuscador) resBuscador.innerHTML = '';
-  } else {
-    showToast('⚠️ Código ' + ean + ' no encontrado. Busca por nombre.');
-    if (resBuscador) resBuscador.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Producto no encontrado.<br>Busca por nombre.</div>';
-  }
+        <div class="fsm-source">por 100g · ${result.fuente === 'vision' ? 'etiqueta escaneada' : 'código de barras'}</div>
+      </div>
+    </div>`;
+  document.getElementById('fsmSelectedName').textContent = result.nombre;
+  document.getElementById('fsmPer100').textContent = `· ${result.kcal_100} kcal / 100g`;
+  document.getElementById('fsmGramStep').style.display = 'flex';
+  document.getElementById('fsmGramos').value = '';
+  document.getElementById('fsmPreview').textContent = '';
+  document.getElementById('fsmOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
+  const resBuscador = document.getElementById('buscadorResultados');
+  if (resBuscador) resBuscador.innerHTML = '';
+}
+
+function cerrarEscaner() {
+  _scannerActivo = false;
+  if (_scannerLoop)   { cancelAnimationFrame(_scannerLoop); _scannerLoop = null; }
+  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
+  document.getElementById('scannerOverlay').style.display = 'none';
+  document.getElementById('scannerToast').style.display = 'none';
+  document.getElementById('scannerHint').style.color = '';
 }
 
 async function handleFotoProducto(e) {
@@ -4498,7 +4552,7 @@ async function handleFotoProducto(e) {
         <!-- Línea de escaneo animada -->
         <div id="scanLine" style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#d4f04a,transparent);box-shadow:0 0 8px #d4f04a;animation:scanAnim 2s ease-in-out infinite;top:0;"></div>
       </div>
-      <div style="margin-top:20px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;opacity:0.8;text-align:center;">Apunta al código de barras</div>
+      <div id="scannerHint" style="margin-top:20px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;opacity:0.9;text-align:center;transition:color 0.3s;">Apunta al código de barras</div>
     </div>
     <!-- Botón cerrar -->
     <button onclick="cerrarEscaner()" style="position:absolute;top:16px;right:16px;width:40px;height:40px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:50%;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:pointer;">✕</button>
