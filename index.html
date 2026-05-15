@@ -2705,6 +2705,7 @@ function fsmActualizarPreview() {
 function fsmCerrar() {
   document.getElementById('fsmOverlay').classList.remove('open');
   _fsmProductoSeleccionado = null;
+  _mfpEditandoIdx = -1;
 }
 
 // ── sendDirect MEJORADO: intercepta búsquedas de alimentos ──
@@ -3050,11 +3051,14 @@ function renderMFPDiario() {
     let itemsHtml = '';
     items.forEach((item, localIdx) => {
       const globalIdx = S.comidas.indexOf(item);
+      // Extraer gramos del nombre: "Patata (600g)" → 600
+      const gramMatch = item.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
+      const gramosActuales = gramMatch ? gramMatch[1] : '';
       itemsHtml += `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
-          <div style="flex:1;min-width:0;">
+          <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g <span style="color:var(--accent);margin-left:4px;">✏️</span></div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
@@ -3108,14 +3112,59 @@ function mfpToggleMeal(bodyId, chevId) {
 function mfpEliminarItem(globalIdx) {
   if (globalIdx < 0 || globalIdx >= S.comidas.length) return;
   const item = S.comidas[globalIdx];
-  S.kcalC  = Math.max(0, S.kcalC  - (item.kcal||0));
-  S.protC  = Math.max(0, S.protC  - (item.prot||0));
-  S.chC    = Math.max(0, S.chC    - (item.ch||0));
-  S.grasaC = Math.max(0, S.grasaC - (item.grasa||0));
   S.comidas.splice(globalIdx, 1);
   updateBars(); saveToday(); renderMFPDiario();
   showToast('🗑️ Eliminado');
 }
+
+function mfpEditarItem(globalIdx) {
+  const item = S.comidas[globalIdx];
+  if (!item) return;
+
+  // Extraer nombre base y gramos actuales del nombre "Pollo (200g)"
+  const gramMatch = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
+  const nombreBase = gramMatch ? gramMatch[1].trim() : item.nombre;
+  const gramosActuales = gramMatch ? gramMatch[2] : '';
+
+  // Reconstruir producto desde el item
+  const producto = {
+    nombre: nombreBase,
+    kcal_100: item.kcal_100 || (gramosActuales ? Math.round(item.kcal / (parseFloat(gramosActuales)/100)) : item.kcal),
+    p_100:    item.p_100    || (gramosActuales ? Math.round((item.prot  / (parseFloat(gramosActuales)/100))*10)/10 : item.prot),
+    hc_100:   item.hc_100   || (gramosActuales ? Math.round((item.ch    / (parseFloat(gramosActuales)/100))*10)/10 : item.ch),
+    g_100:    item.g_100    || (gramosActuales ? Math.round((item.grasa / (parseFloat(gramosActuales)/100))*10)/10 : item.grasa),
+    fuente: item.fuente || 'supabase',
+  };
+
+  // Guardar el idx a editar y abrir FSM con gramos precargados
+  _mfpEditandoIdx = globalIdx;
+  _fsmProductoSeleccionado = producto;
+  document.getElementById('fsmTitle').textContent = '✏️ Editar cantidad';
+  document.getElementById('fsmSubtitle').textContent = nombreBase;
+  document.getElementById('fsmList').innerHTML = `
+    <div class="fsm-item fsm-selected">
+      <div class="fsm-item-img-placeholder">🥦</div>
+      <div class="fsm-item-info">
+        <div class="fsm-item-name">${escapeHtml(nombreBase)}</div>
+        <div class="fsm-item-macros">
+          <span class="fsm-macro k">${producto.kcal_100} kcal</span>
+          <span class="fsm-macro p">P ${producto.p_100}g</span>
+          <span class="fsm-macro c">HC ${producto.hc_100}g</span>
+          <span class="fsm-macro g">G ${producto.g_100}g</span>
+        </div>
+        <div class="fsm-source">por 100g</div>
+      </div>
+    </div>`;
+  document.getElementById('fsmSelectedName').textContent = nombreBase;
+  document.getElementById('fsmPer100').textContent = `· ${producto.kcal_100} kcal / 100g`;
+  document.getElementById('fsmGramStep').style.display = 'flex';
+  document.getElementById('fsmGramos').value = gramosActuales;
+  fsmActualizarPreview();
+  document.getElementById('fsmOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
+}
+
+let _mfpEditandoIdx = -1;
 
 function abrirChatIA() {
   showView('viewChat');
@@ -3347,14 +3396,30 @@ function fsmRegistrar() {
   const grasa= Math.round(p.g_100  * f * 10) / 10;
   const nombre = `${p.nombre} (${g}g)`;
   const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
-  const mealId = _buscadorMealId || '';
 
-  S.kcalC += kcal; S.protC += prot; S.chC += hc; S.grasaC += grasa;
-  S.comidas.push({ nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}), kcal, prot, ch:hc, grasa, ingredientes:ingTexto, mealId });
+  // ── MODO EDICIÓN: reemplazar item existente ──
+  if (_mfpEditandoIdx >= 0 && S.comidas[_mfpEditandoIdx]) {
+    S.comidas[_mfpEditandoIdx] = {
+      ...S.comidas[_mfpEditandoIdx],
+      nombre, kcal, prot, ch: hc, grasa, ingredientes: ingTexto,
+      kcal_100: p.kcal_100, p_100: p.p_100, hc_100: p.hc_100, g_100: p.g_100,
+    };
+    _mfpEditandoIdx = -1;
+    updateBars(); saveToday();
+    fsmCerrar();
+    renderMFPDiario();
+    showToast(`✅ Actualizado · ${kcal} kcal`);
+    return;
+  }
+
+  // ── MODO NORMAL: añadir nuevo item ──
+  const mealId = _buscadorMealId || '';
+  S.comidas.push({ nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+    kcal, prot, ch:hc, grasa, ingredientes:ingTexto, mealId,
+    kcal_100: p.kcal_100, p_100: p.p_100, hc_100: p.hc_100, g_100: p.g_100 });
   updateBars(); saveToday();
   saveComidaSupabase({ nombre, fecha:TODAY, tipoDia:S.tipoDia, kcal, prot, ch:hc, grasa, ingredientes:ingTexto });
 
-  // Si el producto vino de Open Food Facts → guardarlo en Supabase para todos
   if (p.fuente === 'off') {
     supaFetch('/rest/v1/alimentos_macroai', { method:'POST', headers:{'Prefer':'return=minimal'},
       body: JSON.stringify({ nombre:p.nombre, kcal_100:p.kcal_100, p_100:p.p_100, hc_100:p.hc_100, g_100:p.g_100, categoria:'OTROS', fuente:'openfoodfacts' })
@@ -3364,7 +3429,6 @@ function fsmRegistrar() {
   fsmCerrar();
   renderMFPDiario();
   showToast(`✅ ${kcal} kcal añadidas`);
-  // Volver al diario si estamos en buscador
   if (document.getElementById('viewBuscador').classList.contains('active')) {
     showView('viewMain');
   }
