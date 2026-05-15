@@ -1610,21 +1610,13 @@ const _macrosCache = {};
 // ── BUSCAR EN OPEN FOOD FACTS POR CÓDIGO EAN ──
 async function buscarEnOFFporEAN(ean) {
   try {
-    const r = await fetch(
-      `https://world.openfoodfacts.org/api/v0/product/${ean}.json`,
-      { headers: { 'User-Agent': 'MacroAI/1.0' } }
-    );
+    const r = await fetch(WORKER_URL + '/barcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ean })
+    });
     const d = await r.json();
-    if (d.status !== 1 || !d.product) return null;
-    const p = d.product;
-    const n = p.nutriments || {};
-    const kcal = Math.round(parseFloat(n['energy-kcal_100g'] || n['energy-kcal'] || 0));
-    const prot = Math.round(parseFloat(n['proteins_100g'] || 0) * 10) / 10;
-    const hc   = Math.round(parseFloat(n['carbohydrates_100g'] || 0) * 10) / 10;
-    const gras = Math.round(parseFloat(n['fat_100g'] || 0) * 10) / 10;
-    if (kcal === 0 && prot === 0 && hc === 0) return null;
-    const nombre = p.product_name_es || p.product_name || p.abbreviated_product_name || 'Producto ' + ean;
-    return { found: true, nombre, kcal_100: kcal, p_100: prot, hc_100: hc, g_100: gras, fuente: 'openfoodfacts' };
+    if (d.found) return d;
   } catch(e) {}
   return null;
 }
