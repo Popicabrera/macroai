@@ -1525,15 +1525,15 @@ function loadToday(){
         if(!Array.isArray(rows)||!rows.length)return;
         const r=rows[0];
         if(!r.comidas||!r.comidas.length)return;
-        const supaKcal=r.kcal_consumidas||0;
-        if(supaKcal>=S.kcalC){
-          S.kcalC=supaKcal;S.protC=r.prot_consumidas||0;
-          S.chC=r.ch_consumidas||0;S.grasaC=r.grasa_consumidas||0;
+        // Usar Supabase si tiene al menos tantas comidas como localStorage
+        if((r.comidas||[]).length >= S.comidas.length){
           S.comidas=r.comidas||[];
+          // updateBars() recalcula S.kcalC/protC/chC/grasaC desde S.comidas automáticamente
+          updateBars();
           const d2={fecha:getToday(),tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
             kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
           localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d2));
-          updateBars();renderMFPDiario();
+          renderMFPDiario();
         }
       }).catch(()=>{});
   }
@@ -2820,11 +2820,12 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
 
 // ── BARS ──
 function updateBars(){
-  // Normalizar acumulados a enteros para evitar decimales flotantes
-  S.protC=Math.round(S.protC*10)/10;
-  S.chC=Math.round(S.chC*10)/10;
-  S.grasaC=Math.round(S.grasaC*10)/10;
-  S.kcalC=Math.round(S.kcalC);
+  // ── Recalcular siempre desde S.comidas (fuente de verdad) ──
+  // Evita desajustes por acumuladores manuales incorrectos
+  S.kcalC  = Math.round(S.comidas.reduce((a,c)=>a+(c.kcal||0),0));
+  S.protC  = Math.round(S.comidas.reduce((a,c)=>a+(c.prot||0),0)*10)/10;
+  S.chC    = Math.round(S.comidas.reduce((a,c)=>a+(c.ch||0),0)*10)/10;
+  S.grasaC = Math.round(S.comidas.reduce((a,c)=>a+(c.grasa||0),0)*10)/10;
   const p=(v,t)=>Math.min(100,Math.max(0,(v/t)*100));
   // Barras de macros (% consumido → la barra se llena)
   document.getElementById('protFill').style.width=p(S.protC,S.prot)+'%';
