@@ -682,6 +682,7 @@ body{
         <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:#f0ebe0;border:1px solid #d8d0bc;border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
+          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewMiMenu'),50)">🥗 Mi menú</div>
           <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();abrirChatIA()">🤖 Asistente IA</div>
           <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
           <div style="height:1px;background:#d8d0bc;margin:4px 0;"></div>
@@ -1744,6 +1745,7 @@ function showView(id){
   if(id==='viewHistorial')renderHistorial();
 
   if(id==='viewFavoritos')renderFavoritos();
+  if(id==='viewMiMenu')cargarMiMenu();
 }
 
 // ── CONFIG UI ──
@@ -2881,6 +2883,9 @@ async function loadAdminUsers(){
           <div onclick="eliminarCliente('${u.id}','${u.nombre||'este cliente'}')" style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--red);font-weight:600;white-space:nowrap;cursor:pointer;">
             🗑️
           </div>
+        </div>
+        <div onclick="abrirAdminMenu('${u.email}','${(u.nombre||'').replace(/'/g,"\\'")}'')" style="background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;margin-top:4px;">
+          🥗 Menú nutricional
         </div>`;
       body.appendChild(card);
     });
@@ -4552,6 +4557,33 @@ async function handleFotoProducto(e) {
   </div>
 </div>
 
+<!-- ══ VIEW: MI MENÚ (CLIENTE) ══ -->
+<div class="view" id="viewMiMenu">
+<div class="aw">
+  <div class="sub-hdr">
+    <div class="back-btn" onclick="showView('viewMain')">‹</div>
+    <h2>🥗 Mi menú</h2>
+  </div>
+  <div class="scrollable" id="miMenuBody">
+    <div style="text-align:center;padding:40px 0;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:10px;">🥗</div>
+      <div style="font-size:14px;">Cargando tu menú...</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ VIEW: ADMIN MENÚS ══ -->
+<div class="view" id="viewAdminMenu">
+<div class="aw">
+  <div class="sub-hdr" style="background:rgba(212,240,74,0.06);border-bottom:1px solid rgba(212,240,74,0.2);">
+    <div class="back-btn" onclick="showView('viewAdmin')">‹</div>
+    <h2 id="adminMenuTitle" style="color:var(--accent)">⚡ Perfil nutricional</h2>
+  </div>
+  <div class="scrollable" id="adminMenuBody"></div>
+</div>
+</div>
+
 <!-- ══ BARCODE SCANNER OVERLAY ══ -->
 <div id="scannerOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column;align-items:center;justify-content:center;">
   <div style="position:relative;width:100%;max-width:430px;height:100%;display:flex;flex-direction:column;">
@@ -4579,6 +4611,385 @@ async function handleFotoProducto(e) {
     <div id="scannerToast" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(212,240,74,0.15);border:1px solid rgba(212,240,74,0.4);border-radius:12px;padding:10px 18px;color:#d4f04a;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;display:none;"></div>
   </div>
 </div>
+<style>
+@keyframes scanAnim {
+  0%   { top: 4px; opacity: 1; }
+  50%  { top: calc(100% - 6px); opacity: 1; }
+  100% { top: 4px; opacity: 1; }
+}
+
+/* ── MENÚ SEMANAL ESTILOS ── */
+.menu-semana-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--border);}
+.menu-semana-label{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+.menu-nav-btn{width:32px;height:32px;border-radius:9px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;color:var(--text);}
+.menu-nav-btn:active{background:var(--accent-dim);}
+.menu-dia-block{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;}
+.menu-dia-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(212,240,74,0.05);border-bottom:1px solid var(--border);cursor:pointer;}
+.menu-dia-titulo{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.menu-dia-kcal{font-size:12px;color:var(--muted);}
+.menu-comida-row{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.menu-comida-row:last-child{border-bottom:none;}
+.menu-comida-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;background:var(--s2);}
+.menu-comida-check.done{background:var(--accent);border-color:var(--accent);color:#080810;font-size:13px;}
+.menu-comida-info{flex:1;min-width:0;}
+.menu-comida-nombre{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.menu-comida-nombre.done{text-decoration:line-through;color:var(--muted);}
+.menu-comida-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.menu-comida-kcal{font-size:12px;color:var(--muted);flex-shrink:0;}
+
+/* ── ADMIN MENÚ ESTILOS ── */
+.am-section{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+.am-section-hdr{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.am-field{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.am-field:last-child{border-bottom:none;}
+.am-field-label{font-size:13px;color:var(--muted);flex-shrink:0;}
+.am-field-input{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;text-align:right;outline:none;width:90px;}
+.am-field-input:focus{border-color:rgba(212,240,74,0.4);}
+.am-field-input.wide{width:100%;text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;}
+.am-btn-primary{width:100%;padding:14px;background:var(--accent);border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
+.am-btn-primary:active{transform:scale(0.98);opacity:0.9;}
+.am-btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.am-btn-secondary{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;margin-top:8px;}
+.am-btn-secondary:active{background:var(--s3);}
+.am-menu-dia{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+.am-menu-dia-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:rgba(212,240,74,0.04);border-bottom:1px solid var(--border);}
+.am-menu-dia-titulo{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
+.am-menu-dia-kcal{font-size:11px;color:var(--muted);}
+.am-menu-comida-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;}
+.am-menu-comida-row:last-child{border-bottom:none;}
+.am-comida-nombre-col{color:var(--muted);width:75px;flex-shrink:0;font-size:11px;}
+.am-comida-alimento{flex:1;color:var(--text);}
+.am-comida-kcal{color:var(--muted);font-size:11px;flex-shrink:0;}
+</style>
+
+<script>
+// ══════════════════════════════════════════
+// ── MOTOR DE MENÚS ──
+// ══════════════════════════════════════════
+
+const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+// ── Obtener lunes de la semana actual ──
+function getLunesSemana(offset = 0) {
+  const hoy = new Date();
+  const dia = hoy.getDay();
+  const diff = (dia === 0 ? -6 : 1 - dia);
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() + diff + offset * 7);
+  return lunes.toISOString().split('T')[0];
+}
+
+function formatSemanaLabel(fechaLunes) {
+  const lunes = new Date(fechaLunes + 'T12:00:00');
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+  const opts = { day: 'numeric', month: 'short' };
+  return `${lunes.toLocaleDateString('es-ES', opts)} – ${domingo.toLocaleDateString('es-ES', opts)}`;
+}
+
+// ══════════════════════════════════════════
+// ── VISTA CLIENTE: MI MENÚ ──
+// ══════════════════════════════════════════
+
+let _miMenuSemanaOffset = 0;
+
+async function cargarMiMenu() {
+  const semana = getLunesSemana(_miMenuSemanaOffset);
+  const body = document.getElementById('miMenuBody');
+  body.innerHTML = `
+    <div class="menu-semana-nav">
+      <div class="menu-nav-btn" onclick="_miMenuSemanaOffset--;cargarMiMenu()">‹</div>
+      <div class="menu-semana-label" id="miMenuSemanaLabel">${formatSemanaLabel(semana)}</div>
+      <div class="menu-nav-btn" onclick="_miMenuSemanaOffset++;cargarMiMenu()">›</div>
+    </div>
+    <div style="padding:14px;" id="miMenuContenido">
+      <div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div class="auth-spinner"></div>Cargando menú...
+      </div>
+    </div>`;
+
+  try {
+    const res = await supaFetch(`/rest/v1/menus_semanales?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&semana=eq.${semana}&order=dia.asc,nombre_comida.asc&select=*`);
+    const filas = await res.json();
+    const contenido = document.getElementById('miMenuContenido');
+
+    if (!Array.isArray(filas) || !filas.length) {
+      contenido.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--muted);">
+        <div style="font-size:32px;margin-bottom:10px;">🥗</div>
+        <div style="font-size:14px;line-height:1.6;">Tu entrenador aún no<br>ha generado el menú<br>para esta semana.</div>
+      </div>`;
+      return;
+    }
+
+    // Agrupar por día
+    const porDia = {};
+    filas.forEach(f => {
+      if (!porDia[f.dia]) porDia[f.dia] = [];
+      porDia[f.dia].push(f);
+    });
+
+    // Agrupar por comida dentro de cada día
+    let html = '';
+    for (let dia = 1; dia <= 7; dia++) {
+      if (!porDia[dia]) continue;
+      const filasD = porDia[dia];
+      const totalKcal = filasD.reduce((a, f) => a + (f.kcal || 0), 0);
+      const porComida = {};
+      filasD.forEach(f => {
+        if (!porComida[f.nombre_comida]) porComida[f.nombre_comida] = [];
+        porComida[f.nombre_comida].push(f);
+      });
+
+      let comidasHtml = '';
+      for (const [nombreComida, items] of Object.entries(porComida)) {
+        const allDone = items.every(i => i.completado);
+        const kcalComida = Math.round(items.reduce((a, i) => a + (i.kcal || 0), 0));
+        const alimentosStr = items.map(i => `${i.alimento_nombre} (${i.cantidad_g}g)`).join(', ');
+        const ids = items.map(i => i.id).join(',');
+        comidasHtml += `
+          <div class="menu-comida-row">
+            <div class="menu-comida-check ${allDone ? 'done' : ''}" onclick="toggleMenuComida('${ids}',${!allDone},this)">
+              ${allDone ? '✓' : ''}
+            </div>
+            <div class="menu-comida-info">
+              <div class="menu-comida-nombre ${allDone ? 'done' : ''}">${nombreComida}</div>
+              <div class="menu-comida-sub">${alimentosStr}</div>
+            </div>
+            <div class="menu-comida-kcal">${kcalComida} kcal</div>
+          </div>`;
+      }
+
+      html += `
+        <div class="menu-dia-block">
+          <div class="menu-dia-hdr">
+            <span class="menu-dia-titulo">${DIAS_SEMANA[dia - 1]}</span>
+            <span class="menu-dia-kcal">${Math.round(totalKcal)} kcal</span>
+          </div>
+          ${comidasHtml}
+        </div>`;
+    }
+    contenido.innerHTML = html;
+  } catch (e) {
+    document.getElementById('miMenuContenido').innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);font-size:13px;">Error cargando el menú.</div>`;
+  }
+}
+
+async function toggleMenuComida(ids, completado, checkEl) {
+  const idsArray = ids.split(',');
+  checkEl.classList.toggle('done', completado);
+  checkEl.textContent = completado ? '✓' : '';
+  const nombreEl = checkEl.nextElementSibling?.querySelector('.menu-comida-nombre');
+  if (nombreEl) nombreEl.classList.toggle('done', completado);
+
+  try {
+    for (const id of idsArray) {
+      await supaFetch(`/rest/v1/menus_semanales?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ completado })
+      });
+    }
+  } catch (e) {}
+}
+
+// ══════════════════════════════════════════
+// ── VISTA ADMIN: PERFIL + GENERAR MENÚ ──
+// ══════════════════════════════════════════
+
+let _adminMenuEmail = '';
+let _adminMenuNombre = '';
+let _adminMenuSemanaOffset = 0;
+
+function abrirAdminMenu(email, nombre) {
+  _adminMenuEmail = email;
+  _adminMenuNombre = nombre || email;
+  _adminMenuSemanaOffset = 0;
+  document.getElementById('adminMenuTitle').textContent = '⚡ ' + _adminMenuNombre;
+  showView('viewAdminMenu');
+  renderAdminMenuPerfil();
+}
+
+async function renderAdminMenuPerfil() {
+  const body = document.getElementById('adminMenuBody');
+  body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>`;
+
+  // Cargar perfil existente
+  let perfil = null;
+  try {
+    const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows.length) perfil = rows[0];
+  } catch (e) {}
+
+  const semana = getLunesSemana(_adminMenuSemanaOffset);
+
+  body.innerHTML = `
+    <!-- Macros objetivo -->
+    <div class="am-section">
+      <div class="am-section-hdr">Macros objetivo diario</div>
+      <div class="am-field">
+        <span class="am-field-label">Calorías (kcal)</span>
+        <input class="am-field-input" id="amKcal" type="number" inputmode="numeric" value="${perfil?.kcal_objetivo || 2000}">
+      </div>
+      <div class="am-field">
+        <span class="am-field-label">Proteína (g)</span>
+        <input class="am-field-input" id="amProt" type="number" inputmode="numeric" value="${perfil?.p_objetivo || 150}">
+      </div>
+      <div class="am-field">
+        <span class="am-field-label">Hidratos (g)</span>
+        <input class="am-field-input" id="amHc" type="number" inputmode="numeric" value="${perfil?.hc_objetivo || 200}">
+      </div>
+      <div class="am-field">
+        <span class="am-field-label">Grasas (g)</span>
+        <input class="am-field-input" id="amGrasa" type="number" inputmode="numeric" value="${perfil?.g_objetivo || 60}">
+      </div>
+    </div>
+
+    <!-- Preferencias -->
+    <div class="am-section">
+      <div class="am-section-hdr">Configuración</div>
+      <div class="am-field">
+        <span class="am-field-label">Comidas al día</span>
+        <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
+      </div>
+      <div class="am-field" style="flex-direction:column;align-items:flex-start;gap:6px;">
+        <span class="am-field-label">Preferencias / restricciones</span>
+        <input class="am-field-input wide" id="amPrefs" type="text" placeholder="Ej: sin gluten, vegano..." value="${perfil?.preferencias || ''}">
+      </div>
+    </div>
+
+    <!-- Semana -->
+    <div class="am-section">
+      <div class="am-section-hdr">Semana del menú</div>
+      <div class="am-field" style="justify-content:center;">
+        <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset--;renderAdminMenuPerfil()">‹</div>
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:0 12px;" id="amSemanaLabel">${formatSemanaLabel(semana)}</div>
+        <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset++;renderAdminMenuPerfil()">›</div>
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <div style="padding:0 0 8px;">
+      <button class="am-btn-primary" id="amGenBtn" onclick="guardarPerfilYGenerarMenu()">
+        ✨ Guardar y generar menú
+      </button>
+      <button class="am-btn-secondary" onclick="verMenuGenerado()">
+        📋 Ver menú generado
+      </button>
+    </div>
+
+    <!-- Menú generado -->
+    <div id="amMenuPreview"></div>
+  `;
+}
+
+async function guardarPerfilYGenerarMenu() {
+  const btn = document.getElementById('amGenBtn');
+  const kcal = parseInt(document.getElementById('amKcal').value) || 2000;
+  const prot = parseInt(document.getElementById('amProt').value) || 150;
+  const hc = parseInt(document.getElementById('amHc').value) || 200;
+  const grasa = parseInt(document.getElementById('amGrasa').value) || 60;
+  const comidas = parseInt(document.getElementById('amComidas').value) || 4;
+  const prefs = document.getElementById('amPrefs').value.trim();
+  const semana = getLunesSemana(_adminMenuSemanaOffset);
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="width:16px;height:16px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Generando menú...';
+
+  try {
+    // 1. Guardar perfil
+    await fetch(WORKER_URL + '/save-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente_email: _adminMenuEmail,
+        kcal_objetivo: kcal, p_objetivo: prot, hc_objetivo: hc, g_objetivo: grasa,
+        comidas_dia: comidas, preferencias: prefs
+      })
+    });
+
+    // 2. Generar menú
+    const res = await fetch(WORKER_URL + '/generate-menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente_email: _adminMenuEmail,
+        kcal_objetivo: kcal, p_objetivo: prot, hc_objetivo: hc, g_objetivo: grasa,
+        comidas_dia: comidas, preferencias: prefs, semana
+      })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      showToast(`✅ Menú generado (${data.filas} items)`);
+      verMenuGenerado();
+    } else {
+      showToast('❌ Error generando menú');
+    }
+  } catch (e) {
+    showToast('❌ Error de conexión');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✨ Guardar y generar menú';
+}
+
+async function verMenuGenerado() {
+  const semana = getLunesSemana(_adminMenuSemanaOffset);
+  const preview = document.getElementById('amMenuPreview');
+  preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando menú...</div>`;
+
+  try {
+    const res = await supaFetch(`/rest/v1/menus_semanales?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&semana=eq.${semana}&order=dia.asc,nombre_comida.asc&select=*`);
+    const filas = await res.json();
+
+    if (!Array.isArray(filas) || !filas.length) {
+      preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No hay menú para esta semana.</div>`;
+      return;
+    }
+
+    // Agrupar por día y comida
+    const porDia = {};
+    filas.forEach(f => {
+      if (!porDia[f.dia]) porDia[f.dia] = {};
+      if (!porDia[f.dia][f.nombre_comida]) porDia[f.dia][f.nombre_comida] = [];
+      porDia[f.dia][f.nombre_comida].push(f);
+    });
+
+    let html = `<div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Menú generado — ${formatSemanaLabel(semana)}</div>`;
+
+    for (let dia = 1; dia <= 7; dia++) {
+      if (!porDia[dia]) continue;
+      const totalKcal = Math.round(Object.values(porDia[dia]).flat().reduce((a, f) => a + (f.kcal || 0), 0));
+
+      let comidasHtml = '';
+      for (const [nombreComida, items] of Object.entries(porDia[dia])) {
+        const alimentosStr = items.map(i => `${i.alimento_nombre} ${i.cantidad_g}g`).join(' + ');
+        const kcalComida = Math.round(items.reduce((a, i) => a + (i.kcal || 0), 0));
+        comidasHtml += `
+          <div class="am-menu-comida-row">
+            <span class="am-comida-nombre-col">${nombreComida}</span>
+            <span class="am-comida-alimento">${alimentosStr}</span>
+            <span class="am-comida-kcal">${kcalComida}</span>
+          </div>`;
+      }
+
+      html += `
+        <div class="am-menu-dia">
+          <div class="am-menu-dia-hdr">
+            <span class="am-menu-dia-titulo">${DIAS_SEMANA[dia - 1]}</span>
+            <span class="am-menu-dia-kcal">${totalKcal} kcal</span>
+          </div>
+          ${comidasHtml}
+        </div>`;
+    }
+    preview.innerHTML = html;
+  } catch (e) {
+    preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--red);font-size:13px;">Error cargando el menú.</div>`;
+  }
+}
+</script>
+
 <style>
 @keyframes scanAnim {
   0%   { top: 4px; opacity: 1; }
