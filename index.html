@@ -4209,7 +4209,11 @@ async function _procesarEAN(ean) {
   const offResult = (!fsResult || !fsResult.found) ? await buscarEnOFFporEAN(ean) : null;
   const result = (fsResult && fsResult.found) ? fsResult : (offResult && offResult.found) ? offResult : null;
 
-  if (result && result.found) {
+  // Validar que los campos existen y son válidos
+  const nombreOk = result && result.found && result.nombre && result.nombre !== 'undefined';
+  const macrosOk = result && (result.kcal_100 > 0 || result.p_100 > 0 || result.hc_100 > 0);
+
+  if (nombreOk && macrosOk) {
     _fsmProductoSeleccionado = result;
     document.getElementById('fsmTitle').textContent = '📦 ' + result.nombre;
     document.getElementById('fsmSubtitle').textContent = 'EAN ' + ean;
