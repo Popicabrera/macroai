@@ -2884,13 +2884,22 @@ async function loadAdminUsers(){
             🗑️
           </div>
         </div>
-        <div onclick="abrirAdminMenu('${u.email}','${(u.nombre||'').replace(/'/g,"\\'")}'')" style="background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;margin-top:4px;">
+        <div class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;margin-top:4px;">
           🥗 Menú nutricional
         </div>`;
       body.appendChild(card);
     });
   }catch(e){body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';}
 }
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.menu-nutricional-btn');
+  if (btn) {
+    const email = btn.dataset.email;
+    const nombre = btn.dataset.nombre;
+    abrirAdminMenu(email, nombre);
+  }
+});
 
 function showCrearCliente(){
   const f=document.getElementById('crearClienteForm');
