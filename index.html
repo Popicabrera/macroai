@@ -4071,12 +4071,6 @@ function saveEditMeal() {
     return n ? `${n}:${c}` : null;
   }).filter(Boolean).join('\n');
 
-  // Recalcular totales del día
-  S.kcalC  = S.kcalC  - oldMeal.kcal  + newKcal;
-  S.protC  = S.protC  - oldMeal.prot  + newProt;
-  S.chC    = S.chC    - oldMeal.ch    + newCh;
-  S.grasaC = S.grasaC - oldMeal.grasa + newGrasa;
-
   // Actualizar comida
   S.comidas[_editMealIdx].kcal  = newKcal;
   S.comidas[_editMealIdx].prot  = newProt;
