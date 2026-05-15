@@ -3038,10 +3038,10 @@ function renderMFPDiario() {
   container.innerHTML = '';
   MFP_MEALS.forEach(meal => {
     const items = S.comidas.filter(c => c.mealId === meal.id);
-    const totalKcal = items.reduce((a,c) => a + (c.kcal||0), 0);
-    const totalProt = items.reduce((a,c) => a + (c.prot||0), 0);
-    const totalCh   = items.reduce((a,c) => a + (c.ch||0), 0);
-    const totalGrasa= items.reduce((a,c) => a + (c.grasa||0), 0);
+    const totalKcal = Math.round(items.reduce((a,c) => a + (c.kcal||0), 0));
+    const totalProt = Math.round(items.reduce((a,c) => a + (c.prot||0), 0) * 10) / 10;
+    const totalCh   = Math.round(items.reduce((a,c) => a + (c.ch||0), 0) * 10) / 10;
+    const totalGrasa= Math.round(items.reduce((a,c) => a + (c.grasa||0), 0) * 10) / 10;
 
     const block = document.createElement('div');
     block.style.cssText = 'border-bottom:1px solid var(--border);';
@@ -3398,18 +3398,24 @@ async function guardarAlimentoCreado() {
     msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';
     msg.textContent='Nombre y calorías son obligatorios.'; return;
   }
+  msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);color:var(--blue);';
+  msg.textContent='Guardando...';
   try {
-    const r = await supaFetch('/rest/v1/alimentos_macroai', {
-      method:'POST', headers:{'Prefer':'return=minimal'},
-      body: JSON.stringify({ nombre, kcal_100:kcal, p_100:prot, hc_100:hc, g_100:grasa, categoria:'MIS ALIMENTOS', creado_por:CURRENT_USER?.id||null, fuente:'manual' })
+    // Usar Worker con service key para salvar la RLS
+    const r = await fetch(WORKER_URL + '/save-food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, kcal_100:kcal, p_100:prot, hc_100:hc, g_100:grasa,
+        categoria:'MIS ALIMENTOS', creado_por: CURRENT_USER?.id||null, fuente:'manual' })
     });
-    if (r.ok || r.status===201) {
+    const d = await r.json();
+    if (r.ok && !d.error) {
       msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(90,138,0,0.08);border:1px solid rgba(90,138,0,0.25);color:var(--accent);';
       msg.textContent='✅ Alimento guardado correctamente.';
       _misAlimentosCache = null;
       setTimeout(cerrarCrearAlimento, 1200);
     } else {
-      throw new Error('Error guardando');
+      throw new Error(d.error || 'Error guardando');
     }
   } catch(e) {
     msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';
