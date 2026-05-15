@@ -4206,7 +4206,8 @@ async function _procesarEAN(ean) {
   if (resBuscador) resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando ' + ean + '...</div>';
 
   const fsResult = await buscarEnFatSecret(ean);
-  const result = (fsResult && fsResult.found) ? fsResult : await buscarEnOFFporEAN(ean);
+  const offResult = (!fsResult || !fsResult.found) ? await buscarEnOFFporEAN(ean) : null;
+  const result = (fsResult && fsResult.found) ? fsResult : (offResult && offResult.found) ? offResult : null;
 
   if (result && result.found) {
     _fsmProductoSeleccionado = result;
