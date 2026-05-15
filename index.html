@@ -1607,6 +1607,28 @@ async function _traducirParaFS(nombre) {
 // ── CACHÉ EN MEMORIA PARA BÚSQUEDAS DE ALIMENTOS ──
 const _macrosCache = {};
 
+// ── BUSCAR EN OPEN FOOD FACTS POR CÓDIGO EAN ──
+async function buscarEnOFFporEAN(ean) {
+  try {
+    const r = await fetch(
+      `https://world.openfoodfacts.org/api/v0/product/${ean}.json`,
+      { headers: { 'User-Agent': 'MacroAI/1.0' } }
+    );
+    const d = await r.json();
+    if (d.status !== 1 || !d.product) return null;
+    const p = d.product;
+    const n = p.nutriments || {};
+    const kcal = Math.round(parseFloat(n['energy-kcal_100g'] || n['energy-kcal'] || 0));
+    const prot = Math.round(parseFloat(n['proteins_100g'] || 0) * 10) / 10;
+    const hc   = Math.round(parseFloat(n['carbohydrates_100g'] || 0) * 10) / 10;
+    const gras = Math.round(parseFloat(n['fat_100g'] || 0) * 10) / 10;
+    if (kcal === 0 && prot === 0 && hc === 0) return null;
+    const nombre = p.product_name_es || p.product_name || p.abbreviated_product_name || 'Producto ' + ean;
+    return { found: true, nombre, kcal_100: kcal, p_100: prot, hc_100: hc, g_100: gras, fuente: 'openfoodfacts' };
+  } catch(e) {}
+  return null;
+}
+
 // ── BUSCAR EN OPEN FOOD FACTS POR NOMBRE ──
 async function buscarEnOFF(nombre) {
   try {
@@ -4132,26 +4154,27 @@ async function handleFotoProducto(e) {
         showToast('📦 Código: ' + ean + ' — buscando...');
         if (resBuscador) resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando ' + ean + '...</div>';
         const fsResult = await buscarEnFatSecret(ean);
-        if (fsResult && fsResult.found) {
-          _fsmProductoSeleccionado = fsResult;
-          document.getElementById('fsmTitle').textContent = '📦 ' + fsResult.nombre;
+        const result = fsResult && fsResult.found ? fsResult : await buscarEnOFFporEAN(ean);
+        if (result && result.found) {
+          _fsmProductoSeleccionado = result;
+          document.getElementById('fsmTitle').textContent = '📦 ' + result.nombre;
           document.getElementById('fsmSubtitle').textContent = 'EAN ' + ean;
           document.getElementById('fsmList').innerHTML = `
             <div class="fsm-item fsm-selected">
               <div class="fsm-item-img-placeholder">📦</div>
               <div class="fsm-item-info">
-                <div class="fsm-item-name">${fsResult.nombre}</div>
+                <div class="fsm-item-name">${result.nombre}</div>
                 <div class="fsm-item-macros">
-                  <span class="fsm-macro k">${fsResult.kcal_100} kcal</span>
-                  <span class="fsm-macro p">P ${fsResult.p_100}g</span>
-                  <span class="fsm-macro c">HC ${fsResult.hc_100}g</span>
-                  <span class="fsm-macro g">G ${fsResult.g_100}g</span>
+                  <span class="fsm-macro k">${result.kcal_100} kcal</span>
+                  <span class="fsm-macro p">P ${result.p_100}g</span>
+                  <span class="fsm-macro c">HC ${result.hc_100}g</span>
+                  <span class="fsm-macro g">G ${result.g_100}g</span>
                 </div>
                 <div class="fsm-source">por 100g · código de barras</div>
               </div>
             </div>`;
-          document.getElementById('fsmSelectedName').textContent = fsResult.nombre;
-          document.getElementById('fsmPer100').textContent = `· ${fsResult.kcal_100} kcal / 100g`;
+          document.getElementById('fsmSelectedName').textContent = result.nombre;
+          document.getElementById('fsmPer100').textContent = `· ${result.kcal_100} kcal / 100g`;
           document.getElementById('fsmGramStep').style.display = 'flex';
           document.getElementById('fsmGramos').value = '';
           document.getElementById('fsmPreview').textContent = '';
