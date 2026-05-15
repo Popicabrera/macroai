@@ -4131,6 +4131,7 @@ let _scannerStream = null;
 let _scannerLoop  = null;
 let _scannerActivo = false;
 let _scannerModo  = 'barcode'; // 'barcode' | 'vision'
+let _scannerBuscando = false; // evita llamadas simultáneas
 let _scannerUltimoEAN = null;
 let _visionContador = 0;       // frames estables antes de capturar
 
@@ -4175,6 +4176,11 @@ function _loopEscaner() {
       return;
     }
 
+    if (_scannerBuscando) {
+      _scannerLoop = requestAnimationFrame(loop);
+      return;
+    }
+
     if (_scannerModo === 'barcode') {
       // ── MODO 1: detectar código de barras ──
       try {
@@ -4184,23 +4190,23 @@ function _loopEscaner() {
           if (ean !== _scannerUltimoEAN) {
             _scannerUltimoEAN = ean;
             if (navigator.vibrate) navigator.vibrate(60);
-            toast.textContent = '📦 ' + ean;
+            toast.textContent = '📦 ' + ean + ' — buscando...';
             toast.style.display = 'block';
-            // Buscar en OFF
+            _scannerBuscando = true;
             const result = await _buscarEAN(ean);
+            _scannerBuscando = false;
+            if (!_scannerActivo) return;
             if (result) {
-              // Encontrado — cerrar y mostrar FSM
               cerrarEscaner();
               _abrirFSMconResultado(result, ean);
               return;
             } else {
-              // No encontrado — cambiar a modo vision
               _scannerModo = 'vision';
               _visionContador = 0;
               toast.style.display = 'none';
               document.getElementById('scannerHint').textContent = 'Apunta a la etiqueta nutricional';
               document.getElementById('scannerHint').style.color = '#d4f04a';
-            document.getElementById('scannerCaptureBtn').style.display = 'block';
+              document.getElementById('scannerCaptureBtn').style.display = 'block';
             }
           }
         }
