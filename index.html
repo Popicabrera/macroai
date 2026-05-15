@@ -1537,7 +1537,7 @@ function loadToday(){
   }
 }
 // ── BUSCAR EN FATSECRET POR NOMBRE ──
-async function buscarEnFatSecret(nombre) {
+async function buscarEnWorker(nombre) {
   try {
     const res = await fetch(WORKER_URL + '/search', {
       method: 'POST',
@@ -1576,48 +1576,15 @@ async function buscarMacros100g(nombre) {
   return null;
 }
 
-// ── TRADUCCIÓN BÁSICA ESPAÑOL→INGLÉS PARA FATSECRET ──
-// ── TRADUCCIÓN ES→EN VÍA IA con caché en memoria ──
-const _traduccionCache = {};
-async function _traducirParaFS(nombre) {
-  const n = normalizarTexto(nombre);
-  if (_traduccionCache[n]) return _traduccionCache[n];
-  try {
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: 'Food name translator. Reply ONLY with the English food name. No explanations, no punctuation, just the name.',
-        messages: [{ role: 'user', content: `English food name for: "${nombre}"` }]
-      })
-    });
-    const data = await res.json();
-    const traduccion = (data.content?.[0]?.text||'').trim().toLowerCase().replace(/[".,']/g,'');
-    if (traduccion && traduccion.length < 60) {
-      _traduccionCache[n] = traduccion;
-      return traduccion;
-    }
-  } catch(e) {}
-  return nombre;
-}
+
+
 
 
 // ── CACHÉ EN MEMORIA PARA BÚSQUEDAS DE ALIMENTOS ──
 const _macrosCache = {};
 
-// ── BUSCAR EN OPEN FOOD FACTS POR CÓDIGO EAN ──
-async function buscarEnOFFporEAN(ean) {
-  try {
-    const r = await fetch(WORKER_URL + '/barcode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ean })
-    });
-    const d = await r.json();
-    if (d.found) return d;
-  } catch(e) {}
-  return null;
-}
+
+
 
 // ── BUSCAR EN OPEN FOOD FACTS POR NOMBRE ──
 async function buscarEnOFF(nombre) {
@@ -1671,7 +1638,7 @@ Usa valores nutricionales estándar conocidos.`
   return null;
 }
 
-// ── ENRIQUECER ING100 CON DATOS REALES DE BD, FATSECRET, OFF Y ESTIMACIÓN IA ──
+// ── ENRIQUECER ING100 CON DATOS REALES DE BD, WORKER (Supabase→OFF→IA), OFF DIRECTO ──
 async function enriquecerIng100(items) {
   const result = [];
   for (const item of items) {
@@ -1695,24 +1662,16 @@ async function enriquecerIng100(items) {
       continue;
     }
 
-    // 2. FatSecret — original, normalizado y traducido al inglés en paralelo
-    const nombreNorm = normalizarTexto(nombreLimpio);
-    const [fsOrig, fsNormRes, enName] = await Promise.all([
-      buscarEnFatSecret(nombreLimpio),
-      nombreNorm !== nombreLimpio ? buscarEnFatSecret(nombreNorm) : Promise.resolve(null),
-      _traducirParaFS(nombreLimpio)
-    ]);
-    const fsEN = (enName && enName !== nombreNorm && enName !== nombreLimpio)
-      ? await buscarEnFatSecret(enName) : null;
-    const fsMacros = [fsOrig, fsNormRes, fsEN].find(r => r && (r.p_100||r.hc_100||r.g_100));
-
-    if (fsMacros && (fsMacros.p_100||fsMacros.hc_100||fsMacros.g_100)) {
-      _macrosCache[cacheKey] = fsMacros;
-      result.push(`${item.full}:${gramos}:${fsMacros.p_100}:${fsMacros.hc_100}:${fsMacros.g_100}`);
+    // 2. Worker (Supabase → OFF → Claude IA)
+    const workerRes = await buscarEnWorker(nombreLimpio);
+    const workerMacros = workerRes?.resultados?.[0] || null;
+    if (workerMacros && (workerMacros.p_100||workerMacros.hc_100||workerMacros.g_100)) {
+      _macrosCache[cacheKey] = workerMacros;
+      result.push(`${item.full}:${gramos}:${workerMacros.p_100}:${workerMacros.hc_100}:${workerMacros.g_100}`);
       continue;
     }
 
-    // 3. Open Food Facts (muy bueno para productos españoles)
+    // 3. Open Food Facts directo (fallback)
     const offMacros = await buscarEnOFF(nombreLimpio);
     if (offMacros && (offMacros.p_100||offMacros.hc_100||offMacros.g_100)) {
       _macrosCache[cacheKey] = offMacros;
@@ -2256,7 +2215,7 @@ function parseAI(raw){
         updateBars();saveToday();
         actualizarFrecuenciaDesp(_ingTexto+' '+_nombre);
         saveComidaSupabase({nombre:_nombre,fecha:TODAY,tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:_ingTexto});
-        // Enriquecer con macros reales de BD+FatSecret y recalcular TOTAL exacto
+        // Enriquecer con macros reales de BD y recalcular TOTAL exacto
         enriquecerIng100(items).then(ing100=>{
           const idx=S.comidas.findIndex(c=>c.nombre===_nombre&&c.kcal===kcalN);
           if(idx<0)return;
@@ -2668,7 +2627,7 @@ async function abrirFSM(query, gramosInicial = null) {
     data.resultados.forEach((p, i) => {
       const item = document.createElement('div');
       item.className = 'fsm-item';
-      const fuenteLabel = p.fuente === 'openfoodfacts' ? '🌍 Open Food Facts' : '📊 FatSecret';
+      const fuenteLabel = p.fuente === 'off' || p.fuente === 'openfoodfacts' ? '🌍 Open Food Facts' : p.fuente === 'supabase' ? '📋 Base de datos' : '🤖 IA';
       const marca = p.marca ? `<div class="fsm-item-brand">${p.marca}</div>` : '';
       const imgHtml = p.imagen
         ? `<img class="fsm-item-img" src="${p.imagen}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"><div class="fsm-item-img-placeholder" style="display:none;">🥦</div>`
@@ -2742,56 +2701,6 @@ function fsmActualizarPreview() {
     `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · P${prot}g · HC${hc}g · G${grasa}g`;
 }
 
-function fsmRegistrar() {
-  if (!_fsmProductoSeleccionado) return;
-  const g = parseFloat(document.getElementById('fsmGramos').value);
-  if (!g || g <= 0) { showToast('Indica los gramos'); return; }
-  const p = _fsmProductoSeleccionado;
-  const f = g / 100;
-  const kcal = Math.round(p.kcal_100 * f);
-  const prot = Math.round(p.p_100 * f * 10) / 10;
-  const hc   = Math.round(p.hc_100 * f * 10) / 10;
-  const grasa= Math.round(p.g_100  * f * 10) / 10;
-
-  const nombre = `${p.nombre} (${g}g)`;
-  const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
-
-  // Registrar en el estado del día
-  S.kcalC += kcal; S.protC += prot; S.chC += hc; S.grasaC += grasa;
-  const mealIdx = S.comidas.length;
-  S.comidas.push({
-    nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
-    kcal, prot, ch: hc, grasa, ingredientes: ingTexto
-  });
-  updateBars(); saveToday();
-  saveComidaSupabase({ nombre, fecha: TODAY, tipoDia: S.tipoDia, kcal, prot, ch: hc, grasa, ingredientes: ingTexto });
-
-  // Mostrar en el chat
-  const ingHtml = `<div class="plan-card">
-    <div class="plan-hdr">📋 ${p.nombre}</div>
-    <div class="plan-item">
-      <div class="pi-l"><div class="pi-name">🥦 ${p.nombre}</div><div class="pi-note">${p.marca||''}</div></div>
-      <div class="pi-r"><div class="pi-g">${g}g</div><div class="pi-k">${kcal} kcal</div></div>
-    </div>
-    <div class="plan-tot">
-      <div class="pt-lbl">Total ✓ BD</div>
-      <div class="pt-ms">
-        <span class="ptm" style="color:var(--red)">P ${prot}g</span>
-        <span class="ptm" style="color:var(--yellow)">CH ${hc}g</span>
-        <span class="ptm" style="color:var(--blue)">G ${grasa}g</span>
-        <span class="ptm" style="color:var(--accent)">${kcal} kcal ✓</span>
-      </div>
-    </div>
-  </div>`;
-
-  addMsg('ai', `✅ ${nombre} registrado`, [{type:'html',content:ingHtml}], [], {kcal,prot,ch:hc,grasa}, mealIdx, ingTexto);
-
-  // Añadir al historial para contexto de IA
-  S.historial.push({role:'assistant', content:`✅ Registrado: ${nombre} · ${kcal} kcal · P${prot}g · HC${hc}g · G${grasa}g (datos reales de BD)`});
-
-  fsmCerrar();
-  showToast(`✅ ${kcal} kcal añadidas`);
-}
 
 function fsmCerrar() {
   document.getElementById('fsmOverlay').classList.remove('open');
@@ -3274,7 +3183,7 @@ async function buscarAlimentoMFP(query) {
 
   const resultados = [];
 
-  // 1. FatSecret — base principal, millones de alimentos en español
+  // 1. Worker (Supabase → OFF → IA)
   try {
     const resFS = await fetch(WORKER_URL + '/search', {
       method: 'POST',
@@ -3285,7 +3194,7 @@ async function buscarAlimentoMFP(query) {
     if (dataFS.found && Array.isArray(dataFS.resultados) && dataFS.resultados.length > 0) {
       dataFS.resultados.forEach(r => {
         resultados.push({
-          fuente: r.fuente || 'fatsecret',
+          fuente: r.fuente || 'off',
           nombre: r.nombre,
           categoria: r.categoria || '',
           kcal_100: r.kcal_100 || 0,
@@ -3295,9 +3204,9 @@ async function buscarAlimentoMFP(query) {
         });
       });
     }
-  } catch(e) { console.error('FatSecret error:', e); }
+  } catch(e) { console.error('Worker search error:', e); }
 
-  // 2. Claude — si FatSecret no encontró nada, Claude estima con su conocimiento nutricional
+  // 2. Claude fallback — si el worker no encontró nada
   if (resultados.length === 0) {
     try {
       const resIA = await fetch(WORKER_URL, {
@@ -3380,8 +3289,8 @@ function renderResultadosBuscador(resultados, query) {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;';
     item.onclick = () => seleccionarAlimentoBuscador(p);
-    const fuenteColor = p.fuente==='supabase' ? 'var(--accent)' : p.fuente==='fatsecret' ? 'var(--teal)' : p.fuente==='ia' ? 'var(--yellow)' : 'var(--blue)';
-    const fuenteLabel = p.fuente==='supabase' ? '📋 BD' : p.fuente==='fatsecret' ? '📊 FS' : p.fuente==='ia' ? '🤖 IA' : '🌍 OFF';
+    const fuenteColor = p.fuente==='supabase' ? 'var(--accent)' : p.fuente==='ia' ? 'var(--yellow)' : 'var(--blue)';
+    const fuenteLabel = p.fuente==='supabase' ? '📋 BD' : p.fuente==='ia' ? '🤖 IA' : '🌍 OFF';
     const imgHtml = p.imagen
       ? `<img src="${p.imagen}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div style="width:40px;height:40px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🥦</div>`;
@@ -3425,9 +3334,7 @@ function seleccionarAlimentoBuscador(producto) {
   setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
 }
 
-// Override fsmRegistrar para asignar mealId correcto
-const _fsmRegistrarOriginal = window.fsmRegistrar;
-
+// fsmRegistrar: registra el producto seleccionado asignando el mealId correcto
 function fsmRegistrar() {
   if (!_fsmProductoSeleccionado) return;
   const g = parseFloat(document.getElementById('fsmGramos').value);
@@ -4338,7 +4245,6 @@ function cerrarEscaner() {
   document.getElementById('scannerCaptureBtn').style.display = 'none';
   document.getElementById('scannerHint').style.color = '';
   document.getElementById('scannerToast').style.display = 'none';
-  document.getElementById('scannerHint').style.color = '';
 }
 
 async function handleFotoProducto(e) {
@@ -4362,9 +4268,8 @@ async function handleFotoProducto(e) {
         const ean = codes[0].rawValue;
         showToast('📦 Código: ' + ean + ' — buscando...');
         if (resBuscador) resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando ' + ean + '...</div>';
-        const fsResult = await buscarEnFatSecret(ean);
-        const result = fsResult && fsResult.found ? fsResult : await buscarEnOFFporEAN(ean);
-        if (result && result.found) {
+        const result = await _buscarEAN(ean);
+        if (result) {
           _fsmProductoSeleccionado = result;
           document.getElementById('fsmTitle').textContent = '📦 ' + result.nombre;
           document.getElementById('fsmSubtitle').textContent = 'EAN ' + ean;
@@ -4392,7 +4297,7 @@ async function handleFotoProducto(e) {
           if (resBuscador) resBuscador.innerHTML = '';
           return;
         }
-        // EAN no encontrado en FatSecret → avisar y salir
+        // EAN no encontrado en OFF → avisar y salir
         showToast('⚠️ Código ' + ean + ' no encontrado. Busca por nombre.');
         if (resBuscador) resBuscador.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Producto no encontrado.<br>Busca por nombre.</div>';
         return;
