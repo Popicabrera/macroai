@@ -4117,8 +4117,61 @@ async function handleFotoProducto(e) {
 
   const resBuscador = document.getElementById('buscadorResultados');
   if (resBuscador) {
-    resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Leyendo etiqueta...</div>';
+    resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Leyendo código...</div>';
   }
+
+  // ── INTENTAR LEER CÓDIGO DE BARRAS EAN CON BarcodeDetector (nativo Chrome Android) ──
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code'] });
+      const bmp = await createImageBitmap(file);
+      const codes = await detector.detect(bmp);
+      bmp.close();
+      if (codes.length > 0) {
+        const ean = codes[0].rawValue;
+        showToast('📦 Código: ' + ean + ' — buscando...');
+        if (resBuscador) resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando ' + ean + '...</div>';
+        const fsResult = await buscarEnFatSecret(ean);
+        if (fsResult && fsResult.found) {
+          _fsmProductoSeleccionado = fsResult;
+          document.getElementById('fsmTitle').textContent = '📦 ' + fsResult.nombre;
+          document.getElementById('fsmSubtitle').textContent = 'EAN ' + ean;
+          document.getElementById('fsmList').innerHTML = `
+            <div class="fsm-item fsm-selected">
+              <div class="fsm-item-img-placeholder">📦</div>
+              <div class="fsm-item-info">
+                <div class="fsm-item-name">${fsResult.nombre}</div>
+                <div class="fsm-item-macros">
+                  <span class="fsm-macro k">${fsResult.kcal_100} kcal</span>
+                  <span class="fsm-macro p">P ${fsResult.p_100}g</span>
+                  <span class="fsm-macro c">HC ${fsResult.hc_100}g</span>
+                  <span class="fsm-macro g">G ${fsResult.g_100}g</span>
+                </div>
+                <div class="fsm-source">por 100g · código de barras</div>
+              </div>
+            </div>`;
+          document.getElementById('fsmSelectedName').textContent = fsResult.nombre;
+          document.getElementById('fsmPer100').textContent = `· ${fsResult.kcal_100} kcal / 100g`;
+          document.getElementById('fsmGramStep').style.display = 'flex';
+          document.getElementById('fsmGramos').value = '';
+          document.getElementById('fsmPreview').textContent = '';
+          document.getElementById('fsmOverlay').classList.add('open');
+          setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
+          if (resBuscador) resBuscador.innerHTML = '';
+          return;
+        }
+        // EAN no encontrado en FatSecret → avisar y salir
+        showToast('⚠️ Código ' + ean + ' no encontrado. Busca por nombre.');
+        if (resBuscador) resBuscador.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Producto no encontrado.<br>Busca por nombre.</div>';
+        return;
+      }
+    } catch(err) {
+      console.warn('BarcodeDetector error:', err);
+      // Continuar con fallback de etiqueta nutricional
+    }
+  }
+  // ── FALLBACK: leer etiqueta nutricional con IA ──
+  if (resBuscador) resBuscador.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Leyendo etiqueta...</div>';
 
   try {
     const base64 = await new Promise((res, rej) => {
