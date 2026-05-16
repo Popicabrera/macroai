@@ -711,6 +711,13 @@ body{
     </div>
   </div>
 
+  <!-- NAVEGACIÓN DÍAS DIARIO -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button onclick="diarioNavegar(-1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8249;</button>
+    <div id="diarioFechaLabel" onclick="diarioIrHoy()" style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;padding:4px 12px;border-radius:8px;user-select:none;">Hoy</div>
+    <button onclick="diarioNavegar(1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8250;</button>
+  </div>
+
   <!-- PANEL MACROS -->
   <div class="macro-panel">
     <div class="mp-kcal-row">
@@ -1249,6 +1256,10 @@ let CFG=loadCFG();
 // ── STATE ──
 function getToday(){return new Date().toISOString().split('T')[0];}
 const TODAY=getToday();
+
+// ── NAVEGACIÓN DÍAS DIARIO ──
+let _diarioOffset=0;
+let _diarioFecha=getToday();
 
 // ── RESET MEDIANOCHE ──
 // Detectar nuevo día cuando el usuario vuelve a la app — cero gasto
@@ -3016,6 +3027,11 @@ function initApp(){
   // Renderizar diario MFP
   renderMFPDiario();
 
+  // Inicializar navegación días
+  _diarioOffset = 0;
+  _diarioFecha = getToday();
+  cargarDiarioPorFecha(_diarioFecha);
+
   // Iniciar IA en background (para cuando abran el chat)
   const nombreUsuario = CURRENT_USER?.nombre || CURRENT_USER?.email?.split('@')[0] || '';
   const ctx = S.comidas.length > 0
@@ -3042,6 +3058,7 @@ const MFP_MEALS = [
 ];
 
 function renderMFPDiario() {
+  if (_diarioFecha !== getToday()) return; // Solo renderizar si es hoy
   const container = document.getElementById('mfpDiario');
   if (!container) return;
   container.innerHTML = '';
@@ -3883,6 +3900,257 @@ function setNumComidas(n){
 function closeNCM(){
   document.getElementById('ncmOverlay').classList.remove('open');
   renderDiario();
+}
+
+
+// ══════════════════════════════════════════
+// ── DIARIO NAVEGACIÓN POR DÍAS ──
+// ══════════════════════════════════════════
+
+function diarioNavegar(dir) {
+  _diarioOffset += dir;
+  _diarioFecha = getOffsetDate(_diarioOffset);
+  cargarDiarioPorFecha(_diarioFecha);
+}
+
+function diarioIrHoy() {
+  _diarioOffset = 0;
+  _diarioFecha = getToday();
+  cargarDiarioPorFecha(_diarioFecha);
+}
+
+function getOffsetDate(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split('T')[0];
+}
+
+function diarioFechaLabel(fecha) {
+  const hoy = getToday();
+  const ayer = getOffsetDate(-1);
+  const manana = getOffsetDate(1);
+  if (fecha === hoy) return 'Hoy';
+  if (fecha === ayer) return 'Ayer';
+  if (fecha === manana) return 'Mañana';
+  const d = new Date(fecha + 'T12:00:00');
+  const label = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+async function cargarDiarioPorFecha(fecha) {
+  const hoy = getToday();
+  const esHoy = fecha === hoy;
+  const esFuturo = fecha > hoy;
+
+  // Actualizar label navegación
+  const labelEl = document.getElementById('diarioFechaLabel');
+  if (labelEl) {
+    labelEl.textContent = diarioFechaLabel(fecha);
+    labelEl.style.color = esHoy ? 'var(--accent)' : 'var(--text)';
+  }
+
+  if (esHoy) {
+    // Restaurar estado de hoy
+    applyMacros(CFG.tipoDia);
+    updateBars();
+    renderMFPDiario();
+    // Mostrar botón IA y activar pill
+    const btnIA = document.getElementById('btnIADiario');
+    if (btnIA) btnIA.style.display = '';
+    _diarioModoLectura(false);
+    return;
+  }
+
+  // Modo lectura para días que no son hoy
+  _diarioModoLectura(true);
+
+  // Cargar desde Supabase
+  let dataDia = null;
+  try {
+    if (CURRENT_USER) {
+      const res = await supaFetch('/rest/v1/registros_macroai?select=*&usuario_id=eq.' + CURRENT_USER.id + '&fecha=eq.' + fecha);
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length) {
+        const r = rows[0];
+        dataDia = {
+          kcalC: r.kcal_consumidas || 0,
+          protC: r.prot_consumidas || 0,
+          chC: r.ch_consumidas || 0,
+          grasaC: r.grasa_consumidas || 0,
+          kcalObj: r.kcal_objetivo || S.kcalObj,
+          prot: r.prot_objetivo || S.prot,
+          ch: r.ch_objetivo || S.ch,
+          grasa: r.grasa_objetivo || S.grasa,
+          tipoDia: r.tipo_dia || 'entreno',
+          comidas: r.comidas || []
+        };
+      }
+    }
+  } catch(e) {}
+
+  // Fallback localStorage
+  if (!dataDia) {
+    try {
+      const d = JSON.parse(localStorage.getItem('macroai_dia_' + fecha) || 'null');
+      if (d) {
+        dataDia = {
+          kcalC: d.kcalC || 0, protC: d.protC || 0,
+          chC: d.chC || 0, grasaC: d.grasaC || 0,
+          kcalObj: d.kcalObj || S.kcalObj,
+          prot: d.protObj || S.prot,
+          ch: d.chObj || S.ch,
+          grasa: d.grasaObj || S.grasa,
+          tipoDia: d.tipoDia || 'entreno',
+          comidas: d.comidas || []
+        };
+      }
+    } catch(e) {}
+  }
+
+  // Sin datos — mostrar vacío
+  if (!dataDia) {
+    _diarioRenderVacio(esFuturo);
+    return;
+  }
+
+  _diarioRenderOtroDia(dataDia, fecha);
+}
+
+function _diarioModoLectura(activo) {
+  // Botón IA flotante
+  const btnIA = document.querySelector('#mfpDiario + div');
+  if (btnIA) btnIA.style.display = activo ? 'none' : '';
+  // Pill tipo día
+  const pill = document.querySelector('.day-pill');
+  if (pill) {
+    pill.style.pointerEvents = activo ? 'none' : '';
+    pill.style.opacity = activo ? '0.6' : '1';
+  }
+}
+
+function _diarioRenderVacio(esFuturo) {
+  document.getElementById('kcalResta').textContent = S.kcalObj;
+  document.getElementById('kcalObj').textContent = 'de ' + S.kcalObj + ' kcal';
+  document.getElementById('protResta').textContent = S.prot;
+  document.getElementById('chResta').textContent = S.ch;
+  document.getElementById('grasaResta').textContent = S.grasa;
+  ['protFill','chFill','grasaFill'].forEach(id => document.getElementById(id).style.width = '0%');
+  document.getElementById('kcalResta').style.color = 'var(--accent)';
+
+  const container = document.getElementById('mfpDiario');
+  if (!container) return;
+  container.innerHTML = `
+    <div style="text-align:center;padding:48px 20px;color:var(--muted);">
+      <div style="font-size:36px;margin-bottom:12px;">${esFuturo ? '📋' : '📅'}</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">
+        ${esFuturo ? 'Día sin planificar' : 'Sin registros este día'}
+      </div>
+      <div style="font-size:12px;line-height:1.6;">
+        ${esFuturo ? 'Puedes ver tu menú en la pestaña Menú.' : 'No hay comidas registradas para este día.'}
+      </div>
+      <div onclick="diarioIrHoy()" style="margin-top:16px;padding:10px 20px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:20px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;display:inline-block;">↩ Volver a hoy</div>
+    </div>`;
+}
+
+function _diarioRenderOtroDia(data, fecha) {
+  const esFuturo = fecha > getToday();
+
+  // Panel macros — mostrar consumido
+  document.getElementById('kcalResta').textContent = data.kcalC;
+  document.getElementById('kcalObj').textContent = data.kcalC >= data.kcalObj
+    ? '⚠️ de ' + data.kcalObj + ' kcal'
+    : 'de ' + data.kcalObj + ' kcal';
+  document.getElementById('protResta').textContent = data.protC;
+  document.getElementById('chResta').textContent = data.chC;
+  document.getElementById('grasaResta').textContent = data.grasaC;
+
+  const pct = (v, t) => Math.min(100, Math.max(0, (v / (t || 1)) * 100));
+  document.getElementById('protFill').style.width = pct(data.protC, data.prot) + '%';
+  document.getElementById('chFill').style.width = pct(data.chC, data.ch) + '%';
+  document.getElementById('grasaFill').style.width = pct(data.grasaC, data.grasa) + '%';
+  document.getElementById('kcalResta').style.color = data.kcalC > data.kcalObj ? 'var(--red)' : 'var(--accent)';
+
+  // Pill tipo día
+  document.getElementById('dayType').textContent = data.tipoDia === 'entreno' ? 'Día de entreno' : 'Día de descanso';
+  document.getElementById('pillDot').className = 'pdot' + (data.tipoDia === 'descanso' ? ' rest' : '');
+
+  const container = document.getElementById('mfpDiario');
+  if (!container) return;
+
+  if (!data.comidas || !data.comidas.length) {
+    _diarioRenderVacio(esFuturo);
+    return;
+  }
+
+  const MEAL_ORDER = ['desayuno','almuerzo','comida','merienda','cena'];
+  const MEAL_EMOJIS = {desayuno:'🌅',almuerzo:'☕',comida:'☀️',merienda:'🍎',cena:'🌙'};
+  const MEAL_NAMES  = {desayuno:'Desayuno',almuerzo:'Almuerzo',comida:'Comida',merienda:'Merienda',cena:'Cena'};
+
+  const porMeal = {};
+  data.comidas.forEach(c => {
+    const mid = c.mealId || c.tipo?.toLowerCase() || 'sin-categoría';
+    if (!porMeal[mid]) porMeal[mid] = [];
+    porMeal[mid].push(c);
+  });
+
+  let html = '';
+  const mealsMostradas = new Set();
+
+  MEAL_ORDER.forEach(mid => {
+    const items = porMeal[mid] || [];
+    if (!items.length) return;
+    mealsMostradas.add(mid);
+    const totalKcal = Math.round(items.reduce((a,c) => a + (c.kcal||0), 0));
+    const totalProt = Math.round(items.reduce((a,c) => a + (c.prot||0), 0)*10)/10;
+    const totalCh   = Math.round(items.reduce((a,c) => a + (c.ch||0), 0)*10)/10;
+    const totalGrasa= Math.round(items.reduce((a,c) => a + (c.grasa||0), 0)*10)/10;
+
+    const itemsHtml = items.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
+      </div>`).join('');
+
+    html += `
+      <div style="border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:18px;">${MEAL_EMOJIS[mid]||'🍽️'}</span>
+            <div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${MEAL_NAMES[mid]||mid}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${totalProt}g · HC${totalCh}g · G${totalGrasa}g</div>
+            </div>
+          </div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${totalKcal} kcal</span>
+        </div>
+        ${itemsHtml}
+      </div>`;
+  });
+
+  // Comidas sin categoría conocida
+  Object.entries(porMeal).forEach(([mid, items]) => {
+    if (mealsMostradas.has(mid)) return;
+    items.forEach(item => {
+      html += `
+        <div style="border-bottom:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🍽️</span>
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${escapeHtml(item.nombre||'Comida')}</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
+              </div>
+            </div>
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${item.kcal||0} kcal</span>
+          </div>
+        </div>`;
+    });
+  });
+
+  container.innerHTML = html;
 }
 
 // ── BOOT ──
