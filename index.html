@@ -3076,7 +3076,7 @@ function renderMFPDiario() {
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
-            <div onclick="mfpEliminarItem(${globalIdx})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);">✕</div>
+            <div onclick="mfpEliminarItem(${globalIdx})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);"
           </div>
         </div>`;
     });
@@ -3574,7 +3574,7 @@ function renderDiario(){
             <div class="food-kcal-txt">${item.kcal}</div>
             <div class="food-macro-txt">P${Math.round(item.prot)}·CH${Math.round(item.ch)}·G${Math.round(item.grasa)}</div>
           </div>
-          <div class="food-del-btn" onclick="deleteMealItem('${m.id}',${S.comidas.indexOf(item)})">✕</div>
+          <div class="food-del-btn" onclick="deleteMealItem('${m.id}',${S.comidas.indexOf(item)})"
         </div>
       </div>`).join('');
 
@@ -3584,7 +3584,7 @@ function renderDiario(){
         <div style="flex:1;">
           <div class="food-name-txt" style="color:var(--muted);">🔸 ${escapeHtml(txt)}</div>
         </div>
-        <div class="food-del-btn" onclick="removePending('${m.id}',${i})">✕</div>
+        <div class="food-del-btn" onclick="removePending('${m.id}',${i})"
       </div>`).join('');
 
     // Botón calcular — solo si hay pendientes
@@ -3763,7 +3763,7 @@ function renderQamList(){
   list.innerHTML=_qamItems.map((item,i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 10px;">
       <div style="font-size:13px;flex:1;color:var(--text);">🔸 ${escapeHtml(item)}</div>
-      <div onclick="qamRemoveItem(${i})" style="font-size:12px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:5px;background:var(--s3);">✕</div>
+      <div onclick="qamRemoveItem(${i})" style="font-size:12px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:5px;background:var(--s3);"
     </div>`).join('');
 }
 
