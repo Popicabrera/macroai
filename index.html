@@ -2086,13 +2086,46 @@ function sysPrompt(){
   const r={kcal:S.kcalObj-S.kcalC,prot:S.prot-S.protC,ch:S.ch-S.chC,grasa:S.grasa-S.grasaC};
   const despStr=DESP.length?`\nDESPENSA DISPONIBLE: ${despNombres().join(', ')}`:'\nDESPENSA: no configurada aún';
   const memoriaStr=getMemoria7Dias();
+
+  // Contexto de planificación si el usuario está viendo un día futuro
+  const esHoy = _diarioFecha === getToday();
+  const esFuturo = _diarioFecha > getToday();
+  let contextoDia = '';
+  if (esFuturo) {
+    const labelDia = diarioFechaLabel(_diarioFecha);
+    // Cargar comidas planificadas para ese día
+    let comidasPlanificadas = [];
+    try {
+      const d = JSON.parse(localStorage.getItem('macroai_dia_' + _diarioFecha) || 'null');
+      if (d && d.comidas) comidasPlanificadas = d.comidas;
+    } catch(e) {}
+    const totalPlan = comidasPlanificadas.reduce((a,c) => ({
+      kcal: a.kcal+(c.kcal||0), prot: a.prot+(c.prot||0),
+      ch: a.ch+(c.ch||0), grasa: a.grasa+(c.grasa||0)
+    }), {kcal:0,prot:0,ch:0,grasa:0});
+    const restaPlan = {
+      kcal: S.kcalObj - totalPlan.kcal,
+      prot: S.prot - totalPlan.prot,
+      ch: S.ch - totalPlan.ch,
+      grasa: S.grasa - totalPlan.grasa
+    };
+    contextoDia = `\n⚠️ MODO PLANIFICACIÓN — El usuario está planificando el ${labelDia} (${_diarioFecha}), NO el día de hoy.`;
+    if (comidasPlanificadas.length) {
+      contextoDia += `\nYA PLANIFICADO para ${labelDia}:\n` + comidasPlanificadas.map(c=>`- ${c.nombre}: ${c.kcal}kcal | P${c.prot}g CH${c.ch}g G${c.grasa}g`).join('\n');
+      contextoDia += `\nQUEDA POR PLANIFICAR: ${restaPlan.kcal}kcal | P${Math.round(restaPlan.prot)}g CH${Math.round(restaPlan.ch)}g G${Math.round(restaPlan.grasa)}g`;
+    } else {
+      contextoDia += `\nAún no hay nada planificado para ese día. Objetivo completo disponible: ${S.kcalObj}kcal | P${S.prot}g CH${S.ch}g G${S.grasa}g`;
+    }
+    contextoDia += `\nAyuda al usuario a planificar ese día concreto, no el de hoy.`;
+  }
+
   let comidasHoy='';
-  if(S.comidas.length)comidasHoy='\nCOMIDAS DE HOY:\n'+S.comidas.map(c=>`- ${c.nombre} (${c.hora||''}): ${c.kcal}kcal | P${c.prot}g CH${c.ch}g G${c.grasa}g`).join('\n');
+  if(S.comidas.length && esHoy)comidasHoy='\nCOMIDAS DE HOY:\n'+S.comidas.map(c=>`- ${c.nombre} (${c.hora||''}): ${c.kcal}kcal | P${c.prot}g CH${c.ch}g G${c.grasa}g`).join('\n');
   let comidasAyer='';
   const ayer=getYesterdayComidas();
   if(ayer&&ayer.comidas.length)comidasAyer='\nCOMIDAS DE AYER ('+ayer.fecha+'):\n'+ayer.comidas.map(c=>`- ${c.nombre||'Comida'}: ${c.kcal}kcal | P${c.prot||0}g CH${c.ch||0}g G${c.grasa||0}g`).join('\n');
   return `Eres MacroAI, asistente de nutrición para clientes de entrenador personal. Eres cercana, directa y motivadora. LÍMITE ESTRICTO: Solo respondes sobre nutrición, alimentación, macros, calorías, recetas, despensa e historial de comidas. Si preguntan algo fuera de este ámbito responde: "Soy MacroAI, solo puedo ayudarte con nutrición y tus macros 😊".
-
+${contextoDia}
 MACROS Y BASE DE DATOS:
 - Cuando el cliente registre alimentos desde el chat, usa el formato [INGREDIENTES] con macros estimados por tus conocimientos nutricionales (valores estándar por 100g). El sistema los verificará automáticamente contra la base de datos real y corregirá si es necesario.
 - Para alimentos genéricos españoles (pollo, arroz, huevo, avena…) usa valores estándar conocidos — NO digas que no puedes calcularlos.
