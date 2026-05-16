@@ -3440,6 +3440,24 @@ function fsmRegistrar() {
 
   // ── MODO NORMAL: añadir nuevo item ──
   const mealId = _buscadorMealId || '';
+
+  // Si es un día futuro — guardar en localStorage del día futuro
+  if (_buscadorFechaFutura && _buscadorFechaFutura !== getToday()) {
+    const key = 'macroai_dia_' + _buscadorFechaFutura;
+    const d = JSON.parse(localStorage.getItem(key) || 'null') || { fecha: _buscadorFechaFutura, comidas: [] };
+    d.comidas.push({ nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+      kcal, prot, ch:hc, grasa, ingredientes:ingTexto, mealId,
+      kcal_100: p.kcal_100, p_100: p.p_100, hc_100: p.hc_100, g_100: p.g_100 });
+    localStorage.setItem(key, JSON.stringify(d));
+    fsmCerrar();
+    showView('viewMain');
+    cargarDiarioPorFecha(_buscadorFechaFutura);
+    showToast('✅ ' + kcal + ' kcal añadidas al plan');
+    _buscadorFechaFutura = null;
+    return;
+  }
+
+  _buscadorFechaFutura = null;
   S.comidas.push({ nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
     kcal, prot, ch:hc, grasa, ingredientes:ingTexto, mealId,
     kcal_100: p.kcal_100, p_100: p.p_100, hc_100: p.hc_100, g_100: p.g_100 });
@@ -4007,9 +4025,23 @@ async function cargarDiarioPorFecha(fecha) {
     } catch(e) {}
   }
 
-  // Sin datos — mostrar vacío
+  // Sin datos
   if (!dataDia) {
-    _diarioRenderVacio(esFuturo);
+    if (esFuturo) {
+      // Días futuros sin datos: mostrar diario vacío para planificar
+      // Actualizar panel macros con objetivo actual
+      document.getElementById('kcalResta').textContent = S.kcalObj;
+      document.getElementById('kcalObj').textContent = 'de ' + S.kcalObj + ' kcal';
+      document.getElementById('protResta').textContent = S.prot;
+      document.getElementById('chResta').textContent = S.ch;
+      document.getElementById('grasaResta').textContent = S.grasa;
+      ['protFill','chFill','grasaFill'].forEach(id => document.getElementById(id).style.width = '0%');
+      document.getElementById('kcalResta').style.color = 'var(--accent)';
+      // Renderizar diario vacío pero funcional — guardando comidas en _diarioFuturoComidas
+      _diarioRenderFuturo(fecha);
+    } else {
+      _diarioRenderVacio(false);
+    }
     return;
   }
 
@@ -4153,6 +4185,122 @@ function _diarioRenderOtroDia(data, fecha) {
   container.innerHTML = html;
 }
 
+
+function _diarioRenderFuturo(fecha) {
+  // Renderiza el diario MFP normal para días futuros — permite planificar
+  const container = document.getElementById('mfpDiario');
+  if (!container) return;
+
+  // Usar comidas guardadas para este día futuro (si las hay en localStorage)
+  let comidasFuturo = [];
+  try {
+    const d = JSON.parse(localStorage.getItem('macroai_dia_' + fecha) || 'null');
+    if (d && d.comidas) comidasFuturo = d.comidas;
+  } catch(e) {}
+
+  container.innerHTML = '';
+
+  MFP_MEALS.forEach(meal => {
+    const items = comidasFuturo.filter(c => c.mealId === meal.id);
+    const totalKcal = Math.round(items.reduce((a,c) => a + (c.kcal||0), 0));
+    const totalProt = Math.round(items.reduce((a,c) => a + (c.prot||0), 0)*10)/10;
+    const totalCh   = Math.round(items.reduce((a,c) => a + (c.ch||0), 0)*10)/10;
+    const totalGrasa= Math.round(items.reduce((a,c) => a + (c.grasa||0), 0)*10)/10;
+
+    const block = document.createElement('div');
+    block.style.cssText = 'border-bottom:1px solid var(--border);';
+
+    let itemsHtml = items.map((item, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
+          <div onclick="eliminarComidaFutura('${fecha}','${meal.id}',${i})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);">✕</div>
+        </div>
+      </div>`).join('');
+
+    block.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;" onclick="mfpToggleMeal('fbody-${meal.id}','fchev-${meal.id}')">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">${meal.emoji}</span>
+          <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `P${totalProt}g · HC${totalCh}g · G${totalGrasa}g` : 'Sin planificar'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length ? 'var(--accent)' : 'var(--muted)'};">${items.length ? totalKcal + ' kcal' : '—'}</span>
+          <span id="fchev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
+        </div>
+      </div>
+      <div id="fbody-${meal.id}" style="display:none;border-top:1px solid var(--border);">
+        ${itemsHtml}
+        <div onclick="abrirBuscadorFuturo('${fecha}','${meal.id}','${meal.name}')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;color:var(--accent);">
+          <span style="font-size:18px;font-weight:700;">＋</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.3px;">AÑADIR ALIMENTO</span>
+        </div>
+      </div>`;
+    container.appendChild(block);
+
+    // Abrir si tiene items planificados
+    if (items.length) {
+      const body = document.getElementById('fbody-' + meal.id);
+      const chev = document.getElementById('fchev-' + meal.id);
+      if (body) body.style.display = 'block';
+      if (chev) chev.style.transform = 'rotate(180deg)';
+    }
+  });
+
+  // Actualizar totales del panel macros con lo planificado
+  const totalPlan = comidasFuturo.reduce((a,c) => ({
+    kcal: a.kcal + (c.kcal||0), prot: a.prot + (c.prot||0),
+    ch: a.ch + (c.ch||0), grasa: a.grasa + (c.grasa||0)
+  }), {kcal:0,prot:0,ch:0,grasa:0});
+
+  if (totalPlan.kcal > 0) {
+    document.getElementById('kcalResta').textContent = S.kcalObj - totalPlan.kcal;
+    document.getElementById('protResta').textContent = Math.round(S.prot - totalPlan.prot);
+    document.getElementById('chResta').textContent = Math.round(S.ch - totalPlan.ch);
+    document.getElementById('grasaResta').textContent = Math.round(S.grasa - totalPlan.grasa);
+    const pct = (v,t) => Math.min(100, Math.max(0, (v/(t||1))*100));
+    document.getElementById('protFill').style.width = pct(totalPlan.prot, S.prot) + '%';
+    document.getElementById('chFill').style.width = pct(totalPlan.ch, S.ch) + '%';
+    document.getElementById('grasaFill').style.width = pct(totalPlan.grasa, S.grasa) + '%';
+  }
+}
+
+function abrirBuscadorFuturo(fecha, mealId, mealName) {
+  // Redirigir al buscador normal pero guardar en localStorage del día futuro
+  _buscadorFechaFutura = fecha;
+  _buscadorMealId = mealId;
+  _buscadorMealName = mealName;
+  document.getElementById('buscadorTitle').textContent = mealName + ' · ' + diarioFechaLabel(fecha);
+  document.getElementById('buscadorInput').value = '';
+  document.getElementById('buscadorResultados').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Escribe para buscar o escanea un código 📷</div>';
+  setTabBuscador('todos');
+  showView('viewBuscador');
+  setTimeout(() => document.getElementById('buscadorInput').focus(), 300);
+}
+
+function eliminarComidaFutura(fecha, mealId, idx) {
+  try {
+    const key = 'macroai_dia_' + fecha;
+    const d = JSON.parse(localStorage.getItem(key) || 'null') || { comidas: [] };
+    const items = d.comidas.filter(c => c.mealId === mealId);
+    const item = items[idx];
+    if (!item) return;
+    d.comidas = d.comidas.filter(c => c !== item);
+    localStorage.setItem(key, JSON.stringify(d));
+    cargarDiarioPorFecha(fecha);
+    showToast('🗑️ Eliminado del plan');
+  } catch(e) {}
+}
+
+
+let _buscadorFechaFutura = null;
 // ── BOOT ──
 window.addEventListener('load',()=>{
   // Inicializar SDK Supabase
