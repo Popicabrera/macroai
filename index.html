@@ -3467,21 +3467,25 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
 async function cargarMisAlimentos() {
   const res = document.getElementById('buscadorResultados');
   res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
-  try {
-    const r = await supaFetch(`/rest/v1/alimentos_macroai?select=id,nombre,kcal_100,p_100,hc_100,g_100,categoria&creado_por=eq.${CURRENT_USER.id}&order=nombre.asc&limit=50`);
-    const rows = await r.json();
-    if (!Array.isArray(rows) || !rows.length) {
-      res.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">Aún no has creado alimentos.<br>Pulsa <strong>＋ CREAR</strong> para añadir uno.</div>';
-      return;
-    }
-    const resultados = rows.map(row => ({
-      fuente:'supabase', id:row.id, nombre:row.nombre, categoria:row.categoria||'',
-      kcal_100:row.kcal_100||0, p_100:row.p_100||0, hc_100:row.hc_100||0, g_100:row.g_100||0,
+
+  // Mostrar alimentos más usados del historial personal (últimos 30 días, únicos, con datos)
+  const misUsados = getHistorialAlimentosIndividuales(30);
+  if (misUsados.length) {
+    const resultados = misUsados.map(item => ({
+      fuente: 'historial',
+      nombre: item.nombre,
+      kcal_100: item.kcal_100,
+      p_100: item.p_100,
+      hc_100: item.hc_100,
+      g_100: item.g_100,
     }));
+    res.innerHTML = '<div style="padding:10px 14px 4px;font-family:\'Space Grotesk\',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Mis alimentos frecuentes</div>';
     renderResultadosBuscador(resultados, '');
-  } catch(e) {
-    res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:13px;">Error cargando alimentos.</div>';
+    return;
   }
+
+  // Sin historial — mostrar mensaje
+  res.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">Todavía no tienes alimentos frecuentes.<br>Empieza a registrar comidas para verlos aquí.</div>';
 }
 
 function renderResultadosBuscador(resultados, query) {
@@ -3643,12 +3647,12 @@ async function guardarAlimentoCreado() {
   msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);color:var(--blue);';
   msg.textContent='Guardando...';
   try {
-    // Usar Worker con service key para salvar la RLS
+    // Va a la BD compartida (sin creado_por) — disponible para todos los clientes
     const r = await fetch(WORKER_URL + '/save-food', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, kcal_100:kcal, p_100:prot, hc_100:hc, g_100:grasa,
-        categoria:'MIS ALIMENTOS', creado_por: CURRENT_USER?.id||null, fuente:'manual' })
+        categoria:'GENERAL', creado_por: null, fuente:'manual' })
     });
     const d = await r.json();
     if (r.ok && !d.error) {
