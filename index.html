@@ -3268,24 +3268,48 @@ function buscadorLimpiar() {
 // ── PANTALLA INICIO BUSCADOR: escáner + historial alimentos ──
 function renderBuscadorInicio() {
   const res = document.getElementById('buscadorResultados');
-  const historial = getHistorialAlimentosIndividuales(12);
+  const historial = getHistorialAlimentosIndividuales(8);
+  const favs = loadFavs();
 
   const histHtml = historial.length ? `
-    <div style="padding:14px 14px 6px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;">Recientes</div>
+    <div style="padding:14px 14px 4px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Recientes</div>
     </div>
     ${historial.map(item => `
-      <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;"
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);"
            onclick="seleccionarAlimentoBuscador({nombre:${JSON.stringify(item.nombre)},kcal_100:${item.kcal_100},p_100:${item.p_100},hc_100:${item.hc_100},g_100:${item.g_100},fuente:'historial'})">
-        <div style="width:36px;height:36px;border-radius:10px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🥦</div>
+        <div style="width:34px;height:34px;border-radius:10px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🥦</div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · P${item.p_100}g · HC${item.hc_100}g · G${item.g_100}g <span style="color:var(--muted2);">· por 100g</span></div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · P${item.p_100}g · HC${item.hc_100}g · G${item.g_100}g · por 100g</div>
         </div>
-        <div style="width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:var(--accent);font-weight:700;"
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:var(--accent);font-weight:700;"
              onclick="event.stopPropagation();seleccionarAlimentoBuscadorConGramos({nombre:${JSON.stringify(item.nombre)},kcal_100:${item.kcal_100},p_100:${item.p_100},hc_100:${item.hc_100},g_100:${item.g_100}},${item.ultimosGramos||'null'})">＋</div>
       </div>`).join('')}
-  ` : `<div style="padding:28px 20px 8px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7;">Todavía no hay alimentos recientes.<br>¡Añade tu primera comida!</div>`;
+  ` : '';
+
+  const favsHtml = favs.length ? `
+    <div style="padding:14px 14px 4px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">⭐ Favoritos</div>
+    </div>
+    ${favs.map(f => `
+      <div data-fav-id="${f.id}"
+           style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);position:relative;"
+           ontouchstart="favBuscadorTouchStart(${f.id},event)" ontouchend="favBuscadorTouchEnd()" ontouchmove="favBuscadorTouchEnd()"
+           oncontextmenu="event.preventDefault();favBuscadorMenu(${f.id},event)">
+        <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⭐</div>
+        <div style="flex:1;min-width:0;cursor:pointer;" onclick="favBuscadorUsar(${f.id})">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · P${f.prot}g · CH${f.ch}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
+        </div>
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,211,61,0.15);border:1px solid rgba(255,211,61,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:#b8860b;font-weight:700;"
+             onclick="event.stopPropagation();favBuscadorUsar(${f.id})">＋</div>
+      </div>`).join('')}
+  ` : '';
+
+  const sinContenido = !historial.length && !favs.length
+    ? `<div style="padding:32px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">Todavía no hay alimentos recientes.<br>¡Añade tu primera comida!</div>`
+    : '';
 
   res.innerHTML = `
     <div style="margin:14px 14px 0;">
@@ -3299,7 +3323,82 @@ function renderBuscadorInicio() {
         <span style="margin-left:auto;color:var(--muted);font-size:18px;">›</span>
       </div>
     </div>
-    ${histHtml}`;
+    ${histHtml}${favsHtml}${sinContenido}`;
+}
+
+// ── FAVORITOS EN BUSCADOR ──
+
+let _favBuscadorTimer = null;
+
+function favBuscadorTouchStart(id, e) {
+  _favBuscadorTimer = setTimeout(() => favBuscadorMenu(id, e), 600);
+}
+function favBuscadorTouchEnd() {
+  clearTimeout(_favBuscadorTimer);
+}
+
+function favBuscadorUsar(id) {
+  const favs = loadFavs();
+  const f = favs.find(x => x.id === id);
+  if (!f || !f.kcal) return;
+  const mealId = _buscadorMealId || _buscadorFechaFutura ? _buscadorMealId : '';
+
+  // Si es día futuro
+  if (_buscadorFechaFutura && _buscadorFechaFutura !== getToday()) {
+    const key = 'macroai_dia_' + _buscadorFechaFutura;
+    const d = JSON.parse(localStorage.getItem(key) || 'null') || { fecha: _buscadorFechaFutura, comidas: [] };
+    const ingTexto = f.ingredientes ? f.ingredientes.map(i => i.nombre + ':' + i.cantidad).join('\n') : '';
+    d.comidas.push({ nombre: f.nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+      kcal: f.kcal, prot: f.prot, ch: f.ch, grasa: f.grasa, ingredientes: ingTexto, mealId });
+    localStorage.setItem(key, JSON.stringify(d));
+    cerrarBuscador();
+    cargarDiarioPorFecha(_buscadorFechaFutura);
+    showToast('⭐ ' + f.nombre + ' · ' + f.kcal + ' kcal');
+    return;
+  }
+
+  // Día actual
+  const ingTexto = f.ingredientes ? f.ingredientes.map(i => i.nombre + ':' + i.cantidad).join('\n') : '';
+  S.comidas.push({ nombre: f.nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+    kcal: f.kcal, prot: f.prot, ch: f.ch, grasa: f.grasa, ingredientes: ingTexto, mealId });
+  updateBars(); saveToday();
+  saveComidaSupabase({ nombre: f.nombre, fecha: TODAY, tipoDia: S.tipoDia,
+    kcal: f.kcal, prot: f.prot, ch: f.ch, grasa: f.grasa, ingredientes: ingTexto });
+  cerrarBuscador();
+  showToast('⭐ ' + f.nombre + ' · ' + f.kcal + ' kcal');
+}
+
+function favBuscadorMenu(id, e) {
+  if (e) e.preventDefault();
+  const favs = loadFavs();
+  const f = favs.find(x => x.id === id);
+  if (!f) return;
+  if (navigator.vibrate) navigator.vibrate(40);
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;">⭐ ${escapeHtml(f.nombre)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${f.kcal} kcal · P${f.prot}g · CH${f.ch}g · G${f.grasa}g</div>
+      <button onclick="favBuscadorUsar(${f.id});this.closest('[data-fav-menu]').parentElement.remove();"
+        style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;cursor:pointer;">
+        ＋ Añadir a ${escapeHtml(_buscadorMealName||'comida')}
+      </button>
+      <button onclick="editarFavorito(${f.id});this.closest('[data-fav-menu]').parentElement.remove();"
+        style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:8px;cursor:pointer;">
+        ✏️ Editar favorito
+      </button>
+      <button onclick="eliminarFavorito(${f.id});this.closest('[data-fav-menu]').parentElement.remove();renderBuscadorInicio();"
+        style="width:100%;padding:12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:12px;font-size:14px;color:var(--red);margin-bottom:12px;cursor:pointer;">
+        🗑️ Eliminar favorito
+      </button>
+      <button onclick="this.closest('[data-fav-menu]').parentElement.remove();"
+        style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  overlay.querySelector('div').setAttribute('data-fav-menu', '');
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // Devuelve los últimos N alimentos individuales únicos usados (con datos por 100g)
