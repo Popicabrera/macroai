@@ -103,6 +103,37 @@ body{
 .view.active{display:flex;}
 .aw{max-width:430px;margin:0 auto;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
 
+/* ══════════════ BOTTOM NAV ══════════════ */
+#bottomNav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:rgba(245,240,232,0.97);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex;align-items:stretch;
+  z-index:200;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+#bottomNav.hidden{display:none;}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:8px 4px 10px;cursor:pointer;
+  transition:opacity 0.15s;-webkit-tap-highlight-color:transparent;
+  border:none;background:none;outline:none;
+}
+.bn-icon{font-size:20px;line-height:1;}
+.bn-label{font-size:9px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);transition:color 0.15s;}
+.bn-item.active .bn-label{color:var(--accent);}
+.bn-item.active .bn-icon{filter:none;}
+.bn-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin-top:1px;opacity:0;transition:opacity 0.15s;}
+.bn-item.active .bn-dot{opacity:1;}
+/* Espacio para que el contenido no quede debajo del nav */
+.has-bottom-nav .scrollable,
+.has-bottom-nav [style*="overflow-y:auto"],
+.has-bottom-nav [style*="overflow-y: auto"]{
+  padding-bottom:72px !important;
+}
+.main-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0;padding-bottom:72px;}
+
 /* HEADER */
 .header{flex-shrink:0;padding:10px 12px 8px;display:flex;justify-content:space-between;align-items:center;
   border-bottom:1px solid var(--border);background:rgba(245,240,232,0.95);backdrop-filter:blur(20px);gap:8px;}
@@ -673,23 +704,10 @@ body{
   <div class="header">
     <div class="logo" onclick="logoTap()">Macro<em>AI</em></div>
     <div class="hbtns">
-      <div class="day-pill">
+      <div class="day-pill" onclick="toggleDayType()" style="cursor:pointer;">
         <div class="pdot" id="pillDot"></div>
         <span id="dayType">Día de entreno</span>
       </div>
-      <div style="position:relative;">
-        <div class="icon-nav" id="menuBtn" onclick="toggleNavMenu(event)">☰</div>
-        <div id="navMenu" style="display:none;position:absolute;top:36px;right:0;background:#f0ebe0;border:1px solid #d8d0bc;border-radius:14px;padding:6px;z-index:500;min-width:175px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
-          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewFavoritos'),50)">⭐ Favoritos</div>
-          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewHistorial'),50)">📅 Historial</div>
-          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>showView('viewMiMenu'),50)">🥗 Mi menú</div>
-          <div class="nav-menu-item" onclick="event.stopPropagation();closeNavMenu();abrirChatIA()">🤖 Asistente IA</div>
-          <div id="navAdminItem" class="nav-menu-item" style="display:none;color:var(--accent);" onclick="event.stopPropagation();closeNavMenu();setTimeout(()=>{showView('viewAdmin');loadAdminUsers();},50)">⚡ Clientes</div>
-          <div style="height:1px;background:#d8d0bc;margin:4px 0;"></div>
-          <div class="nav-menu-item" style="color:var(--muted);" onclick="event.stopPropagation();closeNavMenu();doLogout()">🚪 Cerrar sesión</div>
-        </div>
-      </div>
-      <div class="icon-nav" onclick="showView('viewConfig')" title="Config">⚙️</div>
     </div>
   </div>
 
@@ -718,10 +736,10 @@ body{
   </div>
 
   <!-- DIARIO TIPO MFP -->
-  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0;">
+  <div class="main-scroll-area">
     <div id="mfpDiario"></div>
     <!-- Botón IA flotante -->
-    <div onclick="abrirChatIA()" style="margin:12px 14px 24px;padding:13px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:13px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+    <div onclick="bnNav('chat')" style="margin:12px 14px 24px;padding:13px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:13px;display:flex;align-items:center;gap:10px;cursor:pointer;">
       <span style="font-size:20px;">🤖</span>
       <div>
         <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">Asistente IA</div>
@@ -861,16 +879,35 @@ body{
 <div class="view" id="viewConfig">
 <div class="aw">
   <div class="sub-hdr">
-    <div class="back-btn" onclick="showView('viewMain')">‹</div>
-    <h2>Configuración ⚙️</h2>
+    <div class="back-btn" onclick="bnNav('diario')">‹</div>
+    <h2>Perfil</h2>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
       <div class="icon-nav" id="adminHeaderBtn" onclick="showView('viewAdmin');loadAdminUsers()" title="Panel Admin" style="display:none;background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.3);color:var(--accent);">⚡</div>
-      <div class="icon-nav" onclick="doLogout()" title="Cerrar sesión">🚪</div>
     </div>
   </div>
   <div class="cfg-body">
+    <div id="perfilInfoBox" style="padding:14px;background:var(--s1);border-radius:14px;border:1px solid var(--border);margin-bottom:4px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;" id="perfilNombre">—</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="perfilEmail">—</div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <div id="modoAppBadge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--accent-dim);color:var(--accent);">Modo Macros</div>
+      </div>
+    </div>
+    <div class="cfg2-sec" id="perfilMacrosBox">
+      <div class="cfg2-title" style="font-size:10px;">Macros asignados por tu entrenador</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 14px;">
+        <div style="background:var(--s2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">💪 Entreno</div>
+          <div id="perfilMacrosE" style="font-size:12px;color:var(--text);line-height:1.7;">—</div>
+        </div>
+        <div style="background:var(--s2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">😴 Descanso</div>
+          <div id="perfilMacrosD" style="font-size:12px;color:var(--text);line-height:1.7;">—</div>
+        </div>
+      </div>
+    </div>
     <div class="cfg2-sec">
-      <div class="cfg2-title">Días de entreno · hoy <span id="hoyLabel" style="font-weight:400;text-transform:none;letter-spacing:0;"></span></div>
+      <div class="cfg2-title">Mis días de entreno · <span id="hoyLabel" style="font-weight:400;text-transform:none;letter-spacing:0;"></span></div>
       <div class="cfg2-weekrow" id="weekRow">
         <div class="cfg2-weekbtn" id="wd1" onclick="toggleWeekDay(1)">L</div>
         <div class="cfg2-weekbtn" id="wd2" onclick="toggleWeekDay(2)">M</div>
@@ -891,55 +928,8 @@ body{
         </div>
       </div>
     </div>
-    <div class="cfg2-cols">
-      <div class="cfg2-col">
-        <div class="cfg2-col-hdr entreno-hdr">💪 Entreno</div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl">Calorías</div>
-          <input class="cfg2-inp" id="cfgKcalE" type="number" value="2000">
-          <div class="cfg2-unit">kcal</div>
-        </div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl" style="color:var(--red)">Proteína</div>
-          <input class="cfg2-inp" id="cfgProtE" type="number" value="100">
-          <div class="cfg2-unit">g</div>
-        </div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl" style="color:var(--yellow)">Carbos</div>
-          <input class="cfg2-inp" id="cfgChE" type="number" value="250">
-          <div class="cfg2-unit">g</div>
-        </div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl" style="color:var(--blue)">Grasa</div>
-          <input class="cfg2-inp" id="cfgGrasaE" type="number" value="44">
-          <div class="cfg2-unit">g</div>
-        </div>
-      </div>
-      <div class="cfg2-col">
-        <div class="cfg2-col-hdr descanso-hdr">😴 Descanso</div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl">Calorías</div>
-          <input class="cfg2-inp" id="cfgKcalD" type="number" value="1700">
-          <div class="cfg2-unit">kcal</div>
-        </div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl" style="color:var(--red)">Proteína</div>
-          <input class="cfg2-inp" id="cfgProtD" type="number" value="100">
-          <div class="cfg2-unit">g</div>
-        </div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl" style="color:var(--yellow)">Carbos</div>
-          <input class="cfg2-inp" id="cfgChD" type="number" value="180">
-          <div class="cfg2-unit">g</div>
-        </div>
-        <div class="cfg2-field">
-          <div class="cfg2-field-lbl" style="color:var(--blue)">Grasa</div>
-          <input class="cfg2-inp" id="cfgGrasaD" type="number" value="55">
-          <div class="cfg2-unit">g</div>
-        </div>
-      </div>
-    </div>
-    <button class="save-btn" onclick="saveConfig()">✓ Guardar cambios</button>
+    <button class="save-btn" onclick="guardarDiasEntreno()">✓ Guardar mis días</button>
+    <button class="save-btn" onclick="doLogout()" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);">🚪 Cerrar sesión</button>
   </div>
 </div>
 </div>
@@ -1107,6 +1097,7 @@ function doLogout(){
   SUPA_TOKEN=null;CURRENT_USER=null;
   localStorage.removeItem('macroai_token');
   localStorage.removeItem('macroai_user');
+  hideBottomNav();
   // Supabase logout en background
   try{fetch(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY}});}catch(e){}
   // Resetear estado de la app
@@ -1741,9 +1732,13 @@ function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   closeContextMenu();
-  if(id==='viewConfig')loadCfgUI();
+  // Sincronizar bottom nav
+  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil'};
+  const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
+  document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
+  if(bnMap[id]){const b=document.getElementById('bn-'+bnMap[id]);if(b)b.classList.add('active');}
+  if(id==='viewConfig'){loadCfgUI();cargarPerfilUsuario();}
   if(id==='viewHistorial')renderHistorial();
-
   if(id==='viewFavoritos')renderFavoritos();
   if(id==='viewMiMenu')cargarMiMenu();
 }
@@ -1751,17 +1746,10 @@ function showView(id){
 // ── CONFIG UI ──
 function loadCfgUI(){
   CFG=loadCFG();
-  document.getElementById('cfgKcalE').value=CFG.entreno.kcal;
-  document.getElementById('cfgProtE').value=CFG.entreno.prot;
-  document.getElementById('cfgChE').value=CFG.entreno.ch;
-  document.getElementById('cfgGrasaE').value=CFG.entreno.grasa;
-  document.getElementById('cfgKcalD').value=CFG.descanso.kcal;
-  document.getElementById('cfgProtD').value=CFG.descanso.prot;
-  document.getElementById('cfgChD').value=CFG.descanso.ch;
-  document.getElementById('cfgGrasaD').value=CFG.descanso.grasa;
   setDayType(CFG.tipoDia,false);
   renderWeekDays();
-  document.getElementById('adminHeaderBtn').style.display=CURRENT_USER?.email===ADMIN_EMAIL?'flex':'none';
+  const adminBtn=document.getElementById('adminHeaderBtn');
+  if(adminBtn)adminBtn.style.display=CURRENT_USER?.email===ADMIN_EMAIL?'flex':'none';
 }
 function setDayType(tipo,update=true){
   document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
@@ -3016,8 +3004,14 @@ function borrarConversacion(){
 function initApp(){
   loadToday(); applyMacros(S.tipoDia); updateBars();
   showView('viewMain');
+  showBottomNav();
   const adminItem = document.getElementById('navAdminItem');
   if (adminItem) adminItem.style.display = CURRENT_USER?.email===ADMIN_EMAIL ? 'block' : 'none';
+  const adminBtn = document.getElementById('adminHeaderBtn');
+  if (adminBtn) adminBtn.style.display = CURRENT_USER?.email===ADMIN_EMAIL ? 'flex' : 'none';
+
+  // Cargar perfil desde Supabase (macros del entrenador + modo_app + dias_entreno)
+  cargarPerfilUsuario();
 
   // Renderizar diario MFP
   renderMFPDiario();
@@ -4878,6 +4872,14 @@ async function renderAdminMenuPerfil() {
     <!-- Configuración -->
     <div class="am-section">
       <div class="am-section-hdr">Configuración</div>
+      <div class="am-field" style="flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:4px;">
+        <span class="am-field-label">Modo de la app</span>
+        <div style="display:flex;gap:8px;width:100%;">
+          <div id="amModoMacros" onclick="amSetModo('macros')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='macros'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='macros'?'#fff':'var(--muted)'};">📊 Macros</div>
+          <div id="amModoMenu" onclick="amSetModo('menu')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='menu'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='menu'?'#fff':'var(--muted)'};">🥗 Menú</div>
+        </div>
+        <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'macros'}">
+      </div>
       <div class="am-field">
         <span class="am-field-label">Comidas al día</span>
         <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
@@ -4952,6 +4954,14 @@ Domingo: pollo, patata, zanahoria"></textarea>
   `;
 }
 
+function amSetModo(modo) {
+  document.getElementById('amModoApp').value = modo;
+  const bM = document.getElementById('amModoMacros');
+  const bMe = document.getElementById('amModoMenu');
+  if(bM){ bM.style.background = modo==='macros'?'var(--accent)':'var(--s2)'; bM.style.color = modo==='macros'?'#fff':'var(--muted)'; }
+  if(bMe){ bMe.style.background = modo==='menu'?'var(--accent)':'var(--s2)'; bMe.style.color = modo==='menu'?'#fff':'var(--muted)'; }
+}
+
 async function guardarPerfil() {
   const kcalE = parseInt(document.getElementById('amKcalE').value) || 2200;
   const protE = parseInt(document.getElementById('amProtE').value) || 160;
@@ -4963,6 +4973,7 @@ async function guardarPerfil() {
   const grasaD = parseInt(document.getElementById('amGrasaD').value) || 60;
   const comidas = parseInt(document.getElementById('amComidas').value) || 4;
   const prefs = document.getElementById('amPrefs').value.trim();
+  const modoApp = document.getElementById('amModoApp')?.value || 'macros';
 
   try {
     await fetch(WORKER_URL + '/save-profile', {
@@ -4972,7 +4983,7 @@ async function guardarPerfil() {
         cliente_email: _adminMenuEmail,
         kcal_objetivo: kcalE, p_objetivo: protE, hc_objetivo: hcE, g_objetivo: grasaE,
         kcal_descanso: kcalD, p_descanso: protD, hc_descanso: hcD, g_descanso: grasaD,
-        comidas_dia: comidas, preferencias: prefs
+        comidas_dia: comidas, preferencias: prefs, modo_app: modoApp
       })
     });
     showToast('✅ Perfil guardado');
@@ -5090,5 +5101,132 @@ async function verMenuGenerado() {
   100% { top: 4px; opacity: 1; }
 }
 </style>
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav id="bottomNav" class="hidden">
+  <button class="bn-item active" id="bn-diario" onclick="bnNav('diario')">
+    <span class="bn-icon">📅</span>
+    <span class="bn-label">Diario</span>
+    <span class="bn-dot"></span>
+  </button>
+  <button class="bn-item" id="bn-menu" onclick="bnNav('menu')">
+    <span class="bn-icon">🥗</span>
+    <span class="bn-label">Menú</span>
+    <span class="bn-dot"></span>
+  </button>
+  <button class="bn-item" id="bn-chat" onclick="bnNav('chat')">
+    <span class="bn-icon">🤖</span>
+    <span class="bn-label">Asistente</span>
+    <span class="bn-dot"></span>
+  </button>
+  <button class="bn-item" id="bn-favoritos" onclick="bnNav('favoritos')">
+    <span class="bn-icon">⭐</span>
+    <span class="bn-label">Favoritos</span>
+    <span class="bn-dot"></span>
+  </button>
+  <button class="bn-item" id="bn-perfil" onclick="bnNav('perfil')">
+    <span class="bn-icon">👤</span>
+    <span class="bn-label">Perfil</span>
+    <span class="bn-dot"></span>
+  </button>
+</nav>
+
+<script>
+// ══ BOTTOM NAV LOGIC ══
+let _bnCurrent = 'diario';
+
+function bnNav(tab) {
+  _bnCurrent = tab;
+  // Actualizar estado visual
+  document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
+  const activeBtn = document.getElementById('bn-' + tab);
+  if (activeBtn) activeBtn.classList.add('active');
+  // Navegar
+  switch(tab) {
+    case 'diario':    showView('viewMain'); break;
+    case 'menu':      showView('viewMiMenu'); break;
+    case 'chat':      abrirChatIA(); break;
+    case 'favoritos': showView('viewFavoritos'); break;
+    case 'perfil':    showView('viewConfig'); break;
+  }
+}
+
+function showBottomNav() {
+  document.getElementById('bottomNav').classList.remove('hidden');
+}
+function hideBottomNav() {
+  document.getElementById('bottomNav').classList.add('hidden');
+}
+
+// Sincronizar tab activo cuando se navega por otras vías
+const _origShowView = typeof showView === 'function' ? showView : null;
+
+// ══ PERFIL: cargar datos desde Supabase ══
+let _MODO_APP = 'macros'; // default
+
+async function cargarPerfilUsuario() {
+  if (!CURRENT_USER) return;
+  try {
+    const res = await supaFetch('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email) + '&limit=1');
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows.length) {
+      const p = rows[0];
+      _MODO_APP = p.modo_app || 'macros';
+      // Actualizar badge modo
+      const badge = document.getElementById('modoAppBadge');
+      if (badge) {
+        badge.textContent = _MODO_APP === 'menu' ? 'Modo Menú' : 'Modo Macros';
+        badge.style.background = _MODO_APP === 'menu' ? 'rgba(63,240,192,0.12)' : 'var(--accent-dim)';
+        badge.style.color = _MODO_APP === 'menu' ? 'var(--teal)' : 'var(--accent)';
+      }
+      // Mostrar macros asignados (solo lectura)
+      const mE = document.getElementById('perfilMacrosE');
+      const mD = document.getElementById('perfilMacrosD');
+      if (mE) mE.innerHTML = `${p.kcal_objetivo||'—'} kcal<br>P ${p.p_objetivo||'—'}g · HC ${p.hc_objetivo||'—'}g · G ${p.g_objetivo||'—'}g`;
+      if (mD) mD.innerHTML = `${p.kcal_descanso||'—'} kcal<br>P ${p.p_descanso||'—'}g · HC ${p.hc_descanso||'—'}g · G ${p.g_descanso||'—'}g`;
+      // Aplicar macros al estado si los tiene el entrenador asignados
+      if (p.kcal_objetivo) {
+        CFG.entreno = {kcal: p.kcal_objetivo, prot: p.p_objetivo||100, ch: p.hc_objetivo||250, grasa: p.g_objetivo||44};
+      }
+      if (p.kcal_descanso) {
+        CFG.descanso = {kcal: p.kcal_descanso, prot: p.p_descanso||100, ch: p.hc_descanso||180, grasa: p.g_descanso||55};
+      }
+      // Cargar días de entreno desde Supabase si los tiene
+      if (p.dias_entreno && Array.isArray(p.dias_entreno)) {
+        WEEK_DAYS = p.dias_entreno;
+        saveWeekDays(WEEK_DAYS);
+      }
+      saveCFG(CFG);
+      autoDetectDayType();
+    }
+  } catch(e) { console.warn('cargarPerfilUsuario:', e); }
+  // Rellenar nombre/email en perfil
+  const pN = document.getElementById('perfilNombre');
+  const pE = document.getElementById('perfilEmail');
+  if (pN) pN.textContent = CURRENT_USER.nombre || CURRENT_USER.email?.split('@')[0] || '—';
+  if (pE) pE.textContent = CURRENT_USER.email || '—';
+}
+
+// Guardar días de entreno del cliente en Supabase
+async function guardarDiasEntreno() {
+  if (!CURRENT_USER) return;
+  saveWeekDays(WEEK_DAYS);
+  autoDetectDayType();
+  try {
+    await supaFetch('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email), {
+      method: 'PATCH',
+      headers: {'Prefer': 'return=minimal', 'Content-Type': 'application/json'},
+      body: JSON.stringify({dias_entreno: WEEK_DAYS})
+    });
+    showToast('✅ Días guardados');
+  } catch(e) {
+    showToast('✅ Días guardados localmente');
+  }
+}
+
+// ══ ADMIN: toggle Modo Menú / Macros ══
+// Se llama desde el panel admin al guardar perfil — añade modo_app al payload
+const _origGuardarPerfil = typeof guardarPerfil === 'function' ? guardarPerfil : null;
+</script>
 </body>
 </html>
