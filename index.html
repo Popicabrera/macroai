@@ -3069,14 +3069,16 @@ function renderMFPDiario() {
       const gramMatch = item.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
       const gramosActuales = gramMatch ? gramMatch[1] : '';
       itemsHtml += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
-          <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})" oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)" ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchEnd()" oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)" ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchEnd()">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);"
+             ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchEnd()"
+             oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
+          <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
-            <div onclick="mfpEliminarItem(${globalIdx})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);">✕</div>
+          </div>
         </div>`;
     });
 
