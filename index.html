@@ -3116,7 +3116,7 @@ function renderMFPDiario() {
       </div>`;
     container.appendChild(block);
 
-    // Abrir si tiene items
+    // Abrir si tiene items — se puede plegar pulsando el header
     if (items.length) {
       const body = document.getElementById(`body-${meal.id}`);
       const chev = document.getElementById(`chev-${meal.id}`);
