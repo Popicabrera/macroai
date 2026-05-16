@@ -3127,7 +3127,10 @@ function renderMFPDiario() {
     });
 
     block.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;" onclick="mfpToggleMeal('body-${meal.id}','chev-${meal.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;"
+           onclick="mfpToggleMeal('body-${meal.id}','chev-${meal.id}')"
+           ontouchstart="mfpMealTouchStart('${meal.id}',event)" ontouchend="mfpMealTouchEnd()" ontouchmove="mfpMealTouchEnd()"
+           oncontextmenu="event.preventDefault();${items.length ? `mfpMealMenu('${meal.id}','${meal.name}',${totalKcal},${totalProt},${totalCh},${totalGrasa},event)` : ''}">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
@@ -3166,6 +3169,89 @@ function mfpToggleMeal(bodyId, chevId) {
   const open = body.style.display === 'block';
   body.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ── LONG-PRESS EN HEADER DE COMIDA → guardar como favorito ──
+let _mfpMealTimer = null;
+function mfpMealTouchStart(mealId, e) {
+  _mfpMealTimer = setTimeout(() => {
+    const items = S.comidas.filter(c => c.mealId === mealId);
+    if (!items.length) return;
+    const meal = MFP_MEALS.find(m => m.id === mealId);
+    const totalKcal  = Math.round(items.reduce((a,c) => a+(c.kcal||0), 0));
+    const totalProt  = Math.round(items.reduce((a,c) => a+(c.prot||0), 0)*10)/10;
+    const totalCh    = Math.round(items.reduce((a,c) => a+(c.ch||0), 0)*10)/10;
+    const totalGrasa = Math.round(items.reduce((a,c) => a+(c.grasa||0), 0)*10)/10;
+    if (navigator.vibrate) navigator.vibrate(40);
+    mfpMealMenu(mealId, meal ? meal.name : mealId, totalKcal, totalProt, totalCh, totalGrasa);
+  }, 600);
+}
+function mfpMealTouchEnd() { clearTimeout(_mfpMealTimer); }
+
+function mfpMealMenu(mealId, mealName, totalKcal, totalProt, totalCh, totalGrasa) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${mealName}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${totalKcal} kcal · P${totalProt}g · CH${totalCh}g · G${totalGrasa}g</div>
+      <button onclick="this.closest('[data-meal-menu]').parentElement.remove();mfpGuardarMealFavorito('${mealId}','${mealName}');"
+        style="width:100%;padding:13px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;">
+        ⭐ Guardar como favorito
+      </button>
+      <button onclick="this.closest('[data-meal-menu]').parentElement.remove();"
+        style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function mfpGuardarMealFavorito(mealId, mealName) {
+  const items = S.comidas.filter(c => c.mealId === mealId);
+  if (!items.length) return;
+  const totalKcal  = Math.round(items.reduce((a,c) => a+(c.kcal||0), 0));
+  const totalProt  = Math.round(items.reduce((a,c) => a+(c.prot||0), 0)*10)/10;
+  const totalCh    = Math.round(items.reduce((a,c) => a+(c.ch||0), 0)*10)/10;
+  const totalGrasa = Math.round(items.reduce((a,c) => a+(c.grasa||0), 0)*10)/10;
+  // Ingredientes: un item por línea "Nombre:Xg:"
+  const ingredientes = items.map(item => {
+    const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
+    return { nombre: gm ? gm[1].trim() : item.nombre, cantidad: gm ? gm[2]+'g' : '' };
+  });
+  const ingRaw = ingredientes.map(i => i.nombre+':'+i.cantidad+':').join('\n');
+
+  // Modal para poner nombre personalizado
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div data-fav-nombre style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">⭐ Guardar favorito</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${totalKcal} kcal · P${totalProt}g · CH${totalCh}g · G${totalGrasa}g</div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;">Nombre del favorito</div>
+      <input id="favNombreInput" type="text" value="${mealName}"
+        style="width:100%;background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6;">${ingredientes.map(i=>i.nombre+(i.cantidad?' ('+i.cantidad+')':'')).join(' · ')}</div>
+      <div style="display:flex;gap:8px;">
+        <button id="favNombreCancel" style="flex:1;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+        <button id="favNombreGuardar" style="flex:2;padding:13px;background:rgba(255,211,61,0.2);border:1px solid rgba(255,211,61,0.4);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;cursor:pointer;">⭐ Guardar</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  setTimeout(() => {
+    const inp = document.getElementById('favNombreInput');
+    if (inp) { inp.focus(); inp.select(); }
+    document.getElementById('favNombreCancel').onclick = () => overlay.remove();
+    const doGuardar = () => {
+      const nombre = (document.getElementById('favNombreInput').value.trim()) || mealName;
+      guardarFavorito(nombre, '', { kcal:totalKcal, prot:totalProt, ch:totalCh, grasa:totalGrasa }, ingRaw);
+      overlay.remove();
+      showToast('⭐ ' + nombre + ' guardado en favoritos');
+    };
+    document.getElementById('favNombreGuardar').onclick = doGuardar;
+    document.getElementById('favNombreInput').addEventListener('keydown', e => { if (e.key === 'Enter') doGuardar(); });
+  }, 100);
 }
 
 function mfpTouchStart(idx,e){window._mfpTimer=setTimeout(()=>mfpMenuItem(idx,e),600);} function mfpTouchEnd(){clearTimeout(window._mfpTimer);} function mfpMenuItem(idx,e){   if(e)e.preventDefault();   const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];   const mealIds=['desayuno','almuerzo','comida','merienda','cena'];   const overlay=document.createElement('div');   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';   let moverOpts=mealIds.map((id,i)=>`<button onclick="mfpMoverItem(${idx},'${id}');this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');   overlay.innerHTML=`<div data-mfp-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">     <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${S.comidas[idx]?.nombre||'Alimento'}</div>     <button onclick="mfpEliminarItem(${idx});this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>     ${moverOpts}     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:4px;">Cancelar</button>   </div>`;   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});   document.body.appendChild(overlay); } function mfpMoverItem(idx,newMealId){   if(!S.comidas[idx])return;   S.comidas[idx].mealId=newMealId;   updateBars();saveToday();renderMFPDiario();showToast('↩ Movido a '+newMealId); } function mfpEliminarItem(globalIdx) {
