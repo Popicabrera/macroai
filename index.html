@@ -3440,11 +3440,11 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
             hc_100: r.hc_100 || 0,
             g_100: r.g_100 || 0,
           });
-          // Guardar en Supabase para la próxima vez
+          // Guardar en Supabase para la próxima vez (ignorar si ya existe)
           try {
             await supaFetch('/rest/v1/alimentos_macroai', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+              headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
               body: JSON.stringify({
                 nombre: r.nombre,
                 kcal_100: r.kcal_100 || 0,
@@ -3595,9 +3595,12 @@ function fsmRegistrar() {
   updateBars(); saveToday();
   saveComidaSupabase({ nombre, fecha:TODAY, tipoDia:S.tipoDia, kcal, prot, ch:hc, grasa, ingredientes:ingTexto });
 
-  if (p.fuente === 'off') {
-    supaFetch('/rest/v1/alimentos_macroai', { method:'POST', headers:{'Prefer':'return=minimal'},
-      body: JSON.stringify({ nombre:p.nombre, kcal_100:p.kcal_100, p_100:p.p_100, hc_100:p.hc_100, g_100:p.g_100, categoria:'OTROS', fuente:'openfoodfacts' })
+  // Guardar en BD compartida si viene de fuente externa (OFF, escáner, visión IA)
+  if (p.fuente === 'off' || p.fuente === 'openfoodfacts' || p.fuente === 'vision' || p.fuente === 'barcode') {
+    supaFetch('/rest/v1/alimentos_macroai', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+      body: JSON.stringify({ nombre:p.nombre, kcal_100:p.kcal_100, p_100:p.p_100, hc_100:p.hc_100, g_100:p.g_100, categoria:'OTROS', fuente: p.fuente || 'openfoodfacts' })
     }).catch(()=>{});
   }
 
