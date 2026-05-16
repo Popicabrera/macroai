@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="MacroAI">
 <link rel="apple-touch-icon" id="appleIcon">
 <link rel="manifest" id="manifestLink">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <script>
 (function(){
   var cdns=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js','https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'];
@@ -23,8 +23,8 @@
 <style>
 :root{
   --bg:#f5f0e8;--s1:#ede8df;--s2:#e4ddd0;--s3:#d8d0c0;
-  --border:rgba(0,0,0,0.10);--accent:#5a8a00;
-  --accent-dim:rgba(90,138,0,0.10);--accent-glow:rgba(90,138,0,0.20);
+  --border:rgba(0,0,0,0.10);--accent:#c0392b;
+  --accent-dim:rgba(192,57,43,0.10);--accent-glow:rgba(192,57,43,0.18);
   --red:#ff6b6b;--yellow:#ffd93d;--blue:#6bb8f6;--teal:#3ff0c0;
   --text:#1a1a2e;--muted:#7a7a8a;--muted2:#b0a898;
 }
@@ -33,13 +33,13 @@
 /* ── FIX SCROLL: usar dvh con fallback, no overflow:hidden en html ── */
 html{height:100%;height:-webkit-fill-available;}
 body{
-  background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;
+  background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
   height:100%;height:-webkit-fill-available;
   overflow:hidden;
   position:fixed;width:100%;
 }
 .ambient{position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 70% 50% at 10% 0%,rgba(90,138,0,0.05) 0%,transparent 60%),
+  background:radial-gradient(ellipse 70% 50% at 10% 0%,rgba(192,57,43,0.05) 0%,transparent 60%),
     radial-gradient(ellipse 50% 50% at 95% 95%,rgba(0,120,100,0.04) 0%,transparent 60%);}
 
 /* ══════════════ AUTH SCREENS ══════════════ */
@@ -51,19 +51,19 @@ body{
 .auth-logo{text-align:center;margin-bottom:8px;}
 .auth-logo-icon{width:72px;height:72px;border-radius:20px;background:var(--accent);
   display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
-  font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#080810;}
-.auth-logo-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;}
+  font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:#080810;}
+.auth-logo-title{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;}
 .auth-logo-title em{color:var(--accent);font-style:normal;}
 .auth-logo-sub{font-size:13px;color:var(--muted);margin-top:4px;letter-spacing:1px;text-transform:uppercase;}
 .auth-card{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:16px;}
-.auth-card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:2px;}
+.auth-card-title{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:2px;}
 .auth-field{display:flex;flex-direction:column;gap:6px;}
 .auth-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);font-weight:600;}
 .auth-input-wrap{position:relative;}
 .auth-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:12px;
-  padding:13px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;
+  padding:13px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;outline:none;
   transition:border-color 0.2s;}
-.auth-input:focus{border-color:rgba(90,138,0,0.5);}
+.auth-input:focus{border-color:rgba(192,57,43,0.5);}
 .auth-input::placeholder{color:var(--muted);}
 .auth-input:-webkit-autofill,
 .auth-input:-webkit-autofill:hover,
@@ -76,7 +76,7 @@ body{
 .pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);
   background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;}
 .auth-btn{width:100%;padding:15px;background:var(--accent);border:none;border-radius:13px;
-  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;
   transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .auth-btn:active{transform:scale(0.98);opacity:0.9;}
 .auth-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
@@ -88,7 +88,7 @@ body{
 .auth-link a{color:var(--accent);text-decoration:none;font-weight:600;}
 .auth-msg{padding:11px 14px;border-radius:10px;font-size:13px;line-height:1.5;display:none;}
 .auth-msg.error{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);display:block;}
-.auth-msg.success{background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.2);color:var(--accent);display:block;}
+.auth-msg.success{background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);color:var(--accent);display:block;}
 .auth-msg.info{background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);color:var(--blue);display:block;}
 .auth-spinner{width:18px;height:18px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;
   border-radius:50%;animation:spin 0.7s linear infinite;}
@@ -106,7 +106,7 @@ body{
 /* HEADER */
 .header{flex-shrink:0;padding:10px 12px 8px;display:flex;justify-content:space-between;align-items:center;
   border-bottom:1px solid var(--border);background:rgba(245,240,232,0.95);backdrop-filter:blur(20px);gap:8px;}
-.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0;cursor:pointer;}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0;cursor:pointer;}
 .logo em{color:var(--accent);font-style:normal;}
 .hbtns{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 .day-pill{display:flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--border);
@@ -137,7 +137,7 @@ body{
 }
 .mp-kcal-val{display:flex;align-items:baseline;gap:3px;}
 .mp-kcal-big{
-  font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+  font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;
   color:var(--accent);line-height:1;
   transition:all 0.4s ease;
 }
@@ -160,7 +160,7 @@ body{
 }
 .mp-macro-nums{display:flex;flex-direction:column;gap:1px;}
 .mp-macro-rest{
-  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;line-height:1;
+  font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;line-height:1;
   transition:all 0.4s ease;
 }
 .mp-macro-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
@@ -184,14 +184,14 @@ body{
 .msg.user{flex-direction:row-reverse;}
 .av{width:28px;height:28px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
   font-size:12px;align-self:flex-end;background:var(--s2);border:1px solid var(--border);}
-.msg.ai .av{background:var(--accent-dim);border-color:rgba(212,240,74,0.25);
-  font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);}
+.msg.ai .av{background:var(--accent-dim);border-color:rgba(192,57,43,0.25);
+  font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:800;color:var(--accent);}
 .bubble{max-width:82%;background:var(--s2);border:1px solid var(--border);
   border-radius:16px;padding:10px 13px;font-size:14px;line-height:1.6;
   user-select:none;-webkit-user-select:none;
   cursor:pointer;position:relative;}
-.msg.user .bubble{background:linear-gradient(135deg,rgba(212,240,74,0.15),rgba(212,240,74,0.07));
-  border-color:rgba(212,240,74,0.25);border-bottom-right-radius:4px;}
+.msg.user .bubble{background:linear-gradient(135deg,rgba(192,57,43,0.15),rgba(192,57,43,0.07));
+  border-color:rgba(192,57,43,0.25);border-bottom-right-radius:4px;}
 .msg.ai .bubble{border-bottom-left-radius:4px;}
 .bubble.fav-marked{border-color:rgba(255,211,61,0.5);background:rgba(255,211,61,0.05);}
 .bubble.fav-marked::after{content:'⭐';position:absolute;top:6px;right:8px;font-size:11px;}
@@ -219,21 +219,21 @@ body{
 
 /* QUICK REPLIES */
 .quick-replies{display:flex;flex-wrap:wrap;gap:6px;padding:2px 12px 4px;animation:fadeUp 0.3s ease both;}
-.qr{background:var(--s2);border:1px solid rgba(212,240,74,0.3);border-radius:20px;padding:7px 14px;
+.qr{background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:20px;padding:7px 14px;
   font-size:13px;color:var(--text);cursor:pointer;transition:all 0.2s;white-space:nowrap;}
 .qr:active{transform:scale(0.96);background:var(--accent-dim);}
 
 /* CARDS */
 .plan-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:6px;}
-.plan-hdr{padding:8px 12px;background:rgba(212,240,74,0.07);border-bottom:1px solid var(--border);
-  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.plan-hdr{padding:8px 12px;background:rgba(192,57,43,0.07);border-bottom:1px solid var(--border);
+  font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 .plan-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;}
 .plan-item:last-child{border-bottom:none;}
 .pi-l{display:flex;flex-direction:column;gap:2px;}
 .pi-name{font-weight:500;}
 .pi-note{font-size:11px;color:var(--muted);}
 .pi-r{text-align:right;}
-.pi-g{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--accent);}
+.pi-g{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--accent);}
 .pi-k{font-size:10px;color:var(--muted);}
 .plan-tot{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
   background:rgba(255,255,255,0.02);border-top:1px solid var(--border);}
@@ -246,11 +246,11 @@ body{
 .dp-l{display:flex;align-items:center;gap:8px;}
 .dp-em{font-size:20px;}
 .dp-name{font-weight:500;}
-.dp-k{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);}
+.dp-k{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);}
 .dp-m{font-size:11px;color:var(--muted);text-align:right;margin-top:1px;}
 .alert-card{border-radius:10px;padding:9px 12px;margin-top:6px;font-size:13px;display:flex;gap:8px;align-items:flex-start;line-height:1.5;}
 .alert-card.warn{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);}
-.alert-card.ok{background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);}
+.alert-card.ok{background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);}
 
 /* TYPING */
 .typing{display:flex;gap:4px;padding:3px 0;align-items:center;}
@@ -262,8 +262,8 @@ body{
 .input-area{flex-shrink:0;padding:8px 12px 16px;background:rgba(245,240,232,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);position:relative;}
 .input-wrap{background:var(--s2);border:1px solid var(--border);border-radius:22px;padding:8px 8px 8px 6px;
   display:flex;align-items:flex-end;gap:4px;transition:border-color 0.3s;}
-.input-wrap:focus-within{border-color:rgba(212,240,74,0.35);}
-.input-field{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;
+.input-wrap:focus-within{border-color:rgba(192,57,43,0.35);}
+.input-field{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;
   font-size:15px;line-height:1.4;resize:none;max-height:90px;min-height:22px;padding:4px 4px;}
 .input-field::placeholder{color:var(--muted);}
 .ibtns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
@@ -285,7 +285,7 @@ body{
 .confirm-bar{display:none;gap:8px;margin-top:8px;}
 .confirm-bar.visible{display:flex;}
 .confirm-btn{flex:1;padding:11px;background:var(--accent);border:none;border-radius:12px;
-  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;}
 .confirm-btn:active{transform:scale(0.97);}
 .cancel-voice-btn{padding:11px 16px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
@@ -294,7 +294,7 @@ body{
 /* SUB-HEADER */
 .sub-hdr{flex-shrink:0;padding:13px 16px;display:flex;align-items:center;gap:12px;
   border-bottom:1px solid var(--border);background:rgba(245,240,232,0.95);backdrop-filter:blur(20px);}
-.sub-hdr h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+.sub-hdr h2{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;}
 .back-btn{width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;line-height:1;color:var(--text);}
 .scrollable{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0;}
@@ -302,35 +302,35 @@ body{
 /* CONFIG */
 .cfg-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0;}
 .cfg2-sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
-.cfg2-title{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);
-  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.cfg2-title{padding:10px 14px;background:rgba(192,57,43,0.06);border-bottom:1px solid var(--border);
+  font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 .cfg2-daytoggle{display:flex;gap:10px;padding:12px 14px;}
 .cfg2-weekrow{display:flex;gap:5px;padding:8px 14px 10px;justify-content:space-between;}
 .cfg2-weekbtn{flex:1;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--s3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all 0.2s;}
-.cfg2-weekbtn.active{background:var(--accent-dim);border-color:rgba(90,138,0,0.4);color:var(--accent);}
+.cfg2-weekbtn.active{background:var(--accent-dim);border-color:rgba(192,57,43,0.4);color:var(--accent);}
 .cfg2-weekbtn.hoy{box-shadow:0 0 0 2px var(--accent);}
 .cfg2-daybtn{flex:1;padding:12px 8px;border-radius:11px;border:1px solid var(--border);background:var(--s3);
   display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all 0.2s;}
-.cfg2-daybtn.active{background:var(--accent-dim);border-color:rgba(212,240,74,0.4);}
+.cfg2-daybtn.active{background:var(--accent-dim);border-color:rgba(192,57,43,0.4);}
 .cfg2-dayicon{font-size:22px;}
 .cfg2-daylbl{font-size:13px;font-weight:600;color:var(--muted);}
 .cfg2-daybtn.active .cfg2-daylbl{color:var(--accent);}
 .cfg2-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .cfg2-col{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .cfg2-col-hdr{padding:9px 12px;border-bottom:1px solid var(--border);
-  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-align:center;}
-.entreno-hdr{background:rgba(212,240,74,0.07);color:var(--accent);}
+  font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;text-align:center;}
+.entreno-hdr{background:rgba(192,57,43,0.07);color:var(--accent);}
 .descanso-hdr{background:rgba(107,184,246,0.07);color:var(--blue);}
 .cfg2-field{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;}
 .cfg2-field:last-child{border-bottom:none;}
 .cfg2-field-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:600;}
 .cfg2-inp{background:var(--s3);border:1px solid var(--border);border-radius:7px;
-  padding:5px 8px;width:100%;text-align:right;color:var(--text);font-family:'Syne',sans-serif;
+  padding:5px 8px;width:100%;text-align:right;color:var(--text);font-family:'Space Grotesk',sans-serif;
   font-size:16px;font-weight:700;outline:none;}
-.cfg2-inp:focus{border-color:rgba(212,240,74,0.4);}
+.cfg2-inp:focus{border-color:rgba(192,57,43,0.4);}
 .cfg2-unit{font-size:10px;color:var(--muted);text-align:right;}
 .save-btn{margin:0 14px 20px;padding:15px;background:var(--accent);border:none;border-radius:13px;
-  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:calc(100% - 28px);}
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:calc(100% - 28px);}
 .cfg-logout-row{padding:14px;border-top:1px solid var(--border);margin-top:4px;}
 .cfg-user-info{font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;}
 .cfg-user-info strong{color:var(--text);}
@@ -341,19 +341,19 @@ body{
   background:var(--s3);border-radius:8px;}
 .hcomida-nombre{font-size:13px;font-weight:500;}
 .hcomida-macros{font-size:11px;color:var(--muted);}
-.hist-repetir-btn{margin-top:4px;padding:9px;background:var(--accent-dim);border:1px solid rgba(212,240,74,0.3);
-  border-radius:9px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
+.hist-repetir-btn{margin-top:4px;padding:9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);
+  border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
   cursor:pointer;text-align:center;}
 .hist-empty .big{font-size:44px;margin-bottom:14px;}
 .hist-day{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .hist-dh{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
-.hist-date{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.hist-date{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;}
 .hist-tipo{font-size:10px;padding:3px 9px;border-radius:10px;}
-.hist-tipo.entreno{background:rgba(212,240,74,0.1);color:var(--accent);}
+.hist-tipo.entreno{background:rgba(192,57,43,0.1);color:var(--accent);}
 .hist-tipo.descanso{background:rgba(107,184,246,0.1);color:var(--blue);}
 .hist-macros{display:flex;padding:10px 14px 4px;}
 .hm{flex:1;text-align:center;}
-.hm-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.hm-val{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;}
 .hm-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
 .hist-bars{padding:4px 14px 12px;display:flex;flex-direction:column;gap:5px;}
 .hbr{display:flex;align-items:center;gap:8px;font-size:11px;}
@@ -363,25 +363,25 @@ body{
 .hbr-pct{width:32px;text-align:right;color:var(--muted);}
 
 /* DESPENSA */
-.desp-hero{background:linear-gradient(135deg,rgba(212,240,74,0.08),rgba(63,240,192,0.05));
-  border:1px solid rgba(212,240,74,0.15);border-radius:14px;padding:16px;text-align:center;}
+.desp-hero{background:linear-gradient(135deg,rgba(192,57,43,0.08),rgba(63,240,192,0.05));
+  border:1px solid rgba(192,57,43,0.15);border-radius:14px;padding:16px;text-align:center;}
 .desp-hero-icon{font-size:36px;margin-bottom:8px;}
-.desp-hero-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px;}
+.desp-hero-title{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px;}
 .desp-hero-sub{font-size:13px;color:var(--muted);line-height:1.5;}
 .desp-actions{display:flex;gap:8px;}
 .desp-btn{flex:1;padding:12px 8px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
   display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:all 0.2s;}
-.desp-btn:active{background:var(--accent-dim);border-color:rgba(212,240,74,0.3);}
+.desp-btn:active{background:var(--accent-dim);border-color:rgba(192,57,43,0.3);}
 .desp-btn-icon{font-size:22px;}
 .desp-btn-lbl{font-size:12px;color:var(--muted);font-weight:500;}
 .desp-input-wrap{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .desp-input-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
-.desp-input-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;}
+.desp-input-title{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;}
 .desp-clear{font-size:11px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:6px;border:1px solid var(--border);}
 .desp-textarea{width:100%;background:none;border:none;outline:none;padding:12px 14px;color:var(--text);
-  font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;resize:none;min-height:80px;}
+  font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;resize:none;min-height:80px;}
 .desp-save{width:100%;padding:13px;background:var(--s3);border:none;border-top:1px solid var(--border);
-  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;transition:all 0.2s;}
+  font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;transition:all 0.2s;}
 .desp-save:hover{background:var(--accent-dim);}
 .desp-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;}
 .desp-chip{background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:5px 11px;
@@ -390,21 +390,21 @@ body{
 .desp-chip-x:hover{color:var(--red);}
 .desp-empty{padding:20px 14px;text-align:center;color:var(--muted);font-size:13px;}
 .use-desp-btn{padding:13px 16px;background:linear-gradient(135deg,var(--accent),#a8d000);border:none;border-radius:12px;
-  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;}
 
 /* FAVORITOS */
 .fav-card{background:var(--s1);border:1px solid rgba(255,211,61,0.25);border-radius:14px;overflow:hidden;}
 .fav-hdr-row{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
-.fav-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+.fav-name{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;}
 .fav-date{font-size:11px;color:var(--muted);}
 .fav-macros{display:flex;padding:10px 14px;gap:12px;}
 .fav-m{flex:1;text-align:center;}
-.fav-m-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.fav-m-val{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;}
 .fav-m-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
 .fav-actions{display:flex;gap:8px;padding:0 14px 12px;}
-.fav-use-btn{flex:1;padding:9px;background:var(--accent-dim);border:1px solid rgba(212,240,74,0.3);
-  border-radius:9px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
+.fav-use-btn{flex:1;padding:9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);
+  border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
   cursor:pointer;text-align:center;}
 .fav-del-btn{padding:9px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);
   border-radius:9px;font-size:14px;cursor:pointer;}
@@ -416,10 +416,10 @@ body{
 .meal-hdr:active{background:var(--s2);}
 .meal-hdr-left{display:flex;align-items:center;gap:10px;}
 .meal-em{font-size:18px;flex-shrink:0;}
-.meal-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.meal-name{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;}
 .meal-sub{font-size:10px;color:var(--muted);margin-top:2px;}
 .meal-hdr-right{display:flex;align-items:center;gap:8px;}
-.meal-kcal-badge{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent);}
+.meal-kcal-badge{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);}
 .meal-kcal-badge.empty{color:var(--muted);}
 .meal-chevron{font-size:11px;color:var(--muted);transition:transform 0.22s;display:inline-block;}
 .meal-chevron.open{transform:rotate(180deg);}
@@ -430,19 +430,19 @@ body{
 .food-name-txt{font-size:13px;font-weight:500;}
 .food-detail-txt{font-size:10px;color:var(--muted);margin-top:1px;}
 .food-right-col{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.food-kcal-txt{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;text-align:right;}
+.food-kcal-txt{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;text-align:right;}
 .food-macro-txt{font-size:9px;color:var(--muted);text-align:right;margin-top:1px;}
 .food-del-btn{width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);flex-shrink:0;}
 .meal-add-row{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 44px;}
-.meal-add-input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;}
+.meal-add-input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);outline:none;}
 .meal-add-input::placeholder{color:var(--muted);}
-.meal-add-input:focus{border-color:rgba(212,240,74,0.35);}
-.meal-add-btn{width:34px;height:34px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#080810;cursor:pointer;flex-shrink:0;border:none;}
+.meal-add-input:focus{border-color:rgba(192,57,43,0.35);}
+.meal-add-btn{width:34px;height:34px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;border:none;}
 .meal-ia-btn{padding:7px 14px 10px 44px;font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px;}
 .meal-calc-btn{
   width:calc(100% - 28px);margin:6px 14px 2px;
   padding:11px;background:var(--accent);border:none;border-radius:11px;
-  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#080810;
   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
   transition:opacity 0.2s;
 }
@@ -452,17 +452,17 @@ body{
 /* ── QUICK ADD MODAL ── */
 .qam-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;}
 .qam-overlay.open{display:block;}
-.qam-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--s1);border-top:1px solid rgba(212,240,74,0.25);border-radius:20px 20px 0 0;padding:16px 16px 32px;z-index:801;animation:sheetUp 0.22s ease;}
+.qam-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--s1);border-top:1px solid rgba(192,57,43,0.25);border-radius:20px 20px 0 0;padding:16px 16px 32px;z-index:801;animation:sheetUp 0.22s ease;}
 @keyframes sheetUp{from{transform:translateX(-50%) translateY(100%);}to{transform:translateX(-50%) translateY(0);}}
 .qam-handle{width:36px;height:4px;background:var(--muted2);border-radius:4px;margin:0 auto 14px;}
-.qam-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;}
-.qam-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;margin-bottom:8px;}
-.qam-input:focus{border-color:rgba(212,240,74,0.35);}
+.qam-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;}
+.qam-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);outline:none;margin-bottom:8px;}
+.qam-input:focus{border-color:rgba(192,57,43,0.35);}
 .qam-hint{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
 .qam-hint strong{color:var(--text);}
 .qam-btns{display:flex;gap:8px;}
 .qam-cancel{flex:1;padding:11px;background:var(--s3);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;text-align:center;}
-.qam-confirm{flex:2;padding:11px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.qam-confirm{flex:2;padding:11px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
 .qam-confirm:disabled{opacity:0.5;cursor:not-allowed;}
 .qam-result{margin-top:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:12px;line-height:1.6;display:none;}
 
@@ -470,11 +470,11 @@ body{
 .ncm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;align-items:center;justify-content:center;}
 .ncm-overlay.open{display:flex;}
 .ncm-box{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:20px;width:280px;max-width:90vw;}
-.ncm-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px;text-align:center;}
+.ncm-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px;text-align:center;}
 .ncm-opts{display:flex;gap:8px;justify-content:center;margin-bottom:16px;}
-.ncm-opt{width:44px;height:44px;border-radius:12px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.15s;}
-.ncm-opt.sel{background:var(--accent-dim);border-color:rgba(212,240,74,0.5);color:var(--accent);}
-.ncm-close{width:100%;padding:11px;background:var(--s3);border:1px solid var(--border);border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
+.ncm-opt{width:44px;height:44px;border-radius:12px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.ncm-opt.sel{background:var(--accent-dim);border-color:rgba(192,57,43,0.5);color:var(--accent);}
+.ncm-close{width:100%;padding:11px;background:var(--s3);border:1px solid var(--border);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
 
 #photoInput{display:none;}
 
@@ -500,13 +500,13 @@ body{
   border-top:1px solid var(--border);padding:16px 16px 36px;
   display:flex;flex-direction:column;gap:10px;animation:slideUp 0.25s ease;max-height:80vh;}
 .fsm-handle{width:36px;height:4px;background:var(--muted2);border-radius:4px;margin:0 auto 6px;}
-.fsm-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);
+.fsm-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);
   text-transform:uppercase;letter-spacing:0.5px;}
 .fsm-subtitle{font-size:12px;color:var(--muted);margin-top:-4px;}
 .fsm-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;}
 .fsm-item{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);
   border-radius:13px;padding:10px 12px;cursor:pointer;transition:all 0.15s;}
-.fsm-item:active{background:var(--accent-dim);border-color:rgba(90,138,0,0.4);}
+.fsm-item:active{background:var(--accent-dim);border-color:rgba(192,57,43,0.4);}
 .fsm-item-img{width:44px;height:44px;border-radius:9px;object-fit:cover;background:var(--s3);flex-shrink:0;}
 .fsm-item-img-placeholder{width:44px;height:44px;border-radius:9px;background:var(--s3);
   display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
@@ -515,21 +515,21 @@ body{
 .fsm-item-brand{font-size:10px;color:var(--muted);margin-top:1px;}
 .fsm-item-macros{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;}
 .fsm-macro{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:600;}
-.fsm-macro.k{background:rgba(90,138,0,0.12);color:var(--accent);}
+.fsm-macro.k{background:rgba(192,57,43,0.12);color:var(--accent);}
 .fsm-macro.p{background:rgba(255,107,107,0.12);color:var(--red);}
 .fsm-macro.c{background:rgba(255,211,61,0.12);color:var(--yellow);}
 .fsm-macro.g{background:rgba(107,184,246,0.12);color:var(--blue);}
 .fsm-source{font-size:9px;color:var(--muted2);margin-top:2px;}
 .fsm-gram-row{display:flex;gap:8px;align-items:center;margin-top:4px;}
 .fsm-gram-input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
-  padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;outline:none;}
-.fsm-gram-input:focus{border-color:rgba(90,138,0,0.5);}
+  padding:11px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:16px;outline:none;}
+.fsm-gram-input:focus{border-color:rgba(192,57,43,0.5);}
 .fsm-register-btn{padding:11px 18px;background:var(--accent);border:none;border-radius:11px;
-  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;white-space:nowrap;}
+  font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;}
 .fsm-cancel{text-align:center;font-size:13px;color:var(--muted);padding:6px;cursor:pointer;margin-top:2px;}
 .fsm-not-found{text-align:center;padding:20px;color:var(--muted);font-size:13px;line-height:1.6;}
 .fsm-loading{text-align:center;padding:24px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px;}
-.fsm-selected{background:rgba(90,138,0,0.07);border-color:rgba(90,138,0,0.4)!important;}
+.fsm-selected{background:rgba(192,57,43,0.07);border-color:rgba(192,57,43,0.4)!important;}
 
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
@@ -551,20 +551,20 @@ body{
   animation:slideUp 0.25s ease;
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.edit-meal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;}
+.edit-meal-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;}
 .edit-meal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .edit-meal-field{display:flex;flex-direction:column;gap:5px;}
 .edit-meal-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:600;}
 .edit-meal-inp{
   background:var(--s2);border:1px solid var(--border);border-radius:10px;
-  padding:10px 12px;color:var(--text);font-family:'Syne',sans-serif;
+  padding:10px 12px;color:var(--text);font-family:'Space Grotesk',sans-serif;
   font-size:17px;font-weight:700;outline:none;width:100%;
   transition:border-color 0.2s;
 }
-.edit-meal-inp:focus{border-color:rgba(90,138,0,0.5);}
+.edit-meal-inp:focus{border-color:rgba(192,57,43,0.5);}
 .edit-meal-btns{display:flex;gap:8px;margin-top:4px;}
 .edit-meal-save{flex:1;padding:14px;background:var(--accent);border:none;border-radius:13px;
-  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;}
+  font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;}
 .edit-meal-cancel{padding:14px 18px;background:var(--s2);border:1px solid var(--border);border-radius:13px;
   font-size:14px;color:var(--muted);cursor:pointer;}
 </style>
@@ -721,10 +721,10 @@ body{
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0;">
     <div id="mfpDiario"></div>
     <!-- Botón IA flotante -->
-    <div onclick="abrirChatIA()" style="margin:12px 14px 24px;padding:13px;background:var(--accent-dim);border:1px solid rgba(90,138,0,0.3);border-radius:13px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+    <div onclick="abrirChatIA()" style="margin:12px 14px 24px;padding:13px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:13px;display:flex;align-items:center;gap:10px;cursor:pointer;">
       <span style="font-size:20px;">🤖</span>
       <div>
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">Asistente IA</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">Asistente IA</div>
         <div style="font-size:11px;color:var(--muted);margin-top:1px;">Sugerencias, análisis y consejos</div>
       </div>
       <span style="margin-left:auto;color:var(--accent);font-size:16px;">›</span>
@@ -778,7 +778,7 @@ body{
     <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 12px;">
       <span style="color:var(--muted);font-size:16px;">🔍</span>
       <input id="buscadorInput" type="text" placeholder="Busca un alimento..."
-        style="flex:1;background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);padding:11px 0;"
+        style="flex:1;background:none;border:none;outline:none;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);padding:11px 0;"
         oninput="buscadorOnInput(this.value)"
         onkeydown="if(event.key==='Enter')buscarAlimentoMFP(this.value)">
     </div>
@@ -786,9 +786,9 @@ body{
   </div>
   <!-- Tabs: Todos / Mis alimentos -->
   <div style="display:flex;border-bottom:1px solid var(--border);">
-    <div id="tabTodos" onclick="setTabBuscador('todos')" style="flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--accent);color:var(--accent);">TODOS</div>
-    <div id="tabMisAlimentos" onclick="setTabBuscador('mis')" style="flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);">MIS ALIMENTOS</div>
-    <div onclick="abrirCrearAlimento()" style="flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--accent);">＋ CREAR</div>
+    <div id="tabTodos" onclick="setTabBuscador('todos')" style="flex:1;padding:10px;text-align:center;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--accent);color:var(--accent);">TODOS</div>
+    <div id="tabMisAlimentos" onclick="setTabBuscador('mis')" style="flex:1;padding:10px;text-align:center;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);">MIS ALIMENTOS</div>
+    <div onclick="abrirCrearAlimento()" style="flex:1;padding:10px;text-align:center;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--accent);">＋ CREAR</div>
   </div>
   <!-- Resultados -->
   <div id="buscadorResultados" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;"></div>
@@ -800,7 +800,7 @@ body{
 <!-- Modal crear alimento -->
 <div id="crearAlimentoOverlay" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;">
   <div style="width:100%;max-width:430px;background:var(--s1);border-radius:22px 22px 0 0;padding:20px 20px 40px;animation:slideUp 0.25s ease;display:flex;flex-direction:column;gap:14px;">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">＋ Crear alimento</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;">＋ Crear alimento</div>
     <div style="font-size:12px;color:var(--muted);">Se guardará en tu base de datos personal</div>
     <input id="caName" type="text" placeholder="Nombre del alimento *" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--text);font-size:14px;outline:none;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -824,7 +824,7 @@ body{
     <div id="caMsg" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;"></div>
     <div style="display:flex;gap:8px;">
       <button onclick="cerrarCrearAlimento()" style="flex:1;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
-      <button onclick="guardarAlimentoCreado()" style="flex:2;padding:13px;background:var(--accent);border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;">✅ Guardar</button>
+      <button onclick="guardarAlimentoCreado()" style="flex:2;padding:13px;background:var(--accent);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;">✅ Guardar</button>
     </div>
   </div>
 </div>
@@ -850,7 +850,7 @@ body{
   <!-- Navegación día -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 4px;">
     <button id="histPrevBtn" onclick="histNavegar(-1)" style="width:36px;height:36px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--muted);cursor:pointer;">‹</button>
-    <div id="histFechaLabel" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);"></div>
+    <div id="histFechaLabel" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);"></div>
     <button id="histNextBtn" onclick="histNavegar(1)" style="width:36px;height:36px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--muted);cursor:pointer;">›</button>
   </div>
   <div class="scrollable" id="histBody"></div>
@@ -864,7 +864,7 @@ body{
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
     <h2>Configuración ⚙️</h2>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
-      <div class="icon-nav" id="adminHeaderBtn" onclick="showView('viewAdmin');loadAdminUsers()" title="Panel Admin" style="display:none;background:rgba(212,240,74,0.1);border-color:rgba(212,240,74,0.3);color:var(--accent);">⚡</div>
+      <div class="icon-nav" id="adminHeaderBtn" onclick="showView('viewAdmin');loadAdminUsers()" title="Panel Admin" style="display:none;background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.3);color:var(--accent);">⚡</div>
       <div class="icon-nav" onclick="doLogout()" title="Cerrar sesión">🚪</div>
     </div>
   </div>
@@ -947,7 +947,7 @@ body{
 <!-- ══ VISTA ADMIN ══ -->
 <div class="view" id="viewAdmin">
 <div class="aw">
-  <div class="sub-hdr" style="background:rgba(212,240,74,0.06);border-bottom:1px solid rgba(212,240,74,0.2);">
+  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
     <div class="back-btn" onclick="showView('viewMain')">‹</div>
     <h2 style="color:var(--accent)">⚡ Admin</h2>
   </div>
@@ -959,11 +959,11 @@ body{
 .admin-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
 .admin-card-top{display:flex;justify-content:space-between;align-items:center;}
 .admin-card-info{display:flex;flex-direction:column;gap:3px;}
-.admin-card-nombre{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.admin-card-nombre{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;}
 .admin-card-email{font-size:12px;color:var(--muted);}
 .admin-card-fecha{font-size:11px;color:var(--muted2);}
 .admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;}
-.admin-card-status.active{background:rgba(212,240,74,0.08);color:var(--accent);}
+.admin-card-status.active{background:rgba(192,57,43,0.08);color:var(--accent);}
 .admin-card-status.inactive{background:rgba(255,107,107,0.08);color:var(--red);}
 .admin-toggle{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
 .admin-toggle.on{background:var(--accent);}
@@ -1142,7 +1142,7 @@ function enterApp(){
   const c=document.createElement('canvas');c.width=192;c.height=192;
   const x=c.getContext('2d');
   x.fillStyle='#f5f0e8';x.fillRect(0,0,192,192);
-  x.fillStyle='#d4f04a';x.beginPath();x.arc(96,96,88,0,Math.PI*2);x.fill();
+  x.fillStyle='#c0392b';x.beginPath();x.arc(96,96,88,0,Math.PI*2);x.fill();
   x.fillStyle='#5a7a00';x.font='bold 110px Syne,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('M',96,100);
   const icon=c.toDataURL('image/png');
   document.getElementById('appleIcon').href=icon;
@@ -1314,7 +1314,7 @@ function renderDespChips(){
   const sorted=[...DESP].sort((a,b)=>(b.usos||0)-(a.usos||0));
   el.innerHTML='<div class="desp-chip-wrap">'+sorted.map((d,i)=>{
     const idx=DESP.indexOf(d);
-    const badge=d.usos>0?`<span style="background:rgba(212,240,74,0.2);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:8px;margin-left:2px;">${d.usos}x</span>`:'';
+    const badge=d.usos>0?`<span style="background:rgba(192,57,43,0.2);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:8px;margin-left:2px;">${d.usos}x</span>`:'';
     return `<div class="desp-chip">${d.nombre}${badge}<span class="desp-chip-x" onclick="removeDesp(${idx})">×</span></div>`;
   }).join('')+'</div>';
 }
@@ -1464,16 +1464,16 @@ function editarFavorito(id){
     </div>`).join('');
   overlay.innerHTML=`
     <div data-fav-edit style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:85vh;overflow-y:auto;">
-      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;">✏️ Editar favorito</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;">✏️ Editar favorito</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Nombre</div>
       <input id="favEditNombre" value="${escapeHtml(f.nombre)}"
         style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--fg);font-size:14px;margin-bottom:14px;box-sizing:border-box;">
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">Ingredientes y cantidades</div>
       <div id="favEditIngs">${renderIngInputs()}</div>
-      <button id="favAddIng" style="width:100%;padding:9px;background:rgba(212,240,74,0.08);border:1px dashed rgba(212,240,74,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:16px;cursor:pointer;">+ Añadir ingrediente</button>
+      <button id="favAddIng" style="width:100%;padding:9px;background:rgba(192,57,43,0.08);border:1px dashed rgba(192,57,43,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:16px;cursor:pointer;">+ Añadir ingrediente</button>
       <div style="display:flex;gap:10px;">
         <button id="favEditCancel" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--fg);font-size:14px;cursor:pointer;">Cancelar</button>
-        <button id="favEditSave" style="flex:2;padding:12px;background:var(--accent);border:none;border-radius:12px;color:#080810;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Guardar cambios</button>
+        <button id="favEditSave" style="flex:2;padding:12px;background:var(--accent);border:none;border-radius:12px;color:#080810;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Guardar cambios</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -1868,13 +1868,13 @@ async function renderHistorialDia(){
       <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Resumen del día</span>
-          <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${d.tipoDia==='descanso'?'rgba(107,184,246,0.1)':'rgba(212,240,74,0.1)'};color:${d.tipoDia==='descanso'?'var(--blue)':'var(--accent)'};">${d.tipoDia==='descanso'?'😴 Descanso':'💪 Entreno'}</span>
+          <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${d.tipoDia==='descanso'?'rgba(107,184,246,0.1)':'rgba(192,57,43,0.1)'};color:${d.tipoDia==='descanso'?'var(--blue)':'var(--accent)'};">${d.tipoDia==='descanso'?'😴 Descanso':'💪 Entreno'}</span>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${d.kcalC}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">kcal</div></div>
-          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--red)">${d.protC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">prot</div></div>
-          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--yellow)">${d.chC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">ch</div></div>
-          <div style="flex:1;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--blue)">${d.grasaC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">grasa</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${d.kcalC}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">kcal</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--red)">${d.protC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">prot</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--yellow)">${d.chC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">ch</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--blue)">${d.grasaC}g</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">grasa</div></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;">
           <div class="hbr"><span class="hbr-lbl">Kcal</span><div class="hbr-track"><div class="hbr-fill" style="width:${pK}%;background:var(--accent)"></div></div><span class="hbr-pct">${pK}%</span></div>
@@ -1911,7 +1911,7 @@ async function renderHistorialDia(){
               <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||'Comida')}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
-              <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">${c.kcal} kcal</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">${c.kcal} kcal</div>
               <div style="font-size:10px;color:var(--muted)">P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g</div>
             </div>
           </div>
@@ -1953,9 +1953,9 @@ function histComidaMenu(card){
     const overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
     overlay.innerHTML=`<div style="background:#f0ebe0;border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
-      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;color:#222;">${escapeHtml(c.nombre||'Comida')}</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;color:#222;">${escapeHtml(c.nombre||'Comida')}</div>
       <button onclick="histUsarHoy('${fecha}',${ci})" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:12px;font-size:14px;color:#080810;font-weight:700;margin-bottom:8px;cursor:pointer;text-align:left;">↩ Usar hoy</button>
-      <button onclick="histGuardarFav('${fecha}',${ci})" style="width:100%;padding:13px;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.25);border-radius:12px;font-size:14px;color:#5a7a00;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
+      <button onclick="histGuardarFav('${fecha}',${ci})" style="width:100%;padding:13px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:12px;font-size:14px;color:#5a7a00;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
       <button onclick="histCopiarComida('${fecha}',${ci})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:#444;margin-bottom:12px;cursor:pointer;text-align:left;">📋 Copiar datos</button>
       <button onclick="this.closest('[data-hist-overlay]').remove()" style="width:100%;padding:13px;background:#e8e0d0;border:none;border-radius:12px;font-size:14px;color:#888;cursor:pointer;">Cancelar</button>
     </div>`;
@@ -2834,10 +2834,10 @@ async function loadAdminUsers(){
 
     body.innerHTML=`
       <div style="padding:0 0 12px;">
-        <button onclick="showCrearCliente()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;">＋ Crear nuevo cliente</button>
+        <button onclick="showCrearCliente()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;">＋ Crear nuevo cliente</button>
       </div>
-      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(212,240,74,0.25);border-radius:14px;padding:16px;margin-bottom:12px;flex-direction:column;gap:12px;">
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent);">Nuevo cliente</div>
+      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(192,57,43,0.25);border-radius:14px;padding:16px;margin-bottom:12px;flex-direction:column;gap:12px;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);">Nuevo cliente</div>
         <div style="display:flex;flex-direction:column;gap:5px;">
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
           <input id="newClientNombre" type="text" placeholder="Nombre del cliente" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
@@ -2847,12 +2847,12 @@ async function loadAdminUsers(){
           <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
         </div>
         <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;"></div>
-        <div id="whatsappBox" style="display:none;background:var(--s2);border:1px solid rgba(212,240,74,0.2);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;"></div>
+        <div id="whatsappBox" style="display:none;background:var(--s2);border:1px solid rgba(192,57,43,0.2);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;"></div>
         <div id="copiarBtnWrap" style="display:none;">
-          <button onclick="copiarWhatsapp()" style="width:100%;padding:12px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#25d366;cursor:pointer;">📋 Copiar mensaje WhatsApp</button>
+          <button onclick="copiarWhatsapp()" style="width:100%;padding:12px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#25d366;cursor:pointer;">📋 Copiar mensaje WhatsApp</button>
         </div>
         <div style="display:flex;gap:8px;" id="crearBtnRow">
-          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#080810;cursor:pointer;">Crear cliente</button>
+          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Crear cliente</button>
           <button onclick="cerrarFormCliente()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
         </div>
       </div>`;
@@ -2884,7 +2884,7 @@ async function loadAdminUsers(){
             🗑️
           </div>
         </div>
-        <div class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;margin-top:4px;">
+        <div class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;margin-top:4px;">
           🥗 Menú nutricional
         </div>`;
       body.appendChild(card);
@@ -2948,7 +2948,7 @@ async function doCrearCliente(){
     document.getElementById('whatsappBox').style.display='block';
     document.getElementById('copiarBtnWrap').style.display='block';
     document.getElementById('crearBtnRow').style.display='none';
-    msg.style.display='block';msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.2);color:var(--accent);';
+    msg.style.display='block';msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);color:var(--accent);';
     msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
     setTimeout(()=>loadAdminUsers(),8000);
   }catch(e){showErr('Error de conexión: '+e.message);}
@@ -3075,7 +3075,7 @@ function renderMFPDiario() {
             <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g <span style="color:var(--accent);margin-left:4px;">✏️</span></div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
             <div onclick="mfpEliminarItem(${globalIdx})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);">✕</div>
           </div>
         </div>`;
@@ -3086,12 +3086,12 @@ function renderMFPDiario() {
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
-            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
             <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `P${totalProt}g · HC${totalCh}g · G${totalGrasa}g` : 'Sin registrar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
           <span id="chev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
       </div>
@@ -3099,7 +3099,7 @@ function renderMFPDiario() {
         ${itemsHtml}
         <div onclick="abrirBuscador('${meal.id}','${meal.name}')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;color:var(--accent);">
           <span style="font-size:18px;font-weight:700;">＋</span>
-          <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.3px;">AÑADIR ALIMENTO</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.3px;">AÑADIR ALIMENTO</span>
         </div>
       </div>`;
     container.appendChild(block);
@@ -3488,7 +3488,7 @@ async function guardarAlimentoCreado() {
     });
     const d = await r.json();
     if (r.ok && !d.error) {
-      msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(90,138,0,0.08);border:1px solid rgba(90,138,0,0.25);color:var(--accent);';
+      msg.style.cssText='display:block;font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);';
       msg.textContent='✅ Alimento guardado correctamente.';
       _misAlimentosCache = null;
       setTimeout(cerrarCrearAlimento, 1200);
@@ -3580,7 +3580,7 @@ function renderDiario(){
 
     // Lista pendiente (aún sin calcular)
     let pendingRows=pending.map((txt,i)=>`
-      <div class="food-row" style="background:rgba(212,240,74,0.04);">
+      <div class="food-row" style="background:rgba(192,57,43,0.04);">
         <div style="flex:1;">
           <div class="food-name-txt" style="color:var(--muted);">🔸 ${escapeHtml(txt)}</div>
         </div>
@@ -3813,7 +3813,7 @@ Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
       S.historial.push({role:'assistant',content:raw});
       // Mostrar resultado
       resultEl.style.display='block';
-      resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(212,240,74,0.07);border:1px solid rgba(212,240,74,0.2);border-radius:10px;font-size:12px;line-height:1.7;color:var(--text);';
+      resultEl.style.cssText='display:block;margin-top:10px;padding:10px 12px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:10px;font-size:12px;line-height:1.7;color:var(--text);';
       // Parsear ingredientes para mostrarlos bonito
       const lines=ingTexto.split('\n').filter(l=>l.trim()&&!l.startsWith('TOTAL'));
       const itemsHtml=lines.map(l=>{
@@ -3826,7 +3826,7 @@ Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
           <span style="color:var(--accent);font-weight:700;">${escapeHtml(kcalP)}</span></div>`;
       }).join('');
       resultEl.innerHTML=`${itemsHtml}
-        <div style="display:flex;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid rgba(212,240,74,0.2);">
+        <div style="display:flex;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid rgba(192,57,43,0.2);">
           <span style="font-weight:700;">TOTAL</span>
           <span style="color:var(--accent);font-weight:800;">${kcalN} kcal · P${protN}g · CH${chN}g · G${grasaN}g</span>
         </div>`;
@@ -4030,7 +4030,7 @@ async function recalcularMacrosEditados(){
     return n?(c?c+' de '+n:n):null;
   }).filter(Boolean);
   if(!ings.length){showToast('Añade ingredientes primero');return;}
-  btn.disabled=true;btn.innerHTML='<span style="width:12px;height:12px;border:2px solid rgba(90,138,0,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;"></span>Calculando...';
+  btn.disabled=true;btn.innerHTML='<span style="width:12px;height:12px;border:2px solid rgba(192,57,43,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;"></span>Calculando...';
   const mealName=document.getElementById('editMealName').textContent.replace('✏️ ','').trim();
   try{
     const prompt=`Calcula los macros totales de esta comida y devuelve SOLO el tag REGISTRAR sin texto extra:
@@ -4196,7 +4196,7 @@ function _loopEscaner() {
               _visionContador = 0;
               toast.style.display = 'none';
               document.getElementById('scannerHint').textContent = 'Apunta a la etiqueta nutricional';
-              document.getElementById('scannerHint').style.color = '#d4f04a';
+              document.getElementById('scannerHint').style.color = '#c0392b';
               document.getElementById('scannerCaptureBtn').style.display = 'block';
             }
           }
@@ -4534,10 +4534,10 @@ async function handleFotoProducto(e) {
     <!-- Ingredientes editables -->
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Ingredientes</div>
     <div id="editIngList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
-    <button id="editAddIng" onclick="editMealAddIng()" style="width:100%;padding:8px;background:rgba(212,240,74,0.06);border:1px dashed rgba(212,240,74,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:14px;cursor:pointer;">+ Añadir ingrediente</button>
+    <button id="editAddIng" onclick="editMealAddIng()" style="width:100%;padding:8px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:14px;cursor:pointer;">+ Añadir ingrediente</button>
 
     <!-- Recalcular con IA -->
-    <button id="editRecalcBtn" onclick="recalcularMacrosEditados()" style="width:100%;padding:11px;background:rgba(212,240,74,0.08);border:1px solid rgba(212,240,74,0.3);border-radius:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px;">✨ Recalcular macros con IA</button>
+    <button id="editRecalcBtn" onclick="recalcularMacrosEditados()" style="width:100%;padding:11px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px;">✨ Recalcular macros con IA</button>
 
     <!-- Macros totales -->
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Macros totales</div>
@@ -4585,7 +4585,7 @@ async function handleFotoProducto(e) {
 <!-- ══ VIEW: ADMIN MENÚS ══ -->
 <div class="view" id="viewAdminMenu">
 <div class="aw">
-  <div class="sub-hdr" style="background:rgba(212,240,74,0.06);border-bottom:1px solid rgba(212,240,74,0.2);">
+  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
     <div class="back-btn" onclick="showView('viewAdmin')">‹</div>
     <h2 id="adminMenuTitle" style="color:var(--accent)">⚡ Perfil nutricional</h2>
   </div>
@@ -4603,21 +4603,21 @@ async function handleFotoProducto(e) {
       <!-- Visor recuadro -->
       <div style="position:relative;width:72%;aspect-ratio:3/2;">
         <!-- Esquinas -->
-        <div style="position:absolute;top:0;left:0;width:22px;height:22px;border-top:3px solid #d4f04a;border-left:3px solid #d4f04a;border-radius:3px 0 0 0;"></div>
-        <div style="position:absolute;top:0;right:0;width:22px;height:22px;border-top:3px solid #d4f04a;border-right:3px solid #d4f04a;border-radius:0 3px 0 0;"></div>
-        <div style="position:absolute;bottom:0;left:0;width:22px;height:22px;border-bottom:3px solid #d4f04a;border-left:3px solid #d4f04a;border-radius:0 0 0 3px;"></div>
-        <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;border-bottom:3px solid #d4f04a;border-right:3px solid #d4f04a;border-radius:0 0 3px 0;"></div>
+        <div style="position:absolute;top:0;left:0;width:22px;height:22px;border-top:3px solid #c0392b;border-left:3px solid #c0392b;border-radius:3px 0 0 0;"></div>
+        <div style="position:absolute;top:0;right:0;width:22px;height:22px;border-top:3px solid #c0392b;border-right:3px solid #c0392b;border-radius:0 3px 0 0;"></div>
+        <div style="position:absolute;bottom:0;left:0;width:22px;height:22px;border-bottom:3px solid #c0392b;border-left:3px solid #c0392b;border-radius:0 0 0 3px;"></div>
+        <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;border-bottom:3px solid #c0392b;border-right:3px solid #c0392b;border-radius:0 0 3px 0;"></div>
         <!-- Línea de escaneo animada -->
-        <div id="scanLine" style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#d4f04a,transparent);box-shadow:0 0 8px #d4f04a;animation:scanAnim 2s ease-in-out infinite;top:0;"></div>
+        <div id="scanLine" style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#c0392b,transparent);box-shadow:0 0 8px #c0392b;animation:scanAnim 2s ease-in-out infinite;top:0;"></div>
       </div>
-      <div id="scannerHint" style="margin-top:20px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;opacity:0.9;text-align:center;transition:color 0.3s;">Apunta al código de barras</div>
+      <div id="scannerHint" style="margin-top:20px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;opacity:0.9;text-align:center;transition:color 0.3s;">Apunta al código de barras</div>
     </div>
     <!-- Botón cerrar -->
     <button onclick="cerrarEscaner()" style="position:absolute;top:16px;right:16px;width:40px;height:40px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:50%;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:pointer;">✕</button>
     <!-- Botón capturar manual (visible solo en modo vision) -->
-    <button id="scannerCaptureBtn" onclick="_capturarAhora()" style="display:none;position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:#d4f04a;color:#1a1a2e;border:none;border-radius:24px;padding:14px 32px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;pointer-events:auto;cursor:pointer;">📸 Capturar ahora</button>
+    <button id="scannerCaptureBtn" onclick="_capturarAhora()" style="display:none;position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:#c0392b;color:#1a1a2e;border:none;border-radius:24px;padding:14px 32px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;pointer-events:auto;cursor:pointer;">📸 Capturar ahora</button>
     <!-- Toast EAN detectado -->
-    <div id="scannerToast" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(212,240,74,0.15);border:1px solid rgba(212,240,74,0.4);border-radius:12px;padding:10px 18px;color:#d4f04a;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;display:none;"></div>
+    <div id="scannerToast" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.4);border-radius:12px;padding:10px 18px;color:#c0392b;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;display:none;"></div>
   </div>
 </div>
 <style>
@@ -4629,12 +4629,12 @@ async function handleFotoProducto(e) {
 
 /* ── MENÚ SEMANAL ESTILOS ── */
 .menu-semana-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--border);}
-.menu-semana-label{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+.menu-semana-label{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
 .menu-nav-btn{width:32px;height:32px;border-radius:9px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;color:var(--text);}
 .menu-nav-btn:active{background:var(--accent-dim);}
 .menu-dia-block{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;}
-.menu-dia-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(212,240,74,0.05);border-bottom:1px solid var(--border);cursor:pointer;}
-.menu-dia-titulo{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.menu-dia-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(192,57,43,0.05);border-bottom:1px solid var(--border);cursor:pointer;}
+.menu-dia-titulo{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;}
 .menu-dia-kcal{font-size:12px;color:var(--muted);}
 .menu-comida-row{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
 .menu-comida-row:last-child{border-bottom:none;}
@@ -4648,21 +4648,21 @@ async function handleFotoProducto(e) {
 
 /* ── ADMIN MENÚ ESTILOS ── */
 .am-section{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;}
-.am-section-hdr{padding:10px 14px;background:rgba(212,240,74,0.06);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.am-section-hdr{padding:10px 14px;background:rgba(192,57,43,0.06);border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 .am-field{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .am-field:last-child{border-bottom:none;}
 .am-field-label{font-size:13px;color:var(--muted);flex-shrink:0;}
-.am-field-input{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;text-align:right;outline:none;width:90px;}
-.am-field-input:focus{border-color:rgba(212,240,74,0.4);}
-.am-field-input.wide{width:100%;text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;}
-.am-btn-primary{width:100%;padding:14px;background:var(--accent);border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#080810;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
+.am-field-input{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:right;outline:none;width:90px;}
+.am-field-input:focus{border-color:rgba(192,57,43,0.4);}
+.am-field-input.wide{width:100%;text-align:left;font-family:'Inter',sans-serif;font-size:13px;font-weight:400;}
+.am-btn-primary{width:100%;padding:14px;background:var(--accent);border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
 .am-btn-primary:active{transform:scale(0.98);opacity:0.9;}
 .am-btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-.am-btn-secondary{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;margin-top:8px;}
+.am-btn-secondary{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;margin-top:8px;}
 .am-btn-secondary:active{background:var(--s3);}
 .am-menu-dia{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;}
-.am-menu-dia-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:rgba(212,240,74,0.04);border-bottom:1px solid var(--border);}
-.am-menu-dia-titulo{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
+.am-menu-dia-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:rgba(192,57,43,0.04);border-bottom:1px solid var(--border);}
+.am-menu-dia-titulo{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;}
 .am-menu-dia-kcal{font-size:11px;color:var(--muted);}
 .am-menu-comida-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;}
 .am-menu-comida-row:last-child{border-bottom:none;}
@@ -4892,7 +4892,7 @@ async function renderAdminMenuPerfil() {
       <div class="am-section-hdr">Semana del menú</div>
       <div class="am-field" style="justify-content:center;">
         <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset--;renderAdminMenuPerfil()">‹</div>
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:0 12px;">${formatSemanaLabel(semana)}</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;padding:0 12px;">${formatSemanaLabel(semana)}</div>
         <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset++;renderAdminMenuPerfil()">›</div>
       </div>
     </div>
@@ -4903,7 +4903,7 @@ async function renderAdminMenuPerfil() {
     </button>
 
     <!-- Separador generación -->
-    <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú semanal</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú semanal</div>
 
     <!-- Opción A: IA sugiere -->
     <div class="am-section" style="margin-bottom:10px;">
@@ -4925,7 +4925,7 @@ async function renderAdminMenuPerfil() {
         Escribe qué ingredientes quieres cada día. La IA busca en tu BD y calcula los gramos exactos.
       </div>
       <div style="padding:0 14px;">
-        <textarea id="amTextoMenu" style="width:100%;min-height:140px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
+        <textarea id="amTextoMenu" style="width:100%;min-height:140px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
           placeholder="Lunes: pollo, arroz, brócoli
 Martes: merluza, patata, espinacas
 Miércoles: ternera, pasta, tomate
@@ -5048,7 +5048,7 @@ async function verMenuGenerado() {
       porDia[f.dia][f.nombre_comida].push(f);
     });
 
-    let html = `<div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Menú generado — ${formatSemanaLabel(semana)}</div>`;
+    let html = `<div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Menú generado — ${formatSemanaLabel(semana)}</div>`;
 
     for (let dia = 1; dia <= 7; dia++) {
       if (!porDia[dia]) continue;
