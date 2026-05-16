@@ -4078,7 +4078,12 @@ async function cargarDiarioPorFecha(fecha) {
     return;
   }
 
-  _diarioRenderOtroDia(dataDia, fecha);
+  // Para días futuros — siempre usar _diarioRenderFuturo para mostrar todas las comidas
+  if (esFuturo) {
+    _diarioRenderFuturo(fecha);
+  } else {
+    _diarioRenderOtroDia(dataDia, fecha);
+  }
 }
 
 function _diarioModoLectura(activo) {
@@ -4288,22 +4293,27 @@ function _diarioRenderFuturo(fecha) {
     }
   });
 
-  // Actualizar totales del panel macros con lo planificado
+  // Actualizar panel macros — siempre mostrar restantes sobre el objetivo
   const totalPlan = comidasFuturo.reduce((a,c) => ({
     kcal: a.kcal + (c.kcal||0), prot: a.prot + (c.prot||0),
     ch: a.ch + (c.ch||0), grasa: a.grasa + (c.grasa||0)
   }), {kcal:0,prot:0,ch:0,grasa:0});
 
-  if (totalPlan.kcal > 0) {
-    document.getElementById('kcalResta').textContent = S.kcalObj - totalPlan.kcal;
-    document.getElementById('protResta').textContent = Math.round(S.prot - totalPlan.prot);
-    document.getElementById('chResta').textContent = Math.round(S.ch - totalPlan.ch);
-    document.getElementById('grasaResta').textContent = Math.round(S.grasa - totalPlan.grasa);
-    const pct = (v,t) => Math.min(100, Math.max(0, (v/(t||1))*100));
-    document.getElementById('protFill').style.width = pct(totalPlan.prot, S.prot) + '%';
-    document.getElementById('chFill').style.width = pct(totalPlan.ch, S.ch) + '%';
-    document.getElementById('grasaFill').style.width = pct(totalPlan.grasa, S.grasa) + '%';
-  }
+  // Siempre actualizar — con o sin comidas planificadas
+  const restaKcal = S.kcalObj - totalPlan.kcal;
+  const restaProt = Math.round(S.prot - totalPlan.prot);
+  const restaCh   = Math.round(S.ch - totalPlan.ch);
+  const restaGrasa= Math.round(S.grasa - totalPlan.grasa);
+  document.getElementById('kcalResta').textContent = restaKcal;
+  document.getElementById('kcalObj').textContent = 'de ' + S.kcalObj + ' kcal';
+  document.getElementById('protResta').textContent = restaProt;
+  document.getElementById('chResta').textContent = restaCh;
+  document.getElementById('grasaResta').textContent = restaGrasa;
+  document.getElementById('kcalResta').style.color = restaKcal < 0 ? 'var(--red)' : 'var(--accent)';
+  const pct = (v,t) => Math.min(100, Math.max(0, (v/(t||1))*100));
+  document.getElementById('protFill').style.width = pct(totalPlan.prot, S.prot) + '%';
+  document.getElementById('chFill').style.width = pct(totalPlan.ch, S.ch) + '%';
+  document.getElementById('grasaFill').style.width = pct(totalPlan.grasa, S.grasa) + '%';
 }
 
 function abrirBuscadorFuturo(fecha, mealId, mealName) {
