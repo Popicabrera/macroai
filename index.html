@@ -4082,9 +4082,10 @@ async function cargarDiarioPorFecha(fecha) {
 }
 
 function _diarioModoLectura(activo) {
-  // Botón IA flotante
+  // Botón IA flotante — ocultar solo en días PASADOS, no en futuros
+  const esFuturo = _diarioFecha > getToday();
   const btnIA = document.querySelector('#mfpDiario + div');
-  if (btnIA) btnIA.style.display = activo ? 'none' : '';
+  if (btnIA) btnIA.style.display = (activo && !esFuturo) ? 'none' : '';
   // Pill tipo día
   const pill = document.querySelector('.day-pill');
   if (pill) {
