@@ -4579,6 +4579,18 @@ function getFechaLabel(fecha) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function getTipoDiaParaFecha(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  const diaSemana = d.getDay();
+  return WEEK_DAYS.includes(diaSemana) ? 'entreno' : 'descanso';
+}
+
+function getMacrosParaFecha(fecha) {
+  const tipo = getTipoDiaParaFecha(fecha);
+  const m = CFG[tipo];
+  return { tipo, kcal: m.kcal, prot: m.prot, ch: m.ch, grasa: m.grasa };
+}
+
 async function cargarDiarioPorFecha(fecha) {
   const hoy = getToday();
   const esHoy = fecha === hoy;
@@ -4593,6 +4605,8 @@ async function cargarDiarioPorFecha(fecha) {
 
   if (esHoy) {
     // Restaurar estado de hoy
+    const tipoHoy = getTipoDiaParaFecha(fecha);
+    if(tipoHoy !== CFG.tipoDia){ CFG.tipoDia=tipoHoy; }
     applyMacros(CFG.tipoDia);
     updateBars();
     renderMFPDiario();
@@ -4652,13 +4666,17 @@ async function cargarDiarioPorFecha(fecha) {
   // Sin datos
   if (!dataDia) {
     if (esFuturo) {
-      // Días futuros sin datos: mostrar diario vacío para planificar
-      // Actualizar panel macros con objetivo actual
-      document.getElementById('kcalResta').textContent = S.kcalObj;
-      document.getElementById('kcalObj').textContent = 'de ' + S.kcalObj + ' kcal';
-      document.getElementById('protResta').textContent = S.prot;
-      document.getElementById('chResta').textContent = S.ch;
-      document.getElementById('grasaResta').textContent = S.grasa;
+      // Días futuros sin datos: usar macros según si es entreno o descanso
+      const mFuturo = getMacrosParaFecha(fecha);
+      const pillDot = document.getElementById('pillDot');
+      const dayTypeEl = document.getElementById('dayType');
+      if(pillDot) pillDot.className='pdot'+(mFuturo.tipo==='descanso'?' rest':'');
+      if(dayTypeEl) dayTypeEl.textContent=mFuturo.tipo==='entreno'?'Día de entreno':'Día de descanso';
+      document.getElementById('kcalResta').textContent = mFuturo.kcal;
+      document.getElementById('kcalObj').textContent = 'de ' + mFuturo.kcal + ' kcal';
+      document.getElementById('protResta').textContent = mFuturo.prot;
+      document.getElementById('chResta').textContent = mFuturo.ch;
+      document.getElementById('grasaResta').textContent = mFuturo.grasa;
       ['protFill','chFill','grasaFill'].forEach(id => document.getElementById(id).style.width = '0%');
       document.getElementById('kcalResta').style.color = 'var(--accent)';
       // Renderizar diario vacío pero funcional — guardando comidas en _diarioFuturoComidas
@@ -4990,6 +5008,13 @@ function _diarioFavModal(nombreDefault, macros, ingRaw) {
 
 
 function _diarioRenderFuturo(fecha) {
+  // Actualizar pill entreno/descanso según el día de la semana
+  const mFut = getMacrosParaFecha(fecha);
+  const pillDot = document.getElementById('pillDot');
+  const dayTypeEl = document.getElementById('dayType');
+  if(pillDot) pillDot.className='pdot'+(mFut.tipo==='descanso'?' rest':'');
+  if(dayTypeEl) dayTypeEl.textContent=mFut.tipo==='entreno'?'Día de entreno':'Día de descanso';
+
   // Renderiza el diario MFP normal para días futuros — permite planificar
   const container = document.getElementById('mfpDiario');
   if (!container) return;
