@@ -6128,186 +6128,293 @@ function abrirPerfilAdmin(id, nombre, email) {
 let _adminMacrosEmail = '';
 let _adminMacrosNombre = '';
 
-let _amModoToggle = 'gramos';
+
+// ══ DRUM PICKER — MACROS ADMIN ══
+let _drumVals = { kcalE:2200, kcalD:1900, pE:160, hcE:220, gE:65, pD:150, hcD:170, gD:60 };
+let _drumModo = 'g';
+let _drumContainer = null;
+let _drumAutoSaveTimer = null;
+
+const _drumRanges = {
+  kcalE:[1000,4000,50], kcalD:[1000,4000,50],
+  g:  { pE:[50,300,5],  hcE:[30,500,5],  gE:[10,150,5],  pD:[50,300,5],  hcD:[30,500,5],  gD:[10,150,5]  },
+  pct:{ pE:[5,55,1],    hcE:[10,75,1],   gE:[5,55,1],    pD:[5,55,1],    hcD:[10,75,1],   gD:[5,55,1]    }
+};
+
+function drumHTML(containerId) {
+  const isG = _drumModo === 'g';
+  const unit = isG ? 'g' : '%';
+  const vPE  = isG ? _drumVals.pE  : Math.round(_drumVals.pE*4/_drumVals.kcalE*100);
+  const vHcE = isG ? _drumVals.hcE : Math.round(_drumVals.hcE*4/_drumVals.kcalE*100);
+  const vGE  = isG ? _drumVals.gE  : Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
+  const vPD  = isG ? _drumVals.pD  : Math.round(_drumVals.pD*4/_drumVals.kcalD*100);
+  const vHcD = isG ? _drumVals.hcD : Math.round(_drumVals.hcD*4/_drumVals.kcalD*100);
+  const vGD  = isG ? _drumVals.gD  : Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
+  const totalE = vPE + vHcE + vGE;
+  const totalD = vPD + vHcD + vGD;
+
+  return `
+  <style>
+  .drum-wrap{height:108px;overflow:hidden;position:relative;cursor:ns-resize;user-select:none;-webkit-user-select:none;}
+  .drum-inner{display:flex;flex-direction:column;align-items:center;}
+  .drum-item{height:36px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--muted2);transition:all 0.08s;white-space:nowrap;}
+  .drum-item.sel{font-size:20px;font-weight:700;color:var(--text);}
+  .drum-item.near{font-size:15px;color:var(--muted);}
+  .drum-wrap::before,.drum-wrap::after{content:'';position:absolute;left:0;right:0;height:36px;z-index:2;pointer-events:none;}
+  .drum-wrap::before{top:0;background:linear-gradient(to bottom,var(--s1),transparent);}
+  .drum-wrap::after{bottom:0;background:linear-gradient(to top,var(--s1),transparent);}
+  .drum-sel-bg{position:absolute;left:4px;right:4px;top:36px;height:36px;background:var(--accent-dim);border-radius:8px;border:1px solid rgba(192,57,43,0.2);pointer-events:none;z-index:1;}
+  .drum-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+  .drum-col-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .drum-unit{font-size:11px;color:var(--muted);font-weight:600;}
+  </style>
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div class="am-section" style="flex:1;margin-bottom:0;">
+      <div class="am-section-hdr">Kcal entreno</div>
+      <div class="am-field">
+        <div class="drum-col" style="padding:4px 0;">
+          <div class="drum-wrap" data-key="kcalE" data-cid="${containerId}">
+            <div class="drum-sel-bg"></div>
+            <div class="drum-inner"></div>
+          </div>
+          <div class="drum-unit">kcal</div>
+        </div>
+      </div>
+    </div>
+    <div class="am-section" style="flex:1;margin-bottom:0;">
+      <div class="am-section-hdr">Kcal descanso</div>
+      <div class="am-field">
+        <div class="drum-col" style="padding:4px 0;">
+          <div class="drum-wrap" data-key="kcalD" data-cid="${containerId}">
+            <div class="drum-sel-bg"></div>
+            <div class="drum-inner"></div>
+          </div>
+          <div class="drum-unit">kcal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;background:var(--s2);border-radius:11px;padding:3px;gap:3px;margin-bottom:12px;">
+    <div onclick="drumSetModo('g','${containerId}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Gramos</div>
+    <div onclick="drumSetModo('pct','${containerId}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${!isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Porcentaje</div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:4px;">
+    <div style="flex:1;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Entreno</div>
+    <div style="flex:1;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Descanso</div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:10px;">
+    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:10px 6px;">
+      <div style="display:flex;gap:4px;">
+        <div class="drum-col">
+          <div class="drum-col-lbl">Prot</div>
+          <div class="drum-wrap" data-key="pE" data-cid="${containerId}"><div class="drum-sel-bg"></div><div class="drum-inner"></div></div>
+          <div class="drum-unit">${unit}</div>
+        </div>
+        <div class="drum-col">
+          <div class="drum-col-lbl">HC</div>
+          <div class="drum-wrap" data-key="hcE" data-cid="${containerId}"><div class="drum-sel-bg"></div><div class="drum-inner"></div></div>
+          <div class="drum-unit">${unit}</div>
+        </div>
+        <div class="drum-col">
+          <div class="drum-col-lbl">Gras</div>
+          <div class="drum-wrap" data-key="gE" data-cid="${containerId}"><div class="drum-sel-bg"></div><div class="drum-inner"></div></div>
+          <div class="drum-unit">${unit}</div>
+        </div>
+      </div>
+      ${!isG ? `<div style="text-align:center;font-size:11px;font-weight:700;margin-top:6px;color:${totalE===100?'var(--green)':'var(--accent)'};">${totalE}%${totalE===100?' ✓':' !'}</div>` : ''}
+    </div>
+    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:10px 6px;">
+      <div style="display:flex;gap:4px;">
+        <div class="drum-col">
+          <div class="drum-col-lbl">Prot</div>
+          <div class="drum-wrap" data-key="pD" data-cid="${containerId}"><div class="drum-sel-bg"></div><div class="drum-inner"></div></div>
+          <div class="drum-unit">${unit}</div>
+        </div>
+        <div class="drum-col">
+          <div class="drum-col-lbl">HC</div>
+          <div class="drum-wrap" data-key="hcD" data-cid="${containerId}"><div class="drum-sel-bg"></div><div class="drum-inner"></div></div>
+          <div class="drum-unit">${unit}</div>
+        </div>
+        <div class="drum-col">
+          <div class="drum-col-lbl">Gras</div>
+          <div class="drum-wrap" data-key="gD" data-cid="${containerId}"><div class="drum-sel-bg"></div><div class="drum-inner"></div></div>
+          <div class="drum-unit">${unit}</div>
+        </div>
+      </div>
+      ${!isG ? `<div style="text-align:center;font-size:11px;font-weight:700;margin-top:6px;color:${totalD===100?'var(--green)':'var(--accent)'};">${totalD}%${totalD===100?' ✓':' !'}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function drumInit(containerId) {
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  _drumContainer = containerId;
+  container.querySelectorAll('.drum-wrap').forEach(drum => {
+    const key = drum.dataset.key;
+    drumBuild(drum, key);
+    drumSetupDrag(drum, key, containerId);
+  });
+}
+
+function drumBuild(drum, key) {
+  const inner = drum.querySelector('.drum-inner');
+  let range, val;
+  if(key === 'kcalE' || key === 'kcalD') {
+    range = _drumRanges[key];
+    val = _drumVals[key];
+  } else {
+    const isG = _drumModo === 'g';
+    range = _drumRanges[_drumModo][key];
+    if(isG) {
+      val = _drumVals[key];
+    } else {
+      const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
+      const factor = key.startsWith('g') ? 9 : 4;
+      val = Math.round(_drumVals[key] * factor / kcal * 100);
+    }
+  }
+  const min=range[0], max=range[1], step=range[2];
+  const items=[];
+  for(let v=min;v<=max;v+=step) items.push(v);
+  inner._items = items;
+  inner._key = key;
+  let cur = Math.round(val/step)*step;
+  cur = Math.max(min, Math.min(max, cur));
+  let idx = items.indexOf(cur);
+  if(idx<0) idx=0;
+  inner._idx = idx;
+  drumRender(inner, idx);
+}
+
+function drumRender(inner, idx) {
+  const items = inner._items;
+  const html = [-1,0,1,2].map(offset => {
+    const i = idx + offset;
+    const v = (i>=0 && i<items.length) ? items[i] : '';
+    const cls = offset===0 ? 'drum-item sel' : (Math.abs(offset)===1 ? 'drum-item near' : 'drum-item');
+    return `<div class="${cls}">${v}</div>`;
+  }).join('');
+  inner.innerHTML = html;
+}
+
+function drumSetupDrag(drum, key, containerId) {
+  let startY=0, startIdx=0, active=false;
+  const start = y => { startY=y; const inner=drum.querySelector('.drum-inner'); startIdx=inner._idx; active=true; };
+  const move = y => {
+    if(!active) return;
+    const inner = drum.querySelector('.drum-inner');
+    const delta = Math.round((startY-y)/36);
+    const newIdx = Math.max(0, Math.min(inner._items.length-1, startIdx+delta));
+    if(newIdx !== inner._idx) {
+      inner._idx = newIdx;
+      const rawVal = inner._items[newIdx];
+      const isG = _drumModo === 'g';
+      if(key==='kcalE'||key==='kcalD') {
+        _drumVals[key] = rawVal;
+      } else if(isG) {
+        _drumVals[key] = rawVal;
+      } else {
+        const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
+        const factor = key.startsWith('g') ? 9 : 4;
+        _drumVals[key] = Math.round(kcal * rawVal / 100 / factor);
+      }
+      drumRender(inner, newIdx);
+      drumUpdateTotals(containerId);
+      drumScheduleAutoSave();
+    }
+  };
+  const end = () => { active=false; };
+  drum.addEventListener('mousedown', e=>start(e.clientY));
+  window.addEventListener('mousemove', e=>{ if(active) move(e.clientY); });
+  window.addEventListener('mouseup', end);
+  drum.addEventListener('touchstart', e=>start(e.touches[0].clientY), {passive:true});
+  drum.addEventListener('touchmove', e=>{ move(e.touches[0].clientY); }, {passive:true});
+  drum.addEventListener('touchend', end);
+}
+
+function drumUpdateTotals(containerId) {
+  const container = document.getElementById(containerId);
+  if(!container || _drumModo==='g') return;
+  const vPE  = Math.round(_drumVals.pE*4/_drumVals.kcalE*100);
+  const vHcE = Math.round(_drumVals.hcE*4/_drumVals.kcalE*100);
+  const vGE  = Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
+  const vPD  = Math.round(_drumVals.pD*4/_drumVals.kcalD*100);
+  const vHcD = Math.round(_drumVals.hcD*4/_drumVals.kcalD*100);
+  const vGD  = Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
+  const tE = vPE+vHcE+vGE, tD = vPD+vHcD+vGD;
+  container.querySelectorAll('[data-total]').forEach(el => {
+    const side = el.dataset.total;
+    const t = side==='E' ? tE : tD;
+    el.textContent = t+'%'+(t===100?' ✓':' !');
+    el.style.color = t===100 ? 'var(--green)' : 'var(--accent)';
+  });
+}
+
+function drumSetModo(modo, containerId) {
+  if(modo === _drumModo) return;
+  _drumModo = modo;
+  const body = document.getElementById(containerId);
+  if(!body) return;
+  if(containerId === 'adminMacrosBody') renderAdminMacrosUI();
+  else if(containerId === 'adminMenuBody') renderAdminMenuMacros();
+}
+
+function drumScheduleAutoSave() {
+  clearTimeout(_drumAutoSaveTimer);
+  _drumAutoSaveTimer = setTimeout(() => {
+    if(_drumContainer === 'adminMacrosBody') guardarMacros(true);
+    else if(_drumContainer === 'adminMenuBody') guardarMacros(true, 'menu');
+  }, 1500);
+}
 
 async function renderAdminMacros() {
   const body = document.getElementById('adminMacrosBody');
   body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
-
   let perfil = null;
   try {
     const res = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(_adminMacrosEmail) + '&limit=1');
     const rows = await res.json();
     if (Array.isArray(rows) && rows.length) perfil = rows[0];
   } catch(e) {}
-
-  window._amPerfil = perfil;
-  _amModoToggle = 'gramos';
-  renderAdminMacrosUI(perfil);
+  _drumVals = { kcalE: perfil?.kcal_objetivo||2200, kcalD: perfil?.kcal_descanso||1900, pE: perfil?.p_objetivo||160, hcE: perfil?.hc_objetivo||220, gE: perfil?.g_objetivo||65, pD: perfil?.p_descanso||150, hcD: perfil?.hc_descanso||170, gD: perfil?.g_descanso||60 };
+  _drumModo = 'g';
+  _drumContainer = 'adminMacrosBody';
+  renderAdminMacrosUI();
 }
 
-function renderAdminMacrosUI(perfil) {
+function renderAdminMacrosUI() {
   const body = document.getElementById('adminMacrosBody');
-  const isG = _amModoToggle === 'gramos';
-  const kcalE = perfil?.kcal_objetivo || 2200;
-  const kcalD = perfil?.kcal_descanso || 1900;
-
-  const pE  = perfil?.p_objetivo  || 160;
-  const hcE = perfil?.hc_objetivo || 220;
-  const gE  = perfil?.g_objetivo  || 65;
-  const pD  = perfil?.p_descanso  || 150;
-  const hcD = perfil?.hc_descanso || 170;
-  const gD  = perfil?.g_descanso  || 60;
-
-  const pctPE  = Math.round(pE*4/kcalE*100);
-  const pctHcE = Math.round(hcE*4/kcalE*100);
-  const pctGE  = Math.round(gE*9/kcalE*100);
-  const pctPD  = Math.round(pD*4/kcalD*100);
-  const pctHcD = Math.round(hcD*4/kcalD*100);
-  const pctGD  = Math.round(gD*9/kcalD*100);
-
-  const totalE = pctPE + pctHcE + pctGE;
-  const totalD = pctPD + pctHcD + pctGD;
-
-  const valPE  = isG ? pE  : pctPE;
-  const valHcE = isG ? hcE : pctHcE;
-  const valGE  = isG ? gE  : pctGE;
-  const valPD  = isG ? pD  : pctPD;
-  const valHcD = isG ? hcD : pctHcD;
-  const valGD  = isG ? gD  : pctGD;
-  const unit   = isG ? 'g' : '%';
-
-  const tgStyle = (active) => `flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${active ? 'background:var(--s1);border:1px solid var(--border);color:var(--accent);' : 'color:var(--muted);'}`;
-
-  body.innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <div class="am-section" style="flex:1;margin-bottom:0;">
-        <div class="am-section-hdr">Kcal entreno</div>
-        <div class="am-field"><input class="am-field-input" id="amMKcalE" type="number" inputmode="numeric" value="${kcalE}" oninput="amMRecalc()" style="width:100%;text-align:right;"></div>
-      </div>
-      <div class="am-section" style="flex:1;margin-bottom:0;">
-        <div class="am-section-hdr">Kcal descanso</div>
-        <div class="am-field"><input class="am-field-input" id="amMKcalD" type="number" inputmode="numeric" value="${kcalD}" oninput="amMRecalc()" style="width:100%;text-align:right;"></div>
-      </div>
-    </div>
-
-    <div style="display:flex;background:var(--s2);border-radius:11px;padding:3px;gap:3px;margin-bottom:12px;">
-      <div id="amTgGramos" style="${tgStyle(isG)}" onclick="amMToggle('gramos')">Gramos</div>
-      <div id="amTgPct" style="${tgStyle(!isG)}" onclick="amMToggle('porcentaje')">Porcentaje</div>
-    </div>
-
-    <div class="am-section">
-      <div class="am-section-hdr">Día de entreno${!isG ? ` <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted);">· kcal calculadas: <span id="amKcalCalcE">—</span></span>` : ''}</div>
-      <div class="am-field"><span class="am-field-label">Proteína</span><div style="display:flex;align-items:center;gap:4px;"><input class="am-field-input" id="amMValPE" type="number" inputmode="numeric" value="${valPE}" oninput="amMRecalc()" style="width:70px;text-align:right;"><span style="font-size:12px;color:var(--muted);">${unit}</span></div></div>
-      <div class="am-field"><span class="am-field-label">Hidratos</span><div style="display:flex;align-items:center;gap:4px;"><input class="am-field-input" id="amMValHcE" type="number" inputmode="numeric" value="${valHcE}" oninput="amMRecalc()" style="width:70px;text-align:right;"><span style="font-size:12px;color:var(--muted);">${unit}</span></div></div>
-      <div class="am-field"><span class="am-field-label">Grasas</span><div style="display:flex;align-items:center;gap:4px;"><input class="am-field-input" id="amMValGE" type="number" inputmode="numeric" value="${valGE}" oninput="amMRecalc()" style="width:70px;text-align:right;"><span style="font-size:12px;color:var(--muted);">${unit}</span></div></div>
-    </div>
-
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Día de descanso${!isG ? ` <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted);">· kcal calculadas: <span id="amKcalCalcD">—</span></span>` : ''}</div>
-      <div class="am-field"><span class="am-field-label">Proteína</span><div style="display:flex;align-items:center;gap:4px;"><input class="am-field-input" id="amMValPD" type="number" inputmode="numeric" value="${valPD}" oninput="amMRecalc()" style="width:70px;text-align:right;"><span style="font-size:12px;color:var(--muted);">${unit}</span></div></div>
-      <div class="am-field"><span class="am-field-label">Hidratos</span><div style="display:flex;align-items:center;gap:4px;"><input class="am-field-input" id="amMValHcD" type="number" inputmode="numeric" value="${valHcD}" oninput="amMRecalc()" style="width:70px;text-align:right;"><span style="font-size:12px;color:var(--muted);">${unit}</span></div></div>
-      <div class="am-field"><span class="am-field-label">Grasas</span><div style="display:flex;align-items:center;gap:4px;"><input class="am-field-input" id="amMValGD" type="number" inputmode="numeric" value="${valGD}" oninput="amMRecalc()" style="width:70px;text-align:right;"><span style="font-size:12px;color:var(--muted);">${unit}</span></div></div>
-    </div>
-
-    ${!isG ? `
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <div id="amTotalE" style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;text-align:center;color:${totalE===100?'var(--green)':'var(--accent)'};">Entreno: ${totalE}%${totalE===100?' ✓':' — ajustar'}</div>
-      <div id="amTotalD" style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;text-align:center;color:${totalD===100?'var(--green)':'var(--accent)'};">Descanso: ${totalD}%${totalD===100?' ✓':' — ajustar'}</div>
-    </div>` : ''}
-
+  body.innerHTML = drumHTML('adminMacrosBody') + `
     <input type="hidden" id="amMModoApp" value="macros">
-    <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">
-      💾 Guardar macros
-    </button>
+    <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">💾 Guardar macros</button>
   `;
-  amMRecalc();
+  drumInit('adminMacrosBody');
 }
 
-function amMToggle(modo) {
-  const perfil = window._amPerfil;
-  const kcalE = parseInt(document.getElementById('amMKcalE')?.value) || perfil?.kcal_objetivo || 2200;
-  const kcalD = parseInt(document.getElementById('amMKcalD')?.value) || perfil?.kcal_descanso || 1900;
-  const isG = _amModoToggle === 'gramos';
-
-  if (modo === _amModoToggle) return;
-
-  if (modo === 'porcentaje' && isG) {
-    const pE  = parseInt(document.getElementById('amMValPE').value)  || 0;
-    const hcE = parseInt(document.getElementById('amMValHcE').value) || 0;
-    const gE  = parseInt(document.getElementById('amMValGE').value)  || 0;
-    const pD  = parseInt(document.getElementById('amMValPD').value)  || 0;
-    const hcD = parseInt(document.getElementById('amMValHcD').value) || 0;
-    const gD  = parseInt(document.getElementById('amMValGD').value)  || 0;
-    window._amPerfil = { ...(perfil||{}), kcal_objetivo:kcalE, kcal_descanso:kcalD, p_objetivo:pE, hc_objetivo:hcE, g_objetivo:gE, p_descanso:pD, hc_descanso:hcD, g_descanso:gD };
-  } else if (modo === 'gramos' && !isG) {
-    const pctPE  = parseInt(document.getElementById('amMValPE').value)  || 0;
-    const pctHcE = parseInt(document.getElementById('amMValHcE').value) || 0;
-    const pctGE  = parseInt(document.getElementById('amMValGE').value)  || 0;
-    const pctPD  = parseInt(document.getElementById('amMValPD').value)  || 0;
-    const pctHcD = parseInt(document.getElementById('amMValHcD').value) || 0;
-    const pctGD  = parseInt(document.getElementById('amMValGD').value)  || 0;
-    window._amPerfil = {
-      ...(perfil||{}), kcal_objetivo:kcalE, kcal_descanso:kcalD,
-      p_objetivo:  Math.round(kcalE * pctPE  / 100 / 4),
-      hc_objetivo: Math.round(kcalE * pctHcE / 100 / 4),
-      g_objetivo:  Math.round(kcalE * pctGE  / 100 / 9),
-      p_descanso:  Math.round(kcalD * pctPD  / 100 / 4),
-      hc_descanso: Math.round(kcalD * pctHcD / 100 / 4),
-      g_descanso:  Math.round(kcalD * pctGD  / 100 / 9)
-    };
-  }
-  _amModoToggle = modo;
-  renderAdminMacrosUI(window._amPerfil);
-}
-
-function amMRecalc() {
-  if (_amModoToggle !== 'porcentaje') return;
-  const kcalE = parseInt(document.getElementById('amMKcalE')?.value) || 2200;
-  const kcalD = parseInt(document.getElementById('amMKcalD')?.value) || 1900;
-  const pE  = parseInt(document.getElementById('amMValPE')?.value)  || 0;
-  const hcE = parseInt(document.getElementById('amMValHcE')?.value) || 0;
-  const gE  = parseInt(document.getElementById('amMValGE')?.value)  || 0;
-  const pD  = parseInt(document.getElementById('amMValPD')?.value)  || 0;
-  const hcD = parseInt(document.getElementById('amMValHcD')?.value) || 0;
-  const gD  = parseInt(document.getElementById('amMValGD')?.value)  || 0;
-  const kcalCalcE = Math.round(pE*4*kcalE/100 + hcE*4*kcalE/100 + gE*9*kcalE/100);
-  const kcalCalcD = Math.round(pD*4*kcalD/100 + hcD*4*kcalD/100 + gD*9*kcalD/100);
-  const totalE = pE + hcE + gE;
-  const totalD = pD + hcD + gD;
-  const elCalcE = document.getElementById('amKcalCalcE');
-  const elCalcD = document.getElementById('amKcalCalcD');
-  const elTotalE = document.getElementById('amTotalE');
-  const elTotalD = document.getElementById('amTotalD');
-  if(elCalcE) elCalcE.textContent = kcalCalcE + ' kcal';
-  if(elCalcD) elCalcD.textContent = kcalCalcD + ' kcal';
-  if(elTotalE){ elTotalE.textContent = `Entreno: ${totalE}%${totalE===100?' ✓':' — ajustar'}`; elTotalE.style.color = totalE===100?'var(--green)':'var(--accent)'; }
-  if(elTotalD){ elTotalD.textContent = `Descanso: ${totalD}%${totalD===100?' ✓':' — ajustar'}`; elTotalD.style.color = totalD===100?'var(--green)':'var(--accent)'; }
+function drumGetMacrosEmail() {
+  if(_drumContainer === 'adminMacrosBody') return _adminMacrosEmail;
+  return _adminMenuEmail;
 }
 
 function amMSetModo(modo) {}
 
-async function guardarMacros() {
-  const kcalE = parseInt(document.getElementById('amMKcalE')?.value) || 2200;
-  const kcalD = parseInt(document.getElementById('amMKcalD')?.value) || 1900;
-  const v1 = parseInt(document.getElementById('amMValPE')?.value)  || 0;
-  const v2 = parseInt(document.getElementById('amMValHcE')?.value) || 0;
-  const v3 = parseInt(document.getElementById('amMValGE')?.value)  || 0;
-  const v4 = parseInt(document.getElementById('amMValPD')?.value)  || 0;
-  const v5 = parseInt(document.getElementById('amMValHcD')?.value) || 0;
-  const v6 = parseInt(document.getElementById('amMValGD')?.value)  || 0;
-  const isG = _amModoToggle === 'gramos';
+async function guardarMacros(silent=false, modoApp='macros') {
+  const email = drumGetMacrosEmail();
   const payload = {
-    cliente_email: _adminMacrosEmail,
-    kcal_objetivo: kcalE,
-    kcal_descanso: kcalD,
-    p_objetivo:    isG ? v1 : Math.round(kcalE * v1 / 100 / 4),
-    hc_objetivo:   isG ? v2 : Math.round(kcalE * v2 / 100 / 4),
-    g_objetivo:    isG ? v3 : Math.round(kcalE * v3 / 100 / 9),
-    p_descanso:    isG ? v4 : Math.round(kcalD * v4 / 100 / 4),
-    hc_descanso:   isG ? v5 : Math.round(kcalD * v5 / 100 / 4),
-    g_descanso:    isG ? v6 : Math.round(kcalD * v6 / 100 / 9),
-    modo_app:      'macros'
+    cliente_email: email,
+    kcal_objetivo: _drumVals.kcalE,
+    kcal_descanso: _drumVals.kcalD,
+    p_objetivo:    _drumVals.pE,
+    hc_objetivo:   _drumVals.hcE,
+    g_objetivo:    _drumVals.gE,
+    p_descanso:    _drumVals.pD,
+    hc_descanso:   _drumVals.hcD,
+    g_descanso:    _drumVals.gD,
+    modo_app:      modoApp
   };
   try {
     const res = await supaAdmin('/rest/v1/perfiles_macroai', {
@@ -6316,7 +6423,7 @@ async function guardarMacros() {
       body: JSON.stringify(payload)
     });
     if (res.ok || res.status === 201 || res.status === 204) {
-      showToast('✅ Macros guardados');
+      if(!silent) showToast('✅ Macros guardados');
     } else {
       const err = await res.text();
       console.error('guardarMacros:', err);
@@ -6339,53 +6446,19 @@ async function renderAdminMenuPerfil(seccion) {
 
   const semana = getLunesSemana(_adminMenuSemanaOffset);
 
-  body.innerHTML = `
-    <div id="amSeccionMacros"><!-- Macros día entreno -->
-    <div class="am-section">
-      <div class="am-section-hdr">Macros día de entreno</div>
-      <div class="am-field">
-        <span class="am-field-label">Calorías (kcal)</span>
-        <input class="am-field-input" id="amKcalE" type="number" inputmode="numeric" value="${perfil?.kcal_objetivo || 2200}">
-      </div>
-      <div class="am-field">
-        <span class="am-field-label">Proteína (g)</span>
-        <input class="am-field-input" id="amProtE" type="number" inputmode="numeric" value="${perfil?.p_objetivo || 160}">
-      </div>
-      <div class="am-field">
-        <span class="am-field-label">Hidratos (g)</span>
-        <input class="am-field-input" id="amHcE" type="number" inputmode="numeric" value="${perfil?.hc_objetivo || 220}">
-      </div>
-      <div class="am-field">
-        <span class="am-field-label">Grasas (g)</span>
-        <input class="am-field-input" id="amGrasaE" type="number" inputmode="numeric" value="${perfil?.g_objetivo || 65}">
-      </div>
-    </div>
+  _drumVals = { kcalE: perfil?.kcal_objetivo||2200, kcalD: perfil?.kcal_descanso||1900, pE: perfil?.p_objetivo||160, hcE: perfil?.hc_objetivo||220, gE: perfil?.g_objetivo||65, pD: perfil?.p_descanso||150, hcD: perfil?.hc_descanso||170, gD: perfil?.g_descanso||60 };
+  _drumModo = 'g';
+  _drumContainer = 'adminMenuBody';
 
-    <!-- Macros día descanso -->
-    <div class="am-section">
-      <div class="am-section-hdr">Macros día de descanso</div>
-      <div class="am-field">
-        <span class="am-field-label">Calorías (kcal)</span>
-        <input class="am-field-input" id="amKcalD" type="number" inputmode="numeric" value="${perfil?.kcal_descanso || 1900}">
-      </div>
-      <div class="am-field">
-        <span class="am-field-label">Proteína (g)</span>
-        <input class="am-field-input" id="amProtD" type="number" inputmode="numeric" value="${perfil?.p_descanso || 150}">
-      </div>
-      <div class="am-field">
-        <span class="am-field-label">Hidratos (g)</span>
-        <input class="am-field-input" id="amHcD" type="number" inputmode="numeric" value="${perfil?.hc_descanso || 170}">
-      </div>
-      <div class="am-field">
-        <span class="am-field-label">Grasas (g)</span>
-        <input class="am-field-input" id="amGrasaD" type="number" inputmode="numeric" value="${perfil?.g_descanso || 60}">
-      </div>
-    </div>
+  body.innerHTML = drumHTML('adminMenuBody') + `
+    <button class="am-btn-secondary" onclick="guardarMacros(false,'menu')" style="margin-bottom:12px;">💾 Guardar macros</button>
+
+    <div id="amSeccionMacros"></div>
 
     <!-- Configuración -->
     <div class="am-section">
       <div class="am-section-hdr">Configuración</div>
-      <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'macros'}">
+      <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
       <div class="am-field">
         <span class="am-field-label">Comidas al día</span>
         <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
@@ -6470,14 +6543,14 @@ function amSetModo(modo) {
 }
 
 async function guardarPerfil() {
-  const kcalE = parseInt(document.getElementById('amKcalE').value) || 2200;
-  const protE = parseInt(document.getElementById('amProtE').value) || 160;
-  const hcE = parseInt(document.getElementById('amHcE').value) || 220;
-  const grasaE = parseInt(document.getElementById('amGrasaE').value) || 65;
-  const kcalD = parseInt(document.getElementById('amKcalD').value) || 1900;
-  const protD = parseInt(document.getElementById('amProtD').value) || 150;
-  const hcD = parseInt(document.getElementById('amHcD').value) || 170;
-  const grasaD = parseInt(document.getElementById('amGrasaD').value) || 60;
+  const kcalE = _drumVals.kcalE || 2200;
+  const protE = _drumVals.pE || 160;
+  const hcE   = _drumVals.hcE || 220;
+  const grasaE = _drumVals.gE || 65;
+  const kcalD = _drumVals.kcalD || 1900;
+  const protD = _drumVals.pD || 150;
+  const hcD = _drumVals.hcD || 170;
+  const grasaD = _drumVals.gD || 60;
   const comidas = parseInt(document.getElementById('amComidas').value) || 4;
   const prefs = document.getElementById('amPrefs').value.trim();
   const modoApp = 'menu';
@@ -6514,10 +6587,10 @@ async function guardarPerfil() {
 async function generarMenu(modo) {
   const btnId = modo === 'sugerir' ? 'amGenBtnA' : 'amGenBtnB';
   const btn = document.getElementById(btnId);
-  const kcal = parseInt(document.getElementById('amKcalE').value) || 2200;
-  const prot = parseInt(document.getElementById('amProtE').value) || 160;
-  const hc = parseInt(document.getElementById('amHcE').value) || 220;
-  const grasa = parseInt(document.getElementById('amGrasaE').value) || 65;
+  const kcal  = _drumVals.kcalE || 2200;
+  const prot  = _drumVals.pE || 160;
+  const hc    = _drumVals.hcE || 220;
+  const grasa = _drumVals.gE || 65;
   const comidas = parseInt(document.getElementById('amComidas').value) || 4;
   const prefs = document.getElementById('amPrefs').value.trim();
   const texto_menu = modo === 'confirmar' ? document.getElementById('amTextoMenu').value.trim() : '';
