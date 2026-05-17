@@ -1600,6 +1600,29 @@ function editarFavorito(id){
       <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Nombre</div>
       <input id="favEditNombre" value="${escapeHtml(f.nombre)}"
         style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--fg);font-size:14px;margin-bottom:14px;box-sizing:border-box;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">Macros totales</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;">kcal</label>
+          <input id="favEditKcal" type="number" value="${f.kcal||0}" min="0"
+            style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;color:var(--red);font-weight:600;text-transform:uppercase;">Prot g</label>
+          <input id="favEditProt" type="number" value="${f.prot||0}" min="0"
+            style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;color:var(--yellow);font-weight:600;text-transform:uppercase;">CH g</label>
+          <input id="favEditCh" type="number" value="${f.ch||0}" min="0"
+            style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;color:var(--blue);font-weight:600;text-transform:uppercase;">Grasa g</label>
+          <input id="favEditGrasa" type="number" value="${f.grasa||0}" min="0"
+            style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;">
+        </div>
+      </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">Ingredientes y cantidades</div>
       <div id="favEditIngs">${renderIngInputs()}</div>
       <button id="favAddIng" style="width:100%;padding:9px;background:rgba(192,57,43,0.08);border:1px dashed rgba(192,57,43,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:16px;cursor:pointer;">+ Añadir ingrediente</button>
@@ -1630,8 +1653,19 @@ function editarFavorito(id){
     const cantidadesInputs=[...overlay.querySelectorAll('[data-ing-cantidad]')];
     const nuevosIngs=nombresInputs.map((inp,i)=>({nombre:inp.value.trim(),cantidad:cantidadesInputs[i]?.value.trim()||''})).filter(x=>x.nombre);
     const nuevoNombre=overlay.querySelector('#favEditNombre').value.trim()||f.nombre;
+    const nuevoKcal=parseInt(overlay.querySelector('#favEditKcal').value)||0;
+    const nuevoProt=parseInt(overlay.querySelector('#favEditProt').value)||0;
+    const nuevoCh=parseInt(overlay.querySelector('#favEditCh').value)||0;
+    const nuevoGrasa=parseInt(overlay.querySelector('#favEditGrasa').value)||0;
     const idx=favs.findIndex(x=>x.id===id);
-    if(idx>=0){favs[idx].nombre=nuevoNombre;favs[idx].ingredientes=nuevosIngs;}
+    if(idx>=0){
+      favs[idx].nombre=nuevoNombre;
+      favs[idx].ingredientes=nuevosIngs;
+      favs[idx].kcal=nuevoKcal;
+      favs[idx].prot=nuevoProt;
+      favs[idx].ch=nuevoCh;
+      favs[idx].grasa=nuevoGrasa;
+    }
     saveFavs(favs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
   });
 }
