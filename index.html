@@ -4941,14 +4941,18 @@ function _diarioRenderFuturo(fecha) {
     block.style.cssText = 'border-bottom:1px solid var(--border);';
 
     let itemsHtml = items.map((item, i) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div
+        ontouchstart="futurMfpTouchStart('${fecha}','${meal.id}',${i},event)"
+        ontouchend="futurMfpTouchEnd()"
+        ontouchmove="futurMfpTouchEnd()"
+        oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
+        style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
-          <div onclick="eliminarComidaFutura('${fecha}','${meal.id}',${i})" style="width:22px;height:22px;border-radius:6px;background:rgba(255,107,107,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:var(--red);">✕</div>
         </div>
       </div>`).join('');
 
@@ -5033,6 +5037,51 @@ function eliminarComidaFutura(fecha, mealId, idx) {
     cargarDiarioPorFecha(fecha);
     showToast('🗑️ Eliminado del plan');
   } catch(e) {}
+}
+
+function futurMfpTouchStart(fecha,mealId,idx,e){
+  window._futurMfpTimer=setTimeout(()=>futurMfpMenuItem(fecha,mealId,idx,e),600);
+}
+function futurMfpTouchEnd(){clearTimeout(window._futurMfpTimer);}
+
+function futurMfpMenuItem(fecha,mealId,idx,e){
+  if(e)e.preventDefault();
+  const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];
+  const mealIds=['desayuno','almuerzo','comida','merienda','cena'];
+  let nombreItem='Alimento';
+  try{
+    const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
+    if(d&&d.comidas){
+      const its=d.comidas.filter(c=>c.mealId===mealId);
+      nombreItem=its[idx]?.nombre||'Alimento';
+    }
+  }catch(err){}
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+  let moverOpts=mealIds.map((id,i)=>`<button onclick="futurMfpMoverItem('${fecha}','${mealId}',${idx},'${id}');this.closest('[data-fut-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');
+  overlay.innerHTML=`<div data-fut-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${nombreItem}</div>
+    <button onclick="eliminarComidaFutura('${fecha}','${mealId}',${idx});this.closest('[data-fut-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>
+    ${moverOpts}
+    <button onclick="this.closest('[data-fut-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:4px;">Cancelar</button>
+  </div>`;
+  overlay.addEventListener('click',ev=>{if(ev.target===overlay)overlay.remove();});
+  document.body.appendChild(overlay);
+}
+
+function futurMfpMoverItem(fecha,mealId,idx,newMealId){
+  try{
+    const key='macroai_dia_'+fecha;
+    const d=JSON.parse(localStorage.getItem(key)||'null')||{comidas:[]};
+    const items=d.comidas.filter(c=>c.mealId===mealId);
+    const item=items[idx];
+    if(!item)return;
+    item.mealId=newMealId;
+    saveDiaFecha(fecha,d);
+    cargarDiarioPorFecha(fecha);
+    showToast('↩ Movido a '+newMealId);
+  }catch(err){}
 }
 
 
