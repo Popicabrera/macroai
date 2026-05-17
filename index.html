@@ -1445,6 +1445,86 @@ function mostrarSelectorComidaFav(id, fechaForzada) {
   document.body.appendChild(overlay);
 }
 
+
+// ── REPARTO: Añadir bloque al diario ──
+function registrarDesdeReparto(idx) {
+  const bloques = window._repartoActual;
+  if (!bloques || !bloques[idx]) return;
+  const b = bloques[idx];
+  // Abrir selector de comida (bottom sheet)
+  const comidas = [
+    {id:'desayuno', emoji:'🌅', label:'Desayuno'},
+    {id:'almuerzo', emoji:'☕', label:'Almuerzo'},
+    {id:'comida',   emoji:'☀️', label:'Comida'},
+    {id:'merienda', emoji:'🍎', label:'Merienda'},
+    {id:'cena',     emoji:'🌙', label:'Cena'},
+  ];
+  const fecha = _diarioFecha || getToday();
+  const esHoy = fecha === getToday();
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  overlay.innerHTML = '<div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">' +
+    '<div style="font-family:\'Space Grotesk\',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">' + b.emoji + ' ' + b.titulo + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">¿En qué comida de ' + (esHoy ? 'Hoy' : fecha) + '?</div>' +
+    comidas.map(c =>
+      '<div data-rp-meal="' + c.id + '" style="display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:12px;margin-bottom:8px;background:var(--s2);cursor:pointer;border:1px solid var(--border);">' +
+        '<span style="font-size:20px;">' + c.emoji + '</span>' +
+        '<span style="font-family:\'Space Grotesk\',sans-serif;font-size:14px;font-weight:600;">' + c.label + '</span>' +
+      '</div>'
+    ).join('') +
+    '<button onclick="this.closest(\'[data-rp-overlay]\').remove()" style="width:100%;padding:12px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:14px;margin-top:4px;cursor:pointer;">Cancelar</button>' +
+  '</div>';
+  overlay.querySelector('div').setAttribute('data-rp-overlay', '');
+  overlay.querySelectorAll('[data-rp-meal]').forEach(el => {
+    el.addEventListener('click', () => {
+      const mealId = el.dataset.rpMeal;
+      overlay.remove();
+      // Registrar en el día abierto
+      const entrada = {
+        nombre: b.titulo || b.nombre,
+        hora: new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'}),
+        kcal: b.kcal, prot: b.prot, ch: b.ch, grasa: b.grasa,
+        ingredientes: b.ingTexto || '',
+        mealId
+      };
+      if (!esHoy) {
+        const key = 'macroai_dia_' + fecha;
+        const d = JSON.parse(localStorage.getItem(key) || 'null') || {fecha, comidas:[]};
+        d.comidas.push(entrada);
+        saveDiaFecha(fecha, d);
+        showView('viewMain');
+        setTimeout(() => cargarDiarioPorFecha(fecha), 200);
+      } else {
+        S.kcalC += b.kcal; S.protC += b.prot; S.chC += b.ch; S.grasaC += b.grasa;
+        S.comidas.push(entrada);
+        updateBars(); saveToday();
+        saveComidaSupabase({nombre: entrada.nombre, fecha: getToday(), tipoDia: S.tipoDia, kcal: b.kcal, prot: b.prot, ch: b.ch, grasa: b.grasa, ingredientes: b.ingTexto || ''});
+        showView('viewMain');
+      }
+      showToast('✅ ' + b.nombre + ' → ' + mealId + ' · ' + b.kcal + ' kcal');
+      // Marcar botón como hecho
+      const btns = document.querySelectorAll('.reparto-btn-add');
+      if (btns[idx]) { btns[idx].textContent = '✅ Añadido'; btns[idx].classList.add('done'); btns[idx].disabled = true; }
+    });
+  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ── REPARTO: Guardar bloque como favorito ──
+function favoritoDesdeReparto(idx) {
+  const bloques = window._repartoActual;
+  if (!bloques || !bloques[idx]) return;
+  const b = bloques[idx];
+  // Parsear ingredientes a formato {nombre, cantidad}
+  const ings = (b.ingTexto || '').split('\n').filter(l => l.trim()).map(l => {
+    const m = l.trim().match(/^(.+?)\s+(\d+\s*(?:g|ml|ud|uds)?)$/i);
+    return m ? {nombre: m[1].trim(), cantidad: m[2].trim()} : {nombre: l.trim(), cantidad: ''};
+  });
+  guardarFavorito(b.titulo || b.nombre, '', {kcal: b.kcal, prot: b.prot, ch: b.ch, grasa: b.grasa}, ings.map(i => i.nombre + ':' + i.cantidad).join('\n'));
+  showToast('⭐ Guardado en favoritos: ' + (b.titulo || b.nombre));
+}
+
 function usarFavorito(id){
   mostrarSelectorComidaFav(id, null);
 }
@@ -2225,7 +2305,18 @@ cena:kcal=XXX,prot=XX,ch=XX,grasa=XX
 [AVISO_WARN]texto[/AVISO_WARN]
 [AVISO_OK]texto[/AVISO_OK]
 [OPCIONES]op1|op2|op3[/OPCIONES]
-[AÑADIR_DESPENSA]alimento1,alimento2,alimento3[/AÑADIR_DESPENSA]`;
+[AÑADIR_DESPENSA]alimento1,alimento2,alimento3[/AÑADIR_DESPENSA]
+
+Cuando el cliente pida repartir sus macros en X comidas (frases como "reparte mis macros", "distribúyelos en X comidas", "organiza mi alimentación del día"), usa el formato REPARTO:
+[REPARTO]
+Desayuno|🌅|Avena con leche y plátano|kcal=380,prot=18,ch=60,grasa=8|Avena copos 80g\nLeche semidesnatada 300ml\nPlátano 100g
+Almuerzo|☕|Yogur con nueces|kcal=200,prot=10,ch=18,grasa=10|Yogur natural 200g\nNueces 20g
+Comida|☀️|Pollo con arroz y ensalada|kcal=650,prot=55,ch=75,grasa=14|Pechuga pollo 200g\nArroz blanco 80g\nEnsalada variada 150g
+Merienda|🍎|Manzana y almendras|kcal=180,prot=5,ch=22,grasa=9|Manzana 150g\nAlmendras 25g
+Cena|🌙|Merluza con patata al vapor|kcal=490,prot=48,ch=45,grasa=10|Merluza 250g\nPatata 200g\nAceite oliva 10g
+[/REPARTO]
+Formato de cada línea: NombreComida|Emoji|TítuloPlato|kcal=X,prot=X,ch=X,grasa=X|Ingrediente1 CantidadXg\nIngrediente2 CantidadXg
+REGLAS del REPARTO: Usa solo las comidas que encajen (si son 3 comidas, usa solo Desayuno, Comida y Cena). Los macros de cada bloque deben sumar aproximadamente el objetivo diario. Los ingredientes son texto libre, uno por línea con \\n.`;
 }
 
 // ── PARSE AI ──
@@ -2368,6 +2459,51 @@ function parseAI(raw){
     }
     h+='</div>';elements.push({type:'html',content:h});text=text.replace(ingMatch[0],'').trim();
   }
+
+  // ── REPARTO DE MACROS POR COMIDAS ──
+  const repartoMatch = text.match(/\[REPARTO\]([\s\S]*?)\[\/REPARTO\]/);
+  if (repartoMatch) {
+    const lineas = repartoMatch[1].trim().split('\n').filter(l => l.trim() && !l.startsWith('//'));
+    const bloques = [];
+    lineas.forEach(l => {
+      const partes = l.split('|');
+      if (partes.length < 4) return;
+      const nombre = partes[0].trim();
+      const emoji  = partes[1].trim();
+      const titulo = partes[2].trim();
+      const macrosRaw = partes[3].trim();
+      const ingTexto  = (partes[4] || '').trim().replace(/\\n/g, '\n');
+      const mv = {};
+      macrosRaw.split(',').forEach(p => { const [k,v] = p.split('='); if(k&&v) mv[k.trim()] = Math.round(parseFloat(v)||0); });
+      bloques.push({ nombre, emoji, titulo, kcal: mv.kcal||0, prot: mv.prot||0, ch: mv.ch||0, grasa: mv.grasa||0, ingTexto });
+    });
+    if (bloques.length) {
+      window._repartoActual = bloques;
+      const rId = 'reparto-' + Date.now();
+      let h = '<div class="reparto-card" id="' + rId + '">';
+      h += '<div class="reparto-hdr"><span>\uD83C\uDF7D\uFE0F Reparto del d\u00EDa</span><span class="reparto-total">' + bloques.reduce((a,b)=>a+b.kcal,0) + ' kcal</span></div>';
+      bloques.forEach((b, i) => {
+        const ingHtml = b.ingTexto ? '<div class="reparto-ings">' + b.ingTexto.split('\n').filter(l=>l.trim()).map(l=>'<span>'+l.trim()+'</span>').join('') + '</div>' : '';
+        h += '<div class="reparto-bloque">' +
+          '<div class="reparto-bloque-top">' +
+            '<span class="reparto-em">' + b.emoji + '</span>' +
+            '<div class="reparto-info"><div class="reparto-nombre">' + b.nombre + '</div><div class="reparto-titulo">' + b.titulo + '</div></div>' +
+            '<div class="reparto-kcal">' + b.kcal + ' kcal</div>' +
+          '</div>' +
+          '<div class="reparto-macros">P ' + b.prot + 'g \u00B7 CH ' + b.ch + 'g \u00B7 G ' + b.grasa + 'g</div>' +
+          ingHtml +
+          '<div class="reparto-btns">' +
+            '<button class="reparto-btn-add" onclick="registrarDesdeReparto(' + i + ')">\u2795 A\u00F1adir al diario</button>' +
+            '<button class="reparto-btn-fav" onclick="favoritoDesdeReparto(' + i + ')">\u2B50</button>' +
+          '</div>' +
+        '</div>';
+      });
+      h += '</div>';
+      elements.push({ type: 'html', content: h });
+    }
+    text = text.replace(repartoMatch[0], '').trim();
+  }
+
   // [REGISTRAR] explícito — fallback si no hubo bloque INGREDIENTES con TOTAL
   const regMatch=rawOrig.match(/\[REGISTRAR\]\s*kcal\s*=\s*(\d+)[^,]*,\s*prot\s*=\s*(\d+)[^,]*,\s*ch\s*=\s*(\d+)[^,]*,\s*grasa\s*=\s*(\d+)[^\[]*\[\/REGISTRAR\]/i);
   const yaRegistrado=S.comidas.length>0&&rawOrig.includes('[INGREDIENTES]')&&rawOrig.includes('TOTAL:');
@@ -6074,6 +6210,30 @@ async function verMenuGenerado() {
 </script>
 
 <style>
+
+/* ── REPARTO DE MACROS ── */
+.reparto-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:6px;}
+.reparto-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--accent-dim);border-bottom:1px solid rgba(192,57,43,0.15);}
+.reparto-hdr span:first-child{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);}
+.reparto-total{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);}
+.reparto-bloque{padding:10px 14px;border-bottom:1px solid var(--border);}
+.reparto-bloque:last-child{border-bottom:none;}
+.reparto-bloque-top{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.reparto-em{font-size:20px;flex-shrink:0;}
+.reparto-info{flex:1;min-width:0;}
+.reparto-nombre{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.reparto-titulo{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.reparto-kcal{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.reparto-macros{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.reparto-ings{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.reparto-ings span{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:11px;color:var(--muted);}
+.reparto-btns{display:flex;gap:6px;}
+.reparto-btn-add{flex:1;padding:8px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;transition:all 0.15s;}
+.reparto-btn-add:active{background:rgba(192,57,43,0.2);}
+.reparto-btn-add.done{background:rgba(50,200,100,0.12);border-color:rgba(50,200,100,0.3);color:#2a9d5c;}
+.reparto-btn-fav{padding:8px 12px;background:rgba(255,211,61,0.1);border:1px solid rgba(255,211,61,0.3);border-radius:10px;font-size:14px;cursor:pointer;transition:all 0.15s;}
+.reparto-btn-fav:active{background:rgba(255,211,61,0.25);}
+
 @keyframes scanAnim {
   0%   { top: 4px; opacity: 1; }
   50%  { top: calc(100% - 6px); opacity: 1; }
