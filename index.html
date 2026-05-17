@@ -898,11 +898,11 @@ body{
       <div class="cfg2-title" style="font-size:10px;">Macros asignados por tu entrenador</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 14px;">
         <div style="background:var(--s2);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">💪 Entreno</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Entreno</div>
           <div id="perfilMacrosE" style="font-size:12px;color:var(--text);line-height:1.7;">—</div>
         </div>
         <div style="background:var(--s2);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">😴 Descanso</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descanso</div>
           <div id="perfilMacrosD" style="font-size:12px;color:var(--text);line-height:1.7;">—</div>
         </div>
       </div>
@@ -920,11 +920,9 @@ body{
       </div>
       <div style="display:flex;gap:8px;padding:0 14px 12px;">
         <div class="cfg2-daybtn" id="btnEntreno" onclick="setDayType('entreno')" style="flex:1;padding:8px 4px;gap:2px;">
-          <div style="font-size:16px;">💪</div>
           <div class="cfg2-daylbl">Entreno</div>
         </div>
         <div class="cfg2-daybtn" id="btnDescanso" onclick="setDayType('descanso')" style="flex:1;padding:8px 4px;gap:2px;">
-          <div style="font-size:16px;">😴</div>
           <div class="cfg2-daylbl">Descanso</div>
         </div>
       </div>
@@ -1241,7 +1239,7 @@ function renderWeekDays(){
   const lbl=document.getElementById('hoyLabel');
   if(lbl){
     const esentreno=WEEK_DAYS.includes(hoy);
-    lbl.textContent='(hoy: '+(esentreno?'💪 entreno':'😴 descanso')+')';
+    lbl.textContent='(hoy: '+(esentreno?'entreno':'descanso')+')';
     lbl.style.color=esentreno?'var(--accent)':'var(--blue)';
   }
 }
@@ -2087,7 +2085,7 @@ async function renderHistorialDia(){
       <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Resumen del día</span>
-          <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${d.tipoDia==='descanso'?'rgba(107,184,246,0.1)':'rgba(192,57,43,0.1)'};color:${d.tipoDia==='descanso'?'var(--blue)':'var(--accent)'};">${d.tipoDia==='descanso'?'😴 Descanso':'💪 Entreno'}</span>
+          <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${d.tipoDia==='descanso'?'rgba(107,184,246,0.1)':'rgba(192,57,43,0.1)'};color:${d.tipoDia==='descanso'?'var(--blue)':'var(--accent)'};">${d.tipoDia==='descanso'?'Descanso':'Entreno'}</span>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
           <div style="flex:1;text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${d.kcalC}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">kcal</div></div>
