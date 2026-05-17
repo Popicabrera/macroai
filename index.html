@@ -3192,8 +3192,13 @@ async function loadAdminUsers(){
             🗑️
           </div>
         </div>
-        <div class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;margin-top:4px;">
-          🥗 Menú nutricional
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <div onclick="abrirPerfilAdmin('${u.id}','${u.nombre||'Sin nombre'}','${u.email}')" style="flex:1;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;">
+            📊 Macros
+          </div>
+          <div class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex:1;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;">
+            🥗 Menú
+          </div>
         </div>`;
       body.appendChild(card);
     });
@@ -6103,16 +6108,17 @@ let _adminMenuEmail = '';
 let _adminMenuNombre = '';
 let _adminMenuSemanaOffset = 0;
 
-function abrirAdminMenu(email, nombre) {
+function abrirAdminMenu(email, nombre, seccion) {
   _adminMenuEmail = email;
   _adminMenuNombre = nombre || email;
   _adminMenuSemanaOffset = 0;
-  document.getElementById('adminMenuTitle').textContent = '⚡ ' + _adminMenuNombre;
+  document.getElementById('adminMenuTitle').textContent = _adminMenuNombre;
   showView('viewAdminMenu');
-  renderAdminMenuPerfil();
+  renderAdminMenuPerfil(seccion);
 }
 
-async function renderAdminMenuPerfil() {
+function abrirPerfilAdmin(id, nombre, email) { abrirAdminMenu(email, nombre, "macros"); }
+async function renderAdminMenuPerfil(seccion) {
   const body = document.getElementById('adminMenuBody');
   body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>`;
 
@@ -6126,7 +6132,7 @@ async function renderAdminMenuPerfil() {
   const semana = getLunesSemana(_adminMenuSemanaOffset);
 
   body.innerHTML = `
-    <!-- Macros día entreno -->
+    <div id="amSeccionMacros"><!-- Macros día entreno -->
     <div class="am-section">
       <div class="am-section-hdr">Macros día de entreno</div>
       <div class="am-field">
@@ -6204,7 +6210,7 @@ async function renderAdminMenuPerfil() {
       💾 Guardar perfil
     </button>
 
-    <!-- Separador generación -->
+    </div><div id="amSeccionMenu"><!-- Separador generación -->
     <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú semanal</div>
 
     <!-- Opción A: IA sugiere -->
@@ -6249,8 +6255,9 @@ Domingo: pollo, patata, zanahoria"></textarea>
     </button>
 
     <!-- Preview -->
-    <div id="amMenuPreview" style="margin-top:16px;"></div>
+    </div><div id="amMenuPreview" style="margin-top:16px;"></div>
   `;
+  if(seccion==='menu'){setTimeout(()=>{const el=document.getElementById('amSeccionMenu');if(el)el.scrollIntoView({behavior:'smooth'});},150);}
 }
 
 function amSetModo(modo) {
