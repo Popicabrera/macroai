@@ -1474,7 +1474,7 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
       const key='macroai_dia_'+fecha;
       const d=JSON.parse(localStorage.getItem(key)||'null')||{fecha,comidas:[]};
       d.comidas.push(entrada);
-      localStorage.setItem(key,JSON.stringify(d));
+      saveDiaFecha(fecha, d);
       showView('viewMain');
       setTimeout(()=>cargarDiarioPorFecha(fecha),200);
       showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
@@ -1758,28 +1758,42 @@ function saveToday(){
   localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d));
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
   if(!idx.includes(getToday())){idx.push(getToday());localStorage.setItem('macroai_dias',JSON.stringify(idx));}
-  // Guardar en Supabase
-  if(CURRENT_USER){
-    supaFetch('/rest/v1/registros_macroai',{
-      method:'POST',
-      headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
-      body:JSON.stringify({
-        usuario_id:CURRENT_USER.id,
-        fecha:getToday(),
-        kcal_consumidas:S.kcalC,
-        prot_consumidas:S.protC,
-        ch_consumidas:S.chC,
-        grasa_consumidas:S.grasaC,
-        kcal_objetivo:S.kcalObj,
-        prot_objetivo:S.prot,
-        ch_objetivo:S.ch,
-        grasa_objetivo:S.grasa,
-        tipo_dia:S.tipoDia,
-        comidas:S.comidas,
-        updated_at:new Date().toISOString()
-      })
-    }).catch(()=>{});
-  }
+  saveFechaSupabase(getToday(), d);
+}
+
+// Guarda CUALQUIER día en Supabase (hoy, pasado o futuro)
+function saveFechaSupabase(fecha, d){
+  if(!CURRENT_USER||!d)return;
+  // Recalcular totales desde comidas para no depender del estado S
+  let kcalC=0,protC=0,chC=0,grasaC=0;
+  (d.comidas||[]).forEach(c=>{kcalC+=c.kcal||0;protC+=c.prot||0;chC+=c.ch||0;grasaC+=c.grasa||0;});
+  supaFetch('/rest/v1/registros_macroai',{
+    method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({
+      usuario_id:CURRENT_USER.id,
+      fecha:fecha,
+      kcal_consumidas:kcalC,
+      prot_consumidas:protC,
+      ch_consumidas:chC,
+      grasa_consumidas:grasaC,
+      kcal_objetivo:d.kcalObj||d.kcal_objetivo||S.kcalObj||0,
+      prot_objetivo:d.protObj||d.prot_objetivo||S.prot||0,
+      ch_objetivo:d.chObj||d.ch_objetivo||S.ch||0,
+      grasa_objetivo:d.grasaObj||d.grasa_objetivo||S.grasa||0,
+      tipo_dia:d.tipoDia||d.tipo_dia||S.tipoDia||'entreno',
+      comidas:d.comidas||[],
+      updated_at:new Date().toISOString()
+    })
+  }).catch(()=>{});
+}
+
+// Guarda un día pasado/futuro en localStorage + Supabase
+function saveDiaFecha(fecha, d){
+  localStorage.setItem('macroai_dia_'+fecha, JSON.stringify(d));
+  const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
+  if(!idx.includes(fecha)){idx.push(fecha);localStorage.setItem('macroai_dias',JSON.stringify(idx));}
+  saveFechaSupabase(fecha, d);
 }
 function getYesterdayComidas(){
   try{const ayer=new Date();ayer.setDate(ayer.getDate()-1);const ayerStr=ayer.toISOString().split('T')[0];
@@ -3818,7 +3832,7 @@ function fsmRegistrar() {
     d.comidas.push({ nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
       kcal, prot, ch:hc, grasa, ingredientes:ingTexto, mealId,
       kcal_100: p.kcal_100, p_100: p.p_100, hc_100: p.hc_100, g_100: p.g_100 });
-    localStorage.setItem(key, JSON.stringify(d));
+    saveDiaFecha(_buscadorFechaFutura, d);
     fsmCerrar();
     showView('viewMain');
     cargarDiarioPorFecha(_buscadorFechaFutura);
@@ -4851,7 +4865,7 @@ function eliminarComidaFutura(fecha, mealId, idx) {
     const item = items[idx];
     if (!item) return;
     d.comidas = d.comidas.filter(c => c !== item);
-    localStorage.setItem(key, JSON.stringify(d));
+    saveDiaFecha(fecha, d);
     cargarDiarioPorFecha(fecha);
     showToast('🗑️ Eliminado del plan');
   } catch(e) {}
