@@ -6137,17 +6137,12 @@ let _drumModo = 'g';
 let _drumContainer = null;
 let _drumAutoSaveTimer = null;
 
-const _drumRanges = {
-  g:   { pE:[0,500,1], hcE:[0,800,1], gE:[0,300,1], pD:[0,500,1], hcD:[0,800,1], gD:[0,300,1] },
-  pct: { pE:[0,100,1], hcE:[0,100,1], gE:[0,100,1], pD:[0,100,1], hcD:[0,100,1], gD:[0,100,1] }
-};
+const RITEM = 40;
+const RVIS  = 5;
 
-const ITEM_H = 44;
-const VISIBLE = 5;
-
-function drumHTML(containerId) {
+function drumHTML(cid) {
   const isG = _drumModo === 'g';
-  const unit = isG ? 'g' : '%';
+  const u = isG ? 'g' : '%';
   const vPE  = isG ? _drumVals.pE  : Math.round(_drumVals.pE*4/_drumVals.kcalE*100);
   const vHcE = isG ? _drumVals.hcE : Math.round(_drumVals.hcE*4/_drumVals.kcalE*100);
   const vGE  = isG ? _drumVals.gE  : Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
@@ -6155,211 +6150,139 @@ function drumHTML(containerId) {
   const vHcD = isG ? _drumVals.hcD : Math.round(_drumVals.hcD*4/_drumVals.kcalD*100);
   const vGD  = isG ? _drumVals.gD  : Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
   const tE = vPE+vHcE+vGE, tD = vPD+vHcD+vGD;
-
+  const col = (key,val) => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">${key==='pE'||key==='pD'?'Prot':key==='hcE'||key==='hcD'?'HC':'Gras'}</div>
+      <div style="position:relative;height:${RITEM*RVIS}px;overflow:hidden;touch-action:none;cursor:ns-resize;"
+           data-drum="${key}" data-cid="${cid}">
+        <div style="position:absolute;left:2px;right:2px;top:${RITEM*2}px;height:${RITEM}px;background:var(--accent-dim);border-radius:8px;border:1px solid rgba(192,57,43,0.2);pointer-events:none;z-index:2;"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:${RITEM*1.5}px;background:linear-gradient(to bottom,var(--s1),transparent);pointer-events:none;z-index:3;"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:${RITEM*1.5}px;background:linear-gradient(to top,var(--s1),transparent);pointer-events:none;z-index:3;"></div>
+        <div data-strip style="position:absolute;left:0;right:0;"></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);">${u}</div>
+    </div>`;
   return `
-  <style>
-  .rlt-wrap{position:relative;height:${ITEM_H*VISIBLE}px;overflow:hidden;cursor:ns-resize;-webkit-user-select:none;user-select:none;touch-action:none;}
-  .rlt-strip{position:absolute;left:0;right:0;will-change:transform;}
-  .rlt-item{height:${ITEM_H}px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:var(--muted2);transition:none;}
-  .rlt-sel{position:absolute;left:4px;right:4px;top:${ITEM_H*2}px;height:${ITEM_H}px;background:var(--accent-dim);border-radius:10px;border:1px solid rgba(192,57,43,0.25);pointer-events:none;z-index:2;}
-  .rlt-fade-top{position:absolute;top:0;left:0;right:0;height:${ITEM_H*2}px;background:linear-gradient(to bottom,var(--s1) 0%,transparent 100%);pointer-events:none;z-index:3;}
-  .rlt-fade-bot{position:absolute;bottom:0;left:0;right:0;height:${ITEM_H*2}px;background:linear-gradient(to top,var(--s1) 0%,transparent 100%);pointer-events:none;z-index:3;}
-  .rlt-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0;}
-  .rlt-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
-  .rlt-unit{font-size:11px;font-weight:600;color:var(--muted);margin-top:2px;}
-  </style>
-
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <div class="am-section" style="flex:1;margin-bottom:0;">
       <div class="am-section-hdr">Kcal entreno</div>
-      <div class="am-field">
-        <input class="am-field-input" id="drumKcalE-${containerId}" type="number" inputmode="numeric" value="${_drumVals.kcalE}"
-          oninput="drumKcalChange('kcalE','${containerId}',this.value)"
-          style="width:100%;text-align:center;font-size:20px;font-weight:700;">
-      </div>
+      <div class="am-field"><input class="am-field-input" id="dKcalE-${cid}" type="number" inputmode="numeric" value="${_drumVals.kcalE}" oninput="drumKcalChange('kcalE','${cid}',this.value)" style="width:100%;text-align:center;font-size:20px;font-weight:700;"></div>
     </div>
     <div class="am-section" style="flex:1;margin-bottom:0;">
       <div class="am-section-hdr">Kcal descanso</div>
-      <div class="am-field">
-        <input class="am-field-input" id="drumKcalD-${containerId}" type="number" inputmode="numeric" value="${_drumVals.kcalD}"
-          oninput="drumKcalChange('kcalD','${containerId}',this.value)"
-          style="width:100%;text-align:center;font-size:20px;font-weight:700;">
-      </div>
+      <div class="am-field"><input class="am-field-input" id="dKcalD-${cid}" type="number" inputmode="numeric" value="${_drumVals.kcalD}" oninput="drumKcalChange('kcalD','${cid}',this.value)" style="width:100%;text-align:center;font-size:20px;font-weight:700;"></div>
     </div>
   </div>
-
   <div style="display:flex;background:var(--s2);border-radius:11px;padding:3px;gap:3px;margin-bottom:14px;">
-    <div onclick="drumSetModo('g','${containerId}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;${isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Gramos</div>
-    <div onclick="drumSetModo('pct','${containerId}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;${!isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Porcentaje</div>
+    <div onclick="drumSetModo('g','${cid}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Gramos</div>
+    <div onclick="drumSetModo('pct','${cid}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${!isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Porcentaje</div>
   </div>
-
   <div style="display:flex;gap:10px;margin-bottom:10px;">
-    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 6px 6px;">
+    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 6px 8px;">
       <div style="text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:8px;">Entreno</div>
-      <div style="display:flex;gap:2px;">
-        <div class="rlt-col"><div class="rlt-lbl">Prot</div><div class="rlt-wrap" data-key="pE" data-cid="${containerId}"><div class="rlt-sel"></div><div class="rlt-fade-top"></div><div class="rlt-fade-bot"></div><div class="rlt-strip" data-val="${vPE}"></div></div><div class="rlt-unit">${unit}</div></div>
-        <div class="rlt-col"><div class="rlt-lbl">HC</div><div class="rlt-wrap" data-key="hcE" data-cid="${containerId}"><div class="rlt-sel"></div><div class="rlt-fade-top"></div><div class="rlt-fade-bot"></div><div class="rlt-strip" data-val="${vHcE}"></div></div><div class="rlt-unit">${unit}</div></div>
-        <div class="rlt-col"><div class="rlt-lbl">Gras</div><div class="rlt-wrap" data-key="gE" data-cid="${containerId}"><div class="rlt-sel"></div><div class="rlt-fade-top"></div><div class="rlt-fade-bot"></div><div class="rlt-strip" data-val="${vGE}"></div></div><div class="rlt-unit">${unit}</div></div>
-      </div>
+      <div style="display:flex;gap:2px;">${col('pE',vPE)}${col('hcE',vHcE)}${col('gE',vGE)}</div>
       ${!isG?`<div style="text-align:center;font-size:11px;font-weight:700;margin-top:6px;color:${tE===100?'var(--green)':'var(--accent)'};" data-total="E">${tE}%${tE===100?' ✓':' !'}</div>`:''}
     </div>
-    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 6px 6px;">
+    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 6px 8px;">
       <div style="text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">Descanso</div>
-      <div style="display:flex;gap:2px;">
-        <div class="rlt-col"><div class="rlt-lbl">Prot</div><div class="rlt-wrap" data-key="pD" data-cid="${containerId}"><div class="rlt-sel"></div><div class="rlt-fade-top"></div><div class="rlt-fade-bot"></div><div class="rlt-strip" data-val="${vPD}"></div></div><div class="rlt-unit">${unit}</div></div>
-        <div class="rlt-col"><div class="rlt-lbl">HC</div><div class="rlt-wrap" data-key="hcD" data-cid="${containerId}"><div class="rlt-sel"></div><div class="rlt-fade-top"></div><div class="rlt-fade-bot"></div><div class="rlt-strip" data-val="${vHcD}"></div></div><div class="rlt-unit">${unit}</div></div>
-        <div class="rlt-col"><div class="rlt-lbl">Gras</div><div class="rlt-wrap" data-key="gD" data-cid="${containerId}"><div class="rlt-sel"></div><div class="rlt-fade-top"></div><div class="rlt-fade-bot"></div><div class="rlt-strip" data-val="${vGD}"></div></div><div class="rlt-unit">${unit}</div></div>
-      </div>
+      <div style="display:flex;gap:2px;">${col('pD',vPD)}${col('hcD',vHcD)}${col('gD',vGD)}</div>
       ${!isG?`<div style="text-align:center;font-size:11px;font-weight:700;margin-top:6px;color:${tD===100?'var(--green)':'var(--accent)'};" data-total="D">${tD}%${tD===100?' ✓':' !'}</div>`:''}
     </div>
   </div>`;
 }
 
-function drumKcalChange(key, containerId, val) {
-  const v = parseInt(val);
-  if(v > 500) { _drumVals[key] = v; drumScheduleAutoSave(); }
+function drumKcalChange(key, cid, val) {
+  const v = parseInt(val); if(v > 500) { _drumVals[key]=v; drumScheduleAutoSave(); }
 }
 
-function drumBuildStrip(strip, val) {
-  const max = 800;
+function drumRenderStrip(strip, center) {
+  const half = Math.floor(RVIS/2)+1;
   let html = '';
-  for(let i = 0; i <= max; i++) {
-    const dist = Math.abs(i - val);
-    let sz, opacity, weight;
-    if(dist === 0)      { sz=22; opacity=1;   weight=700; }
-    else if(dist === 1) { sz=16; opacity=0.55; weight=600; }
-    else if(dist === 2) { sz=13; opacity=0.3;  weight=600; }
-    else                { sz=12; opacity=0.12; weight=400; }
-    html += `<div class="rlt-item" style="font-size:${sz}px;opacity:${opacity};font-weight:${weight};">${i}</div>`;
+  for(let i = center-half; i <= center+half; i++) {
+    const dist = Math.abs(i - center);
+    let sz, op, fw;
+    if(dist===0)      { sz=22; op=1;    fw=700; }
+    else if(dist===1) { sz=16; op=0.5;  fw=600; }
+    else if(dist===2) { sz=13; op=0.25; fw=500; }
+    else              { sz=11; op=0.1;  fw=400; }
+    const label = i < 0 ? '' : i;
+    html += `<div style="height:${RITEM}px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:${sz}px;font-weight:${fw};opacity:${op};color:var(--text);">${label}</div>`;
   }
   strip.innerHTML = html;
-  strip.style.transform = `translateY(${(ITEM_H*2 - val*ITEM_H)}px)`;
-  strip._val = val;
-  strip._targetY = ITEM_H*2 - val*ITEM_H;
-  strip._currentY = strip._targetY;
+  strip.style.top = (RITEM*2 - half*RITEM) + 'px';
+  strip._center = center;
 }
 
-function drumSetY(strip, y) {
-  const max = 800;
-  const minY = ITEM_H*2 - max*ITEM_H;
-  const maxY = ITEM_H*2;
-  y = Math.max(minY, Math.min(maxY, y));
-  strip._currentY = y;
-  strip.style.transform = `translateY(${y}px)`;
-  const val = Math.round((ITEM_H*2 - y) / ITEM_H);
-  strip._val = Math.max(0, Math.min(max, val));
-  drumUpdateStripHighlight(strip);
-}
-
-function drumUpdateStripHighlight(strip) {
-  const items = strip.querySelectorAll('.rlt-item');
-  items.forEach((item, i) => {
-    const dist = Math.abs(i - strip._val);
-    if(dist === 0)      { item.style.fontSize='22px'; item.style.opacity='1';    item.style.fontWeight='700'; }
-    else if(dist === 1) { item.style.fontSize='16px'; item.style.opacity='0.55'; item.style.fontWeight='600'; }
-    else if(dist === 2) { item.style.fontSize='13px'; item.style.opacity='0.3';  item.style.fontWeight='600'; }
-    else                { item.style.fontSize='12px'; item.style.opacity='0.12'; item.style.fontWeight='400'; }
-  });
-}
-
-function drumSnap(strip, key, containerId) {
-  const target = ITEM_H*2 - strip._val*ITEM_H;
-  strip._targetY = target;
-  strip.style.transition = 'transform 0.18s cubic-bezier(0.25,0.46,0.45,0.94)';
-  strip.style.transform = `translateY(${target}px)`;
-  strip._currentY = target;
-  setTimeout(()=>{ strip.style.transition=''; }, 200);
-  drumCommitVal(strip, key, containerId);
-}
-
-function drumCommitVal(strip, key, containerId) {
-  const val = strip._val;
-  const isG = _drumModo === 'g';
-  if(isG) {
-    _drumVals[key] = val;
-  } else {
-    const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
-    const factor = key.startsWith('g') ? 9 : 4;
-    _drumVals[key] = Math.round(kcal * val / 100 / factor);
-  }
-  drumSyncKcal(containerId);
-  drumUpdateTotals(containerId);
-  drumScheduleAutoSave();
-}
-
-function drumSyncKcal(containerId) {
-  if(_drumModo !== 'g') return;
-  const calcE = _drumVals.pE*4 + _drumVals.hcE*4 + _drumVals.gE*9;
-  const calcD = _drumVals.pD*4 + _drumVals.hcD*4 + _drumVals.gD*9;
-  const eIn = document.getElementById('drumKcalE-'+containerId);
-  const dIn = document.getElementById('drumKcalD-'+containerId);
-  if(eIn) { eIn.value = calcE; _drumVals.kcalE = calcE; }
-  if(dIn) { dIn.value = calcD; _drumVals.kcalD = calcD; }
-}
-
-function drumUpdateTotals(containerId) {
-  const container = document.getElementById(containerId);
-  if(!container || _drumModo==='g') return;
-  const vPE  = Math.round(_drumVals.pE*4/_drumVals.kcalE*100);
-  const vHcE = Math.round(_drumVals.hcE*4/_drumVals.kcalE*100);
-  const vGE  = Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
-  const vPD  = Math.round(_drumVals.pD*4/_drumVals.kcalD*100);
-  const vHcD = Math.round(_drumVals.hcD*4/_drumVals.kcalD*100);
-  const vGD  = Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
-  const tE = vPE+vHcE+vGE, tD = vPD+vHcD+vGD;
-  container.querySelectorAll('[data-total]').forEach(el => {
-    const s = el.dataset.total;
-    const t = s==='E'?tE:tD;
-    el.textContent = t+'%'+(t===100?' ✓':' !');
-    el.style.color = t===100?'var(--green)':'var(--accent)';
-  });
-}
-
-function drumInit(containerId) {
-  const container = document.getElementById(containerId);
+function drumInit(cid) {
+  _drumContainer = cid;
+  const container = document.getElementById(cid);
   if(!container) return;
-  _drumContainer = containerId;
-  container.querySelectorAll('.rlt-wrap').forEach(wrap => {
-    const key = wrap.dataset.key;
-    const strip = wrap.querySelector('.rlt-strip');
-    const val = parseInt(strip.dataset.val) || 0;
-    drumBuildStrip(strip, val);
-    drumSetupDrag(wrap, strip, key, containerId);
+  container.querySelectorAll('[data-drum]').forEach(wrap => {
+    const key = wrap.dataset.drum;
+    const strip = wrap.querySelector('[data-strip]');
+    const isG = _drumModo === 'g';
+    let val;
+    if(isG) { val = _drumVals[key]; }
+    else {
+      const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
+      const f = key.startsWith('g') ? 9 : 4;
+      val = Math.round(_drumVals[key]*f/kcal*100);
+    }
+    strip._center = val;
+    strip._offset = 0;
+    drumRenderStrip(strip, val);
+    drumSetupDrag(wrap, strip, key, cid);
   });
 }
 
-function drumSetupDrag(wrap, strip, key, containerId) {
-  let startY = 0, startStripY = 0, active = false, velY = 0, lastY = 0, lastT = 0;
+function drumSetupDrag(wrap, strip, key, cid) {
+  let startY=0, lastY=0, lastT=0, velY=0, active=false, raf=null;
+
+  const getCenter = () => strip._center;
+
+  const applyOffset = (offset) => {
+    const steps = Math.round(offset / RITEM);
+    const newCenter = Math.max(0, Math.min(800, strip._centerAtStart - steps));
+    if(newCenter !== strip._center) {
+      strip._center = newCenter;
+      drumRenderStrip(strip, newCenter);
+      drumCommit(strip, key, cid);
+    }
+  };
 
   const start = (y) => {
-    strip.style.transition = '';
-    startY = y; startStripY = strip._currentY;
-    velY = 0; lastY = y; lastT = Date.now();
+    cancelAnimationFrame(raf);
+    startY = y; lastY = y; lastT = Date.now(); velY = 0;
+    strip._centerAtStart = strip._center;
     active = true;
   };
+
   const move = (y) => {
     if(!active) return;
-    const now = Date.now();
-    const dt = now - lastT || 1;
+    const now = Date.now(); const dt = Math.max(now-lastT, 1);
     velY = (y - lastY) / dt * 16;
     lastY = y; lastT = now;
-    const newY = startStripY + (y - startY);
-    drumSetY(strip, newY);
+    applyOffset(startY - y);
   };
+
   const end = () => {
-    if(!active) return;
-    active = false;
-    // Inercia
-    let y = strip._currentY;
-    const friction = 0.88;
-    let v = velY * 8;
+    if(!active) return; active = false;
+    let v = velY * -3;
+    const friction = 0.85;
+    let acc = 0;
     const animate = () => {
-      if(Math.abs(v) < 0.5) { drumSnap(strip, key, containerId); return; }
-      y += v; v *= friction;
-      drumSetY(strip, y);
-      requestAnimationFrame(animate);
+      if(Math.abs(v) < 0.3) return;
+      acc += v; v *= friction;
+      const steps = Math.round(acc / RITEM);
+      const newCenter = Math.max(0, Math.min(800, strip._centerAtStart - steps - Math.round((startY-lastY)/RITEM)));
+      if(newCenter !== strip._center) {
+        strip._center = newCenter;
+        drumRenderStrip(strip, newCenter);
+        drumCommit(strip, key, cid);
+      }
+      raf = requestAnimationFrame(animate);
     };
-    requestAnimationFrame(animate);
+    raf = requestAnimationFrame(animate);
   };
 
   wrap.addEventListener('mousedown',  e => { e.preventDefault(); start(e.clientY); });
@@ -6370,25 +6293,68 @@ function drumSetupDrag(wrap, strip, key, containerId) {
   wrap.addEventListener('touchend',    () => end());
   wrap.addEventListener('wheel', e => {
     e.preventDefault();
-    const newY = strip._currentY - e.deltaY * 0.6;
-    drumSetY(strip, newY);
-    clearTimeout(wrap._wheelT);
-    wrap._wheelT = setTimeout(() => drumSnap(strip, key, containerId), 150);
+    const delta = e.deltaY > 0 ? 1 : -1;
+    const newCenter = Math.max(0, Math.min(800, strip._center + delta));
+    strip._center = newCenter; strip._centerAtStart = newCenter;
+    drumRenderStrip(strip, newCenter);
+    drumCommit(strip, key, cid);
   }, {passive:false});
 }
 
-function drumSetModo(modo, containerId) {
-  if(modo === _drumModo) return;
-  _drumModo = modo;
-  if(containerId === 'adminMacrosBody') renderAdminMacrosUI();
-  else if(containerId === 'adminMenuBody') renderAdminMenuMacros();
+function drumCommit(strip, key, cid) {
+  const val = strip._center;
+  const isG = _drumModo === 'g';
+  if(isG) {
+    _drumVals[key] = val;
+  } else {
+    const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
+    const f = key.startsWith('g') ? 9 : 4;
+    _drumVals[key] = Math.round(kcal * val / 100 / f);
+  }
+  drumSyncKcal(cid);
+  drumUpdateTotals(cid);
+  drumScheduleAutoSave();
+}
+
+function drumSyncKcal(cid) {
+  if(_drumModo !== 'g') return;
+  const calcE = _drumVals.pE*4 + _drumVals.hcE*4 + _drumVals.gE*9;
+  const calcD = _drumVals.pD*4 + _drumVals.hcD*4 + _drumVals.gD*9;
+  const eIn = document.getElementById('dKcalE-'+cid);
+  const dIn = document.getElementById('dKcalD-'+cid);
+  if(eIn) { eIn.value=calcE; _drumVals.kcalE=calcE; }
+  if(dIn) { dIn.value=calcD; _drumVals.kcalD=calcD; }
+}
+
+function drumUpdateTotals(cid) {
+  const container = document.getElementById(cid);
+  if(!container || _drumModo==='g') return;
+  const vPE  = Math.round(_drumVals.pE*4/_drumVals.kcalE*100);
+  const vHcE = Math.round(_drumVals.hcE*4/_drumVals.kcalE*100);
+  const vGE  = Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
+  const vPD  = Math.round(_drumVals.pD*4/_drumVals.kcalD*100);
+  const vHcD = Math.round(_drumVals.hcD*4/_drumVals.kcalD*100);
+  const vGD  = Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
+  const tE=vPE+vHcE+vGE, tD=vPD+vHcD+vGD;
+  container.querySelectorAll('[data-total]').forEach(el=>{
+    const t = el.dataset.total==='E'?tE:tD;
+    el.textContent=t+'%'+(t===100?' ✓':' !');
+    el.style.color=t===100?'var(--green)':'var(--accent)';
+  });
+}
+
+function drumSetModo(modo, cid) {
+  if(modo===_drumModo) return;
+  _drumModo=modo;
+  if(cid==='adminMacrosBody') renderAdminMacrosUI();
+  else renderAdminMenuMacros();
 }
 
 function drumScheduleAutoSave() {
   clearTimeout(_drumAutoSaveTimer);
-  _drumAutoSaveTimer = setTimeout(() => {
-    if(_drumContainer === 'adminMacrosBody') guardarMacros(true);
-    else if(_drumContainer === 'adminMenuBody') guardarMacros(true, 'menu');
+  _drumAutoSaveTimer = setTimeout(()=>{
+    if(_drumContainer==='adminMacrosBody') guardarMacros(true);
+    else guardarMacros(true,'menu');
   }, 1500);
 }
 
@@ -6397,19 +6363,18 @@ async function renderAdminMacros() {
   body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
   let perfil = null;
   try {
-    const res = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(_adminMacrosEmail) + '&limit=1');
+    const res = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.'+encodeURIComponent(_adminMacrosEmail)+'&limit=1');
     const rows = await res.json();
-    if (Array.isArray(rows) && rows.length) perfil = rows[0];
+    if(Array.isArray(rows)&&rows.length) perfil=rows[0];
   } catch(e) {}
-  _drumVals = { kcalE: perfil?.kcal_objetivo||2200, kcalD: perfil?.kcal_descanso||1900, pE: perfil?.p_objetivo||160, hcE: perfil?.hc_objetivo||220, gE: perfil?.g_objetivo||65, pD: perfil?.p_descanso||150, hcD: perfil?.hc_descanso||170, gD: perfil?.g_descanso||60 };
-  _drumModo = 'g';
-  _drumContainer = 'adminMacrosBody';
+  _drumVals={kcalE:perfil?.kcal_objetivo||2200,kcalD:perfil?.kcal_descanso||1900,pE:perfil?.p_objetivo||160,hcE:perfil?.hc_objetivo||220,gE:perfil?.g_objetivo||65,pD:perfil?.p_descanso||150,hcD:perfil?.hc_descanso||170,gD:perfil?.g_descanso||60};
+  _drumModo='g'; _drumContainer='adminMacrosBody';
   renderAdminMacrosUI();
 }
 
 function renderAdminMacrosUI() {
   const body = document.getElementById('adminMacrosBody');
-  body.innerHTML = drumHTML('adminMacrosBody') + `
+  body.innerHTML = drumHTML('adminMacrosBody')+`
     <input type="hidden" id="amMModoApp" value="macros">
     <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">💾 Guardar macros</button>
   `;
@@ -6417,8 +6382,7 @@ function renderAdminMacrosUI() {
 }
 
 function drumGetMacrosEmail() {
-  if(_drumContainer === 'adminMacrosBody') return _adminMacrosEmail;
-  return _adminMenuEmail;
+  return _drumContainer==='adminMacrosBody' ? _adminMacrosEmail : _adminMenuEmail;
 }
 
 function amMSetModo(modo) {}
