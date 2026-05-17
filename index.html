@@ -6715,12 +6715,15 @@ async function cargarPerfilUsuario() {
         CFG.descanso = {kcal: p.kcal_descanso, prot: p.p_descanso||100, ch: p.hc_descanso||180, grasa: p.g_descanso||55};
       }
       // Cargar días de entreno desde Supabase si los tiene
-      if (p.dias_entreno && Array.isArray(p.dias_entreno)) {
-        WEEK_DAYS = p.dias_entreno;
+      if (p.dias_entreno && Array.isArray(p.dias_entreno) && p.dias_entreno.length > 0) {
+        WEEK_DAYS = p.dias_entreno.map(d => parseInt(d));
         saveWeekDays(WEEK_DAYS);
       }
       saveCFG(CFG);
       autoDetectDayType();
+      // Actualizar diario con los macros correctos
+      renderMFPDiario();
+      renderWeekDays();
     }
   } catch(e) { console.warn('cargarPerfilUsuario:', e); }
   // Rellenar nombre/email en perfil
