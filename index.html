@@ -4466,8 +4466,9 @@ function _diarioRenderOtroDia(data, fecha) {
     const totalCh   = Math.round(items.reduce((a,c) => a + (c.ch||0), 0)*10)/10;
     const totalGrasa= Math.round(items.reduce((a,c) => a + (c.grasa||0), 0)*10)/10;
 
-    const itemsHtml = items.map(item => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);">
+    const itemsHtml = items.map((item, itemIdx) => `
+      <div class="diario-item-otroDia" data-fecha="${fecha}" data-mid="${mid}" data-item-idx="${itemIdx}"
+        style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
@@ -4494,9 +4495,10 @@ function _diarioRenderOtroDia(data, fecha) {
   // Comidas sin categoría conocida
   Object.entries(porMeal).forEach(([mid, items]) => {
     if (mealsMostradas.has(mid)) return;
-    items.forEach(item => {
+    items.forEach((item, itemIdx) => {
       html += `
-        <div style="border-bottom:1px solid var(--border);">
+        <div class="diario-item-otroDia" data-fecha="${fecha}" data-mid="${mid}" data-item-idx="${itemIdx}"
+          style="border-bottom:1px solid var(--border);cursor:pointer;user-select:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-size:18px;">🍽️</span>
@@ -4512,6 +4514,100 @@ function _diarioRenderOtroDia(data, fecha) {
   });
 
   container.innerHTML = html;
+
+  // ── Adjuntar long-press a cada item ──
+  container.querySelectorAll('.diario-item-otroDia').forEach(el => {
+    let timer = null;
+    const start = () => { timer = setTimeout(() => _diarioItemMenu(el, data, fecha), 500); };
+    const cancel = () => clearTimeout(timer);
+    el.addEventListener('touchstart', start, {passive: true});
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchmove', cancel, {passive: true});
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', cancel);
+    el.addEventListener('mouseleave', cancel);
+  });
+}
+
+function _diarioItemMenu(el, data, fecha) {
+  const mid = el.dataset.mid;
+  const itemIdx = parseInt(el.dataset.itemIdx);
+  // Buscar el item en data.comidas filtrando por mealId/tipo
+  const itemsDeMeal = data.comidas.filter(c => (c.mealId || c.tipo?.toLowerCase() || 'sin-categoría') === mid);
+  const item = itemsDeMeal[itemIdx];
+  if (!item) return;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `<div style="background:var(--bg);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;color:var(--text);">${escapeHtml(item.nombre||'Alimento')}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g · ${item.kcal||0} kcal</div>
+    <button id="_dioFav" style="width:100%;padding:13px;background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);border-radius:12px;font-size:14px;color:#b8860b;font-weight:600;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
+    <button id="_dioHoy" style="width:100%;padding:13px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:600;margin-bottom:8px;cursor:pointer;text-align:left;">↩ Copiar a hoy</button>
+    <button id="_dioDel" style="width:100%;padding:13px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:12px;font-size:14px;color:var(--red);font-weight:600;margin-bottom:12px;cursor:pointer;text-align:left;">🗑️ Borrar de este día</button>
+    <button id="_dioCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+  </div>`;
+
+  // ── Guardar en favoritos ──
+  overlay.querySelector('#_dioFav').onclick = () => {
+    overlay.remove();
+    // Pedir nombre personalizado
+    const nombre = prompt('Nombre del favorito:', item.nombre || 'Favorito');
+    if (nombre === null) return;
+    guardarFavorito(nombre.trim() || item.nombre, '', {kcal: item.kcal||0, prot: item.prot||0, ch: item.ch||0, grasa: item.grasa||0}, '');
+    showToast('⭐ Guardado en favoritos');
+  };
+
+  // ── Copiar a hoy ──
+  overlay.querySelector('#_dioHoy').onclick = () => {
+    overlay.remove();
+    const kcalN = item.kcal||0, protN = item.prot||0, chN = item.ch||0, grasaN = item.grasa||0;
+    S.kcalC += kcalN; S.protC += protN; S.chC += chN; S.grasaC += grasaN;
+    S.comidas.push({nombre: item.nombre||'Comida', hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}), kcal: kcalN, prot: protN, ch: chN, grasa: grasaN, mealId: mid});
+    updateBars(); saveToday();
+    saveComidaSupabase({nombre: item.nombre||'Comida', fecha: getToday(), tipoDia: S.tipoDia, kcal: kcalN, prot: protN, ch: chN, grasa: grasaN});
+    showToast('↩ ' + escapeHtml(item.nombre||'Comida') + ' · ' + kcalN + ' kcal copiado a hoy');
+  };
+
+  // ── Borrar de este día ──
+  overlay.querySelector('#_dioDel').onclick = async () => {
+    overlay.remove();
+    // Eliminar de data.comidas
+    const globalIdx = data.comidas.indexOf(item);
+    if (globalIdx >= 0) data.comidas.splice(globalIdx, 1);
+    // Recalcular totales
+    data.kcalC = Math.round(data.comidas.reduce((a,c)=>a+(c.kcal||0),0));
+    data.protC = Math.round(data.comidas.reduce((a,c)=>a+(c.prot||0),0)*10)/10;
+    data.chC   = Math.round(data.comidas.reduce((a,c)=>a+(c.ch||0),0)*10)/10;
+    data.grasaC= Math.round(data.comidas.reduce((a,c)=>a+(c.grasa||0),0)*10)/10;
+    // Guardar en Supabase
+    if (CURRENT_USER) {
+      try {
+        await supaFetch('/rest/v1/registros_macroai?usuario_id=eq.' + CURRENT_USER.id + '&fecha=eq.' + fecha, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
+          body: JSON.stringify({
+            kcal_consumidas: data.kcalC, prot_consumidas: data.protC,
+            ch_consumidas: data.chC, grasa_consumidas: data.grasaC,
+            comidas: data.comidas
+          })
+        });
+      } catch(e) {}
+    }
+    // localStorage también
+    try {
+      const lsKey = 'macroai_dia_' + fecha;
+      const d = JSON.parse(localStorage.getItem(lsKey) || 'null');
+      if (d) { d.comidas = data.comidas; localStorage.setItem(lsKey, JSON.stringify(d)); }
+    } catch(e) {}
+    // Re-renderizar
+    _diarioRenderOtroDia(data, fecha);
+    showToast('🗑️ Eliminado');
+  };
+
+  overlay.querySelector('#_dioCancel').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 
