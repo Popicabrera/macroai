@@ -6131,243 +6131,85 @@ let _adminMacrosNombre = '';
 
 // ══ DRUM PICKER — MACROS ADMIN ══
 
-// ══ RULETA DRUM — MacroAI Admin ══
+// ══ MACROS ADMIN — campos fijos ══
 let _drumVals = { kcalE:2200, kcalD:1900, pE:160, hcE:220, gE:65, pD:150, hcD:170, gD:60 };
 let _drumModo = 'g';
 let _drumContainer = null;
 let _drumAutoSaveTimer = null;
 
-const RH = 38;
-
 function drumHTML(cid) {
-  const isG = _drumModo === 'g';
-  const u = isG ? 'g' : '%';
-  const vPE  = isG ? _drumVals.pE  : Math.round(_drumVals.pE*4/_drumVals.kcalE*100);
-  const vHcE = isG ? _drumVals.hcE : Math.round(_drumVals.hcE*4/_drumVals.kcalE*100);
-  const vGE  = isG ? _drumVals.gE  : Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
-  const vPD  = isG ? _drumVals.pD  : Math.round(_drumVals.pD*4/_drumVals.kcalD*100);
-  const vHcD = isG ? _drumVals.hcD : Math.round(_drumVals.hcD*4/_drumVals.kcalD*100);
-  const vGD  = isG ? _drumVals.gD  : Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
-  const tE = vPE+vHcE+vGE, tD = vPD+vHcD+vGD;
-
-  const mkCol = (key, val) => `
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">${key.startsWith('p')?'Prot':key.startsWith('h')?'HC':'Gras'}</div>
-      <div data-drum="${key}" data-cid="${cid}"
-           style="position:relative;width:100%;height:${RH*5}px;overflow:hidden;touch-action:none;cursor:ns-resize;border-radius:8px;">
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
-          <div style="width:90%;height:${RH}px;background:var(--accent-dim);border-radius:7px;border:1px solid rgba(192,57,43,0.25);"></div>
-        </div>
-        <div style="position:absolute;top:0;left:0;right:0;height:${RH*1.8}px;background:linear-gradient(to bottom,var(--s1) 20%,transparent);pointer-events:none;z-index:3;"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;height:${RH*1.8}px;background:linear-gradient(to top,var(--s1) 20%,transparent);pointer-events:none;z-index:3;"></div>
-        <div data-strip="${key}" style="position:absolute;left:0;right:0;top:0;"></div>
-      </div>
-      <div style="font-size:11px;font-weight:600;color:var(--muted);">${u}</div>
+  const v = _drumVals;
+  const field = (label, id, val) => `
+    <div class="am-field">
+      <span class="am-field-label">${label}</span>
+      <input class="am-field-input" id="${id}-${cid}" type="number" inputmode="numeric" value="${val}"
+        style="width:80px;text-align:right;" oninput="drumFieldChange('${cid}')">
     </div>`;
-
   return `
-  <div style="display:flex;gap:8px;margin-bottom:12px;">
-    <div class="am-section" style="flex:1;margin-bottom:0;">
-      <div class="am-section-hdr">Kcal entreno</div>
-      <div class="am-field"><input class="am-field-input" id="dKcalE-${cid}" type="number" inputmode="numeric"
-        value="${_drumVals.kcalE}" oninput="drumKcalChange('kcalE','${cid}',this.value)"
-        style="width:100%;text-align:center;font-size:20px;font-weight:700;"></div>
-    </div>
-    <div class="am-section" style="flex:1;margin-bottom:0;">
-      <div class="am-section-hdr">Kcal descanso</div>
-      <div class="am-field"><input class="am-field-input" id="dKcalD-${cid}" type="number" inputmode="numeric"
-        value="${_drumVals.kcalD}" oninput="drumKcalChange('kcalD','${cid}',this.value)"
-        style="width:100%;text-align:center;font-size:20px;font-weight:700;"></div>
-    </div>
+  <div class="am-section" style="margin-bottom:10px;">
+    <div class="am-section-hdr">Día de entreno</div>
+    ${field('Calorías (kcal)','dKcalE',v.kcalE)}
+    ${field('Hidratos (g)',   'dHcE',  v.hcE)}
+    ${field('Proteína (g)',   'dPE',   v.pE)}
+    ${field('Grasas (g)',     'dGE',   v.gE)}
   </div>
-  <div style="display:flex;background:var(--s2);border-radius:11px;padding:3px;gap:3px;margin-bottom:14px;">
-    <div onclick="drumSetModo('g','${cid}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Gramos</div>
-    <div onclick="drumSetModo('pct','${cid}')" style="flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;${!isG?'background:var(--s1);border:1px solid var(--border);color:var(--accent);':'color:var(--muted);'}">Porcentaje</div>
-  </div>
-  <div style="display:flex;gap:10px;margin-bottom:10px;">
-    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 6px 8px;">
-      <div style="text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:8px;">Entreno</div>
-      <div style="display:flex;gap:4px;">${mkCol('pE',vPE)}${mkCol('hcE',vHcE)}${mkCol('gE',vGE)}</div>
-      ${!isG?`<div data-total="E" style="text-align:center;font-size:11px;font-weight:700;margin-top:6px;color:${tE===100?'var(--green)':'var(--accent)'};">${tE}%${tE===100?' ✓':' !'}</div>`:''}
-    </div>
-    <div style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 6px 8px;">
-      <div style="text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">Descanso</div>
-      <div style="display:flex;gap:4px;">${mkCol('pD',vPD)}${mkCol('hcD',vHcD)}${mkCol('gD',vGD)}</div>
-      ${!isG?`<div data-total="D" style="text-align:center;font-size:11px;font-weight:700;margin-top:6px;color:${tD===100?'var(--green)':'var(--accent)'};">${tD}%${tD===100?' ✓':' !'}</div>`:''}
-    </div>
+  <div class="am-section" style="margin-bottom:14px;">
+    <div class="am-section-hdr">Día de descanso</div>
+    ${field('Calorías (kcal)','dKcalD',v.kcalD)}
+    ${field('Hidratos (g)',   'dHcD',  v.hcD)}
+    ${field('Proteína (g)',   'dPD',   v.pD)}
+    ${field('Grasas (g)',     'dGD',   v.gD)}
   </div>`;
+}
+
+function drumFieldChange(cid) {
+  const g = (id) => parseInt(document.getElementById(id+'-'+cid)?.value)||0;
+  _drumVals = {
+    kcalE: g('dKcalE'), kcalD: g('dKcalD'),
+    hcE: g('dHcE'), pE: g('dPE'), gE: g('dGE'),
+    hcD: g('dHcD'), pD: g('dPD'), gD: g('dGD')
+  };
+  drumScheduleAutoSave();
 }
 
 function drumKcalChange(key, cid, val) {
   const v = parseInt(val);
-  if(v > 500) { _drumVals[key] = v; drumScheduleAutoSave(); }
+  if(v > 500) { _drumVals[key]=v; drumScheduleAutoSave(); }
 }
 
-function drumPaint(strip, center) {
-  const rows = [];
-  for(let i = center-2; i <= center+2; i++) {
-    const d = Math.abs(i - center);
-    const sz  = d===0 ? 22 : d===1 ? 16 : 12;
-    const op  = d===0 ? 1  : d===1 ? 0.45 : 0.18;
-    const fw  = d===0 ? 700 : d===1 ? 600 : 400;
-    const v   = i < 0 ? '' : i > 800 ? '' : i;
-    rows.push(`<div style="height:${RH}px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:${sz}px;font-weight:${fw};opacity:${op};color:var(--text);">${v}</div>`);
-  }
-  strip.innerHTML = rows.join('');
-  strip.style.top = (RH * 0) + 'px';
-  strip._center = center;
-}
+function drumInit(cid) { _drumContainer = cid; }
 
-function drumInit(cid) {
-  _drumContainer = cid;
-  const container = document.getElementById(cid);
-  if(!container) return;
-  container.querySelectorAll('[data-drum]').forEach(wrap => {
-    const key = wrap.dataset.drum;
-    const strip = wrap.querySelector('[data-strip]');
-    if(!strip) return;
-    const isG = _drumModo === 'g';
-    let val;
-    if(isG) { val = _drumVals[key]||0; }
-    else {
-      const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
-      const f = key.startsWith('g') ? 9 : 4;
-      val = Math.round((_drumVals[key]||0)*f/kcal*100);
-    }
-    drumPaint(strip, val);
-    drumSetupDrag(wrap, strip, key, cid);
-  });
-}
+function drumSetModo(modo, cid) {}
 
-function drumSetupDrag(wrap, strip, key, cid) {
-  let startY=0, startCenter=0, active=false, velY=0, lastY=0, lastT=0, raf=null;
+function drumSyncKcal(cid) {}
 
-  const commit = (center) => {
-    const c = Math.max(0, Math.min(800, center));
-    drumPaint(strip, c);
-    const isG = _drumModo==='g';
-    if(isG) { _drumVals[key]=c; }
-    else {
-      const kcal=key.endsWith('E')?_drumVals.kcalE:_drumVals.kcalD;
-      const f=key.startsWith('g')?9:4;
-      _drumVals[key]=Math.round(kcal*c/100/f);
-    }
-    drumSyncKcal(cid);
-    drumUpdateTotals(cid);
-    drumScheduleAutoSave();
-  };
-
-  const inertia = (v) => {
-    const friction = 0.84;
-    let acc = 0;
-    const go = () => {
-      if(Math.abs(v) < 0.4) return;
-      acc += v * (RH/16); v *= friction;
-      const steps = Math.round(acc / RH);
-      const newC = Math.max(0, Math.min(800, startCenter - steps));
-      if(newC !== strip._center) commit(newC);
-      raf = requestAnimationFrame(go);
-    };
-    raf = requestAnimationFrame(go);
-  };
-
-  wrap.addEventListener('mousedown', e => {
-    e.preventDefault();
-    cancelAnimationFrame(raf);
-    startY=e.clientY; startCenter=strip._center; lastY=e.clientY; lastT=Date.now(); velY=0; active=true;
-  });
-  window.addEventListener('mousemove', e => {
-    if(!active) return;
-    const now=Date.now(); const dt=Math.max(now-lastT,1);
-    velY=(e.clientY-lastY)/dt*16; lastY=e.clientY; lastT=now;
-    const steps=Math.round((startY-e.clientY)/RH);
-    const newC=Math.max(0,Math.min(800,startCenter+steps));
-    if(newC!==strip._center) commit(newC);
-  });
-  window.addEventListener('mouseup', () => {
-    if(!active) return; active=false;
-    inertia(-velY);
-  });
-  wrap.addEventListener('touchstart', e => {
-    cancelAnimationFrame(raf);
-    startY=e.touches[0].clientY; startCenter=strip._center; lastY=startY; lastT=Date.now(); velY=0; active=true;
-  }, {passive:true});
-  wrap.addEventListener('touchmove', e => {
-    if(!active) return;
-    e.preventDefault();
-    const now=Date.now(); const dt=Math.max(now-lastT,1);
-    const y=e.touches[0].clientY;
-    velY=(y-lastY)/dt*16; lastY=y; lastT=now;
-    const steps=Math.round((startY-y)/RH);
-    const newC=Math.max(0,Math.min(800,startCenter+steps));
-    if(newC!==strip._center) commit(newC);
-  }, {passive:false});
-  wrap.addEventListener('touchend', () => {
-    if(!active) return; active=false;
-    inertia(-velY);
-  });
-  wrap.addEventListener('wheel', e => {
-    e.preventDefault();
-    cancelAnimationFrame(raf);
-    const d=e.deltaY>0?1:-1;
-    commit(Math.max(0,Math.min(800,strip._center+d)));
-  }, {passive:false});
-}
-
-function drumSyncKcal(cid) {
-  if(_drumModo!=='g') return;
-  const calcE=_drumVals.pE*4+_drumVals.hcE*4+_drumVals.gE*9;
-  const calcD=_drumVals.pD*4+_drumVals.hcD*4+_drumVals.gD*9;
-  const eIn=document.getElementById('dKcalE-'+cid);
-  const dIn=document.getElementById('dKcalD-'+cid);
-  if(eIn){eIn.value=calcE;_drumVals.kcalE=calcE;}
-  if(dIn){dIn.value=calcD;_drumVals.kcalD=calcD;}
-}
-
-function drumUpdateTotals(cid) {
-  const container=document.getElementById(cid);
-  if(!container||_drumModo==='g') return;
-  const tE=Math.round(_drumVals.pE*4/_drumVals.kcalE*100)+Math.round(_drumVals.hcE*4/_drumVals.kcalE*100)+Math.round(_drumVals.gE*9/_drumVals.kcalE*100);
-  const tD=Math.round(_drumVals.pD*4/_drumVals.kcalD*100)+Math.round(_drumVals.hcD*4/_drumVals.kcalD*100)+Math.round(_drumVals.gD*9/_drumVals.kcalD*100);
-  container.querySelectorAll('[data-total]').forEach(el=>{
-    const t=el.dataset.total==='E'?tE:tD;
-    el.textContent=t+'%'+(t===100?' ✓':' !');
-    el.style.color=t===100?'var(--green)':'var(--accent)';
-  });
-}
-
-function drumSetModo(modo, cid) {
-  if(modo===_drumModo) return;
-  _drumModo=modo;
-  if(cid==='adminMacrosBody') renderAdminMacrosUI();
-  else renderAdminMenuMacros();
-}
+function drumUpdateTotals(cid) {}
 
 function drumScheduleAutoSave() {
   clearTimeout(_drumAutoSaveTimer);
-  _drumAutoSaveTimer=setTimeout(()=>{
+  _drumAutoSaveTimer = setTimeout(()=>{
     if(_drumContainer==='adminMacrosBody') guardarMacros(true);
     else guardarMacros(true,'menu');
-  },1500);
+  }, 1500);
 }
 
 async function renderAdminMacros() {
-  const body=document.getElementById('adminMacrosBody');
-  body.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
-  let perfil=null;
+  const body = document.getElementById('adminMacrosBody');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
+  let perfil = null;
   try {
-    const res=await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.'+encodeURIComponent(_adminMacrosEmail)+'&limit=1');
-    const rows=await res.json();
+    const res = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.'+encodeURIComponent(_adminMacrosEmail)+'&limit=1');
+    const rows = await res.json();
     if(Array.isArray(rows)&&rows.length) perfil=rows[0];
   } catch(e){}
-  _drumVals={kcalE:perfil?.kcal_objetivo||2200,kcalD:perfil?.kcal_descanso||1900,pE:perfil?.p_objetivo||160,hcE:perfil?.hc_objetivo||220,gE:perfil?.g_objetivo||65,pD:perfil?.p_descanso||150,hcD:perfil?.hc_descanso||170,gD:perfil?.g_descanso||60};
+  _drumVals = { kcalE:perfil?.kcal_objetivo||2200, kcalD:perfil?.kcal_descanso||1900, pE:perfil?.p_objetivo||160, hcE:perfil?.hc_objetivo||220, gE:perfil?.g_objetivo||65, pD:perfil?.p_descanso||150, hcD:perfil?.hc_descanso||170, gD:perfil?.g_descanso||60 };
   _drumModo='g'; _drumContainer='adminMacrosBody';
   renderAdminMacrosUI();
 }
 
 function renderAdminMacrosUI() {
-  const body=document.getElementById('adminMacrosBody');
-  body.innerHTML=drumHTML('adminMacrosBody')+`
+  const body = document.getElementById('adminMacrosBody');
+  body.innerHTML = drumHTML('adminMacrosBody')+`
     <input type="hidden" id="amMModoApp" value="macros">
     <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">💾 Guardar macros</button>
   `;
@@ -6375,17 +6217,18 @@ function renderAdminMacrosUI() {
 }
 
 function drumGetMacrosEmail() {
-  return _drumContainer==='adminMacrosBody'?_adminMacrosEmail:_adminMenuEmail;
+  return _drumContainer==='adminMacrosBody' ? _adminMacrosEmail : _adminMenuEmail;
 }
 
 function amMSetModo(modo) {}
 
 async function guardarMacros(silent=false, modoApp='macros') {
   const email = drumGetMacrosEmail();
-  const kcalEInput = document.getElementById('drumKcalE-' + _drumContainer);
-  const kcalDInput = document.getElementById('drumKcalD-' + _drumContainer);
-  if(kcalEInput) _drumVals.kcalE = parseInt(kcalEInput.value) || _drumVals.kcalE;
-  if(kcalDInput) _drumVals.kcalD = parseInt(kcalDInput.value) || _drumVals.kcalD;
+  // Leer valores actuales de los campos
+  const g = (id) => parseInt(document.getElementById(id+'-'+_drumContainer)?.value)||0;
+  if(document.getElementById('dKcalE-'+_drumContainer)) {
+    _drumVals = { kcalE:g('dKcalE')||_drumVals.kcalE, kcalD:g('dKcalD')||_drumVals.kcalD, pE:g('dPE')||_drumVals.pE, hcE:g('dHcE')||_drumVals.hcE, gE:g('dGE')||_drumVals.gE, pD:g('dPD')||_drumVals.pD, hcD:g('dHcD')||_drumVals.hcD, gD:g('dGD')||_drumVals.gD };
+  }
   const payload = {
     cliente_email: email,
     kcal_objetivo: _drumVals.kcalE,
@@ -6528,6 +6371,7 @@ Domingo: pollo, patata, zanahoria"></textarea>
     <!-- Preview -->
     </div><div id="amMenuPreview" style="margin-top:16px;"></div>
   `;
+  drumInit('adminMenuBody');
   if(seccion==='menu'){setTimeout(()=>{const el=document.getElementById('amSeccionMenu');if(el)el.scrollIntoView({behavior:'smooth'});},150);}
 }
 
