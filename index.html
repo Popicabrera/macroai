@@ -1573,7 +1573,9 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
     // Sin macros guardados — pedir a la IA que calcule
     showView('viewMain');
     const lista=f.ingredientes&&f.ingredientes.length?f.ingredientes.map(i=>`${i.cantidad} de ${i.nombre.replace(/^[^\w]+/,'')}`).join(', '):f.nombre;
-    setTimeout(()=>sendDirect(`Registra este favorito: ${f.nombre}. Ingredientes: ${lista}`),300);
+    const comidaLabel = mealId ? (mealId.charAt(0).toUpperCase()+mealId.slice(1)) : '';
+    const diaLabel = fecha && fecha !== getToday() ? ` para el ${getFechaLabel(fecha)}` : '';
+    setTimeout(()=>sendDirect(`Registra este favorito en ${comidaLabel}${diaLabel}: ${f.nombre}. Ingredientes: ${lista}`),300);
   }
 }
 
@@ -3646,7 +3648,7 @@ function favBuscadorTouchEnd() {
 function favBuscadorUsar(id) {
   const favs = loadFavs();
   const f = favs.find(x => x.id === id);
-  if (!f || !f.kcal) return;
+  if (!f) return;
   const fecha = _buscadorFechaFutura || _diarioFecha || getToday();
   cerrarBuscador();
   setTimeout(() => mostrarSelectorComidaFav(id, fecha), 150);
