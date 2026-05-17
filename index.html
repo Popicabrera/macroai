@@ -1410,7 +1410,7 @@ function mostrarSelectorComidaFav(id, fechaForzada) {
   const favs = loadFavs(); const f = favs.find(x => x.id === id); if (!f) return;
   const fecha = fechaForzada || _diarioFecha || getToday();
   const esHoy = fecha === getToday();
-  const labelFecha = esHoy ? 'Hoy' : diarioFechaLabel ? diarioFechaLabel(fecha) : fecha;
+  const labelFecha = esHoy ? 'Hoy' : getFechaLabel(fecha);
   const comidas = [
     {id:'desayuno',   emoji:'🌅', label:'Desayuno'},
     {id:'almuerzo',   emoji:'☕', label:'Almuerzo'},
@@ -2154,7 +2154,7 @@ function sysPrompt(){
   const esFuturo = _diarioFecha > getToday();
   let contextoDia = '';
   if (esFuturo) {
-    const labelDia = diarioFechaLabel(_diarioFecha);
+    const labelDia = getFechaLabel(_diarioFecha);
     // Cargar comidas planificadas para ese día
     let comidasPlanificadas = [];
     try {
@@ -4321,7 +4321,7 @@ function getOffsetDate(offset) {
   return d.toISOString().split('T')[0];
 }
 
-function diarioFechaLabel(fecha) {
+function getFechaLabel(fecha) {
   const hoy = getToday();
   const ayer = getOffsetDate(-1);
   const manana = getOffsetDate(1);
@@ -4341,7 +4341,7 @@ async function cargarDiarioPorFecha(fecha) {
   // Actualizar label navegación
   const labelEl = document.getElementById('diarioFechaLabel');
   if (labelEl) {
-    labelEl.textContent = diarioFechaLabel(fecha);
+    labelEl.textContent = getFechaLabel(fecha);
     labelEl.style.color = esHoy ? 'var(--accent)' : 'var(--text)';
   }
 
@@ -4839,7 +4839,7 @@ function abrirBuscadorFuturo(fecha, mealId, mealName) {
   _buscadorMealId = mealId;
   _buscadorMealName = mealName;
   _buscadorTab = 'todos';
-  document.getElementById('buscadorTitle').textContent = mealName + ' · ' + diarioFechaLabel(fecha);
+  document.getElementById('buscadorTitle').textContent = mealName + ' · ' + getFechaLabel(fecha);
   document.getElementById('buscadorInput').value = '';
   const clearBtn = document.getElementById('buscadorClearBtn');
   if (clearBtn) clearBtn.style.display = 'none';
