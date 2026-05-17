@@ -6589,9 +6589,11 @@ function bnNav(tab) {
 
 function showBottomNav() {
   document.getElementById('bottomNav').classList.remove('hidden');
+  document.body.classList.add('has-bottom-nav');
 }
 function hideBottomNav() {
   document.getElementById('bottomNav').classList.add('hidden');
+  document.body.classList.remove('has-bottom-nav');
 }
 
 // Sincronizar tab activo cuando se navega por otras vías
