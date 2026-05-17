@@ -4493,7 +4493,8 @@ function _diarioRenderOtroDia(data, fecha) {
 
     html += `
       <div style="border-bottom:1px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;">
+        <div class="diario-meal-hdr" data-mid="${mid}" data-meal-name="${MEAL_NAMES[mid]||mid}" data-kcal="${totalKcal}" data-prot="${totalProt}" data-ch="${totalCh}" data-grasa="${totalGrasa}"
+          style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:18px;">${MEAL_EMOJIS[mid]||'🍽️'}</span>
             <div>
@@ -4542,6 +4543,53 @@ function _diarioRenderOtroDia(data, fecha) {
     el.addEventListener('mouseup', cancel);
     el.addEventListener('mouseleave', cancel);
   });
+
+  // ── Long-press en header de comida → guardar toda la comida como favorito ──
+  container.querySelectorAll('.diario-meal-hdr').forEach(hdr => {
+    let timer = null;
+    const start = () => { timer = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(40);
+      const mid = hdr.dataset.mid;
+      const mealName = hdr.dataset.mealName;
+      const totalKcal = parseFloat(hdr.dataset.kcal)||0;
+      const totalProt = parseFloat(hdr.dataset.prot)||0;
+      const totalCh   = parseFloat(hdr.dataset.ch)||0;
+      const totalGrasa= parseFloat(hdr.dataset.grasa)||0;
+      const itemsDeMeal = data.comidas.filter(c => (c.mealId || c.tipo?.toLowerCase() || 'sin-categoría') === mid);
+      // Construir ingredientes raw
+      const ingRaw = itemsDeMeal.map(item => {
+        const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
+        const nom = gm ? gm[1].trim() : item.nombre;
+        const cant = gm ? gm[2]+'g' : '';
+        return nom+':'+cant+':';
+      }).join('\n');
+
+      // Bottom sheet igual que mfpMealMenu
+      const ov2 = document.createElement('div');
+      ov2.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+      ov2.innerHTML = `
+        <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${mealName}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · P${totalProt}g · CH${totalCh}g · G${totalGrasa}g</div>
+          <button id="_hdrFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar como favorito</button>
+          <button id="_hdrCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+        </div>`;
+      ov2.addEventListener('click', e => { if (e.target === ov2) ov2.remove(); });
+      document.body.appendChild(ov2);
+      ov2.querySelector('#_hdrFav').onclick = () => {
+        ov2.remove();
+        _diarioFavModal(mealName, {kcal: totalKcal, prot: totalProt, ch: totalCh, grasa: totalGrasa}, ingRaw);
+      };
+      ov2.querySelector('#_hdrCancel').onclick = () => ov2.remove();
+    }, 600); };
+    const cancel = () => clearTimeout(timer);
+    hdr.addEventListener('touchstart', start, {passive: true});
+    hdr.addEventListener('touchend', cancel);
+    hdr.addEventListener('touchmove', cancel, {passive: true});
+    hdr.addEventListener('mousedown', start);
+    hdr.addEventListener('mouseup', cancel);
+    hdr.addEventListener('mouseleave', cancel);
+  });
 }
 
 function _diarioItemMenu(el, data, fecha) {
@@ -4554,23 +4602,19 @@ function _diarioItemMenu(el, data, fecha) {
 
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
-  overlay.innerHTML = `<div style="background:var(--bg);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
-    <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;color:var(--text);">${escapeHtml(item.nombre||'Alimento')}</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g · ${item.kcal||0} kcal</div>
-    <button id="_dioFav" style="width:100%;padding:13px;background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);border-radius:12px;font-size:14px;color:#b8860b;font-weight:600;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
-    <button id="_dioHoy" style="width:100%;padding:13px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:600;margin-bottom:8px;cursor:pointer;text-align:left;">↩ Copiar a hoy</button>
-    <button id="_dioDel" style="width:100%;padding:13px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:12px;font-size:14px;color:var(--red);font-weight:600;margin-bottom:12px;cursor:pointer;text-align:left;">🗑️ Borrar de este día</button>
-    <button id="_dioCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+  overlay.innerHTML = `<div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px;color:var(--text);">${escapeHtml(item.nombre||'Alimento')}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g · ${item.kcal||0} kcal</div>
+    <button id="_dioFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
+    <button id="_dioHoy" style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;cursor:pointer;text-align:left;">↩ Copiar a hoy</button>
+    <button id="_dioDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);margin-bottom:12px;cursor:pointer;text-align:left;">🗑️ Borrar de este día</button>
+    <button id="_dioCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
   </div>`;
 
-  // ── Guardar en favoritos ──
+  // ── Guardar en favoritos — modal bonito sin prompt() ──
   overlay.querySelector('#_dioFav').onclick = () => {
     overlay.remove();
-    // Pedir nombre personalizado
-    const nombre = prompt('Nombre del favorito:', item.nombre || 'Favorito');
-    if (nombre === null) return;
-    guardarFavorito(nombre.trim() || item.nombre, '', {kcal: item.kcal||0, prot: item.prot||0, ch: item.ch||0, grasa: item.grasa||0}, '');
-    showToast('⭐ Guardado en favoritos');
+    _diarioFavModal(item.nombre || 'Favorito', {kcal: item.kcal||0, prot: item.prot||0, ch: item.ch||0, grasa: item.grasa||0}, '');
   };
 
   // ── Copiar a hoy ──
@@ -4623,6 +4667,39 @@ function _diarioItemMenu(el, data, fecha) {
   overlay.querySelector('#_dioCancel').onclick = () => overlay.remove();
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+}
+
+// Modal bonito para nombrar favorito (reutilizable, sin prompt())
+function _diarioFavModal(nombreDefault, macros, ingRaw) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div data-fav-nombre style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">⭐ Guardar favorito</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${macros.kcal} kcal · P${macros.prot}g · CH${macros.ch}g · G${macros.grasa}g</div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;">Nombre del favorito</div>
+      <input id="_dioFavInput" type="text" value="${escapeHtml(nombreDefault)}"
+        style="width:100%;background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:16px;box-sizing:border-box;">
+      <div style="display:flex;gap:8px;">
+        <button id="_dioFavCancel" style="flex:1;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+        <button id="_dioFavGuardar" style="flex:2;padding:13px;background:rgba(255,211,61,0.2);border:1px solid rgba(255,211,61,0.4);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;cursor:pointer;">⭐ Guardar</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  setTimeout(() => {
+    const inp = document.getElementById('_dioFavInput');
+    if (inp) { inp.focus(); inp.select(); }
+    document.getElementById('_dioFavCancel').onclick = () => ov.remove();
+    const doGuardar = () => {
+      const nombre = (document.getElementById('_dioFavInput').value.trim()) || nombreDefault;
+      guardarFavorito(nombre, '', macros, ingRaw || '');
+      ov.remove();
+      showToast('⭐ ' + nombre + ' guardado en favoritos');
+    };
+    document.getElementById('_dioFavGuardar').onclick = doGuardar;
+    document.getElementById('_dioFavInput').addEventListener('keydown', e => { if (e.key === 'Enter') doGuardar(); });
+  }, 100);
 }
 
 
