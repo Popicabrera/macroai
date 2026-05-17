@@ -1964,7 +1964,7 @@ function showView(id){
   document.getElementById(id).classList.add('active');
   closeContextMenu();
   // Sincronizar bottom nav
-  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes'};
+  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes'};
   const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
   if(bnMap[id]){const b=document.getElementById('bn-'+bnMap[id]);if(b)b.classList.add('active');}
@@ -6117,7 +6117,95 @@ function abrirAdminMenu(email, nombre, seccion) {
   renderAdminMenuPerfil(seccion);
 }
 
-function abrirPerfilAdmin(id, nombre, email) { abrirAdminMenu(email, nombre, "macros"); }
+function abrirPerfilAdmin(id, nombre, email) {
+  _adminMacrosEmail = email;
+  _adminMacrosNombre = nombre || email;
+  document.getElementById('adminMacrosTitle').textContent = nombre || email;
+  showView('viewAdminMacros');
+  renderAdminMacros();
+}
+
+let _adminMacrosEmail = '';
+let _adminMacrosNombre = '';
+
+async function renderAdminMacros() {
+  const body = document.getElementById('adminMacrosBody');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
+
+  let perfil = null;
+  try {
+    const res = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(_adminMacrosEmail) + '&limit=1');
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows.length) perfil = rows[0];
+  } catch(e) {}
+
+  body.innerHTML = `
+    <div class="am-section">
+      <div class="am-section-hdr">Macros día de entreno</div>
+      <div class="am-field"><span class="am-field-label">Calorías (kcal)</span><input class="am-field-input" id="amMKcalE" type="number" inputmode="numeric" value="${perfil?.kcal_objetivo || 2200}"></div>
+      <div class="am-field"><span class="am-field-label">Proteína (g)</span><input class="am-field-input" id="amMProtE" type="number" inputmode="numeric" value="${perfil?.p_objetivo || 160}"></div>
+      <div class="am-field"><span class="am-field-label">Hidratos (g)</span><input class="am-field-input" id="amMHcE" type="number" inputmode="numeric" value="${perfil?.hc_objetivo || 220}"></div>
+      <div class="am-field"><span class="am-field-label">Grasas (g)</span><input class="am-field-input" id="amMGrasaE" type="number" inputmode="numeric" value="${perfil?.g_objetivo || 65}"></div>
+    </div>
+    <div class="am-section">
+      <div class="am-section-hdr">Macros día de descanso</div>
+      <div class="am-field"><span class="am-field-label">Calorías (kcal)</span><input class="am-field-input" id="amMKcalD" type="number" inputmode="numeric" value="${perfil?.kcal_descanso || 1900}"></div>
+      <div class="am-field"><span class="am-field-label">Proteína (g)</span><input class="am-field-input" id="amMProtD" type="number" inputmode="numeric" value="${perfil?.p_descanso || 150}"></div>
+      <div class="am-field"><span class="am-field-label">Hidratos (g)</span><input class="am-field-input" id="amMHcD" type="number" inputmode="numeric" value="${perfil?.hc_descanso || 170}"></div>
+      <div class="am-field"><span class="am-field-label">Grasas (g)</span><input class="am-field-input" id="amMGrasaD" type="number" inputmode="numeric" value="${perfil?.g_descanso || 60}"></div>
+    </div>
+    <div class="am-section" style="margin-bottom:16px;">
+      <div class="am-section-hdr">Modo de la app</div>
+      <div style="display:flex;gap:8px;padding:10px 14px;">
+        <div id="amMModoMacros" onclick="amMSetModo('macros')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='macros'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='macros'?'#fff':'var(--muted)'};">📊 Macros</div>
+        <div id="amMModoMenu" onclick="amMSetModo('menu')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='menu'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='menu'?'#fff':'var(--muted)'};">🥗 Menú</div>
+        <input type="hidden" id="amMModoApp" value="${perfil?.modo_app||'macros'}">
+      </div>
+    </div>
+    <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">
+      💾 Guardar macros
+    </button>
+  `;
+}
+
+function amMSetModo(modo) {
+  document.getElementById('amMModoApp').value = modo;
+  const bM = document.getElementById('amMModoMacros');
+  const bMe = document.getElementById('amMModoMenu');
+  if(bM){ bM.style.background = modo==='macros'?'var(--accent)':'var(--s2)'; bM.style.color = modo==='macros'?'#fff':'var(--muted)'; }
+  if(bMe){ bMe.style.background = modo==='menu'?'var(--accent)':'var(--s2)'; bMe.style.color = modo==='menu'?'#fff':'var(--muted)'; }
+}
+
+async function guardarMacros() {
+  const payload = {
+    cliente_email: _adminMacrosEmail,
+    kcal_objetivo: parseInt(document.getElementById('amMKcalE').value) || 2200,
+    p_objetivo:    parseInt(document.getElementById('amMProtE').value) || 160,
+    hc_objetivo:   parseInt(document.getElementById('amMHcE').value)  || 220,
+    g_objetivo:    parseInt(document.getElementById('amMGrasaE').value) || 65,
+    kcal_descanso: parseInt(document.getElementById('amMKcalD').value) || 1900,
+    p_descanso:    parseInt(document.getElementById('amMProtD').value) || 150,
+    hc_descanso:   parseInt(document.getElementById('amMHcD').value)  || 170,
+    g_descanso:    parseInt(document.getElementById('amMGrasaD').value) || 60,
+    modo_app:      document.getElementById('amMModoApp')?.value || 'macros'
+  };
+  try {
+    const res = await supaAdmin('/rest/v1/perfiles_macroai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok || res.status === 201 || res.status === 204) {
+      showToast('✅ Macros guardados');
+    } else {
+      const err = await res.text();
+      console.error('guardarMacros:', err);
+      showToast('❌ Error guardando macros');
+    }
+  } catch(e) {
+    showToast('❌ Error de conexión');
+  }
+}
 async function renderAdminMenuPerfil(seccion) {
   const body = document.getElementById('adminMenuBody');
   body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>`;
@@ -6281,20 +6369,32 @@ async function guardarPerfil() {
   const prefs = document.getElementById('amPrefs').value.trim();
   const modoApp = document.getElementById('amModoApp')?.value || 'macros';
 
+  const payload = {
+    cliente_email: _adminMenuEmail,
+    kcal_objetivo: kcalE, p_objetivo: protE, hc_objetivo: hcE, g_objetivo: grasaE,
+    kcal_descanso: kcalD, p_descanso: protD, hc_descanso: hcD, g_descanso: grasaD,
+    comidas_dia: comidas, preferencias: prefs, modo_app: modoApp
+  };
+
   try {
-    await fetch(WORKER_URL + '/save-profile', {
+    const res = await supaAdmin('/rest/v1/perfiles_macroai', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cliente_email: _adminMenuEmail,
-        kcal_objetivo: kcalE, p_objetivo: protE, hc_objetivo: hcE, g_objetivo: grasaE,
-        kcal_descanso: kcalD, p_descanso: protD, hc_descanso: hcD, g_descanso: grasaD,
-        comidas_dia: comidas, preferencias: prefs, modo_app: modoApp
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(payload)
     });
-    showToast('✅ Perfil guardado');
+    if (res.ok || res.status === 201 || res.status === 204) {
+      showToast('✅ Perfil guardado');
+    } else {
+      const err = await res.text();
+      console.error('guardarPerfil error:', err);
+      showToast('❌ Error guardando perfil');
+    }
   } catch(e) {
-    showToast('❌ Error guardando perfil');
+    console.error('guardarPerfil:', e);
+    showToast('❌ Error de conexión');
   }
 }
 
@@ -6564,5 +6664,16 @@ async function guardarDiasEntreno() {
 // Se llama desde el panel admin al guardar perfil — añade modo_app al payload
 const _origGuardarPerfil = typeof guardarPerfil === 'function' ? guardarPerfil : null;
 </script>
+
+<div class="view" id="viewAdminMacros">
+<div class="aw">
+  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
+    <div class="back-btn" onclick="showView('viewAdmin')">‹</div>
+    <h2 id="adminMacrosTitle" style="color:var(--accent)">Macros</h2>
+  </div>
+  <div class="scrollable" id="adminMacrosBody"></div>
+</div>
+</div>
+
 </body>
 </html>
