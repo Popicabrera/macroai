@@ -1140,7 +1140,7 @@ function enterApp(){
   const x=c.getContext('2d');
   x.fillStyle='#f5f0e8';x.fillRect(0,0,192,192);
   x.fillStyle='#c0392b';x.beginPath();x.arc(96,96,88,0,Math.PI*2);x.fill();
-  x.fillStyle='#5a7a00';x.font='bold 110px Syne,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('M',96,100);
+  x.fillStyle='#f5f0e8';x.font='bold 110px Syne,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('M',96,100);
   const icon=c.toDataURL('image/png');
   document.getElementById('appleIcon').href=icon;
   const m={name:'MacroAI',short_name:'MacroAI',start_url:'.',display:'standalone',background_color:'#f5f0e8',theme_color:'#f5f0e8',orientation:'portrait',icons:[{src:icon,sizes:'192x192',type:'image/png'},{src:icon,sizes:'512x512',type:'image/png'}]};
