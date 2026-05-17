@@ -1414,36 +1414,93 @@ function renderFavoritos(){
   });
 }
 
+// Muestra bottom sheet para elegir comida (y opcionalmente día) al registrar un favorito
+function mostrarSelectorComidaFav(id, fechaForzada) {
+  const favs = loadFavs(); const f = favs.find(x => x.id === id); if (!f) return;
+  const fecha = fechaForzada || _diarioFecha || getToday();
+  const esHoy = fecha === getToday();
+  const labelFecha = esHoy ? 'Hoy' : diarioFechaLabel ? diarioFechaLabel(fecha) : fecha;
+  const comidas = [
+    {id:'desayuno',   emoji:'🌅', label:'Desayuno'},
+    {id:'almuerzo',   emoji:'☕', label:'Almuerzo'},
+    {id:'comida',     emoji:'☀️', label:'Comida'},
+    {id:'merienda',   emoji:'🍎', label:'Merienda'},
+    {id:'cena',       emoji:'🌙', label:'Cena'},
+  ];
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">⭐ ${escapeHtml(f.nombre)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">¿En qué comida de <strong>${labelFecha}</strong>?</div>
+      ${comidas.map(c=>`
+        <div data-meal-pick="${c.id}"
+          style="display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:12px;margin-bottom:8px;background:var(--s2);cursor:pointer;border:1px solid var(--border);">
+          <span style="font-size:20px;">${c.emoji}</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;">${c.label}</span>
+        </div>`).join('')}
+      <button onclick="this.closest('div[style*=inset]').remove()"
+        style="width:100%;padding:12px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:14px;margin-top:4px;cursor:pointer;">Cancelar</button>
+    </div>`;
+  // Listeners por JS (sin inline handlers con datos)
+  overlay.querySelectorAll('[data-meal-pick]').forEach(el => {
+    el.addEventListener('click', () => {
+      const mealId = el.dataset.mealPick;
+      overlay.remove();
+      _ejecutarRegistroFavorito(id, mealId, fecha);
+    });
+  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 function usarFavorito(id){
+  mostrarSelectorComidaFav(id, null);
+}
+
+function _ejecutarRegistroFavorito(id, mealId, fecha){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
-  showView('viewMain');
+  const esHoy = !fecha || fecha === getToday();
   // Si tiene macros guardados — registrar directamente sin llamar a la IA
   if(f.kcal>0){
-    setTimeout(()=>{
-      const kcalN=f.kcal||0,protN=f.prot||0,chN=f.ch||0,grasaN=f.grasa||0;
-      S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
-      // Reconstruir texto de ingredientes desde array guardado
-      let ingTexto='';
-      if(f.ingredientes&&f.ingredientes.length){
-        ingTexto=f.ingredientes.map(i=>`${i.nombre}:${i.cantidad}`).join('\n');
-      }
-      S.comidas.push({nombre:f.nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
-      const mealIdx=S.comidas.length-1;
-      updateBars();saveToday();
-      saveComidaSupabase({nombre:f.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
-      // Construir tarjeta de ingredientes
-      let ingHtml='';
-      if(f.ingredientes&&f.ingredientes.length){
-        ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
-        f.ingredientes.forEach(i=>{ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(i.nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(i.cantidad)}</div></div></div>`;});
-        ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
-        ingHtml+='</div>';
-      }
-      addMsg('ai','✅ '+f.nombre+' registrado desde favoritos',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN},mealIdx,ingTexto);
-      showToast('⭐ '+f.nombre+' registrado · '+kcalN+' kcal');
-    },300);
+    const kcalN=f.kcal||0,protN=f.prot||0,chN=f.ch||0,grasaN=f.grasa||0;
+    let ingTexto='';
+    if(f.ingredientes&&f.ingredientes.length){
+      ingTexto=f.ingredientes.map(i=>`${i.nombre}:${i.cantidad}`).join('\n');
+    }
+    const entrada={nombre:f.nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId};
+    if(!esHoy){
+      // Día pasado o futuro — guardar en localStorage de ese día
+      const key='macroai_dia_'+fecha;
+      const d=JSON.parse(localStorage.getItem(key)||'null')||{fecha,comidas:[]};
+      d.comidas.push(entrada);
+      localStorage.setItem(key,JSON.stringify(d));
+      showView('viewMain');
+      setTimeout(()=>cargarDiarioPorFecha(fecha),200);
+      showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
+    } else {
+      // Hoy
+      showView('viewMain');
+      setTimeout(()=>{
+        S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
+        S.comidas.push(entrada);
+        const mealIdx=S.comidas.length-1;
+        updateBars();saveToday();
+        saveComidaSupabase({nombre:f.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+        let ingHtml='';
+        if(f.ingredientes&&f.ingredientes.length){
+          ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
+          f.ingredientes.forEach(i=>{ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(i.nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(i.cantidad)}</div></div></div>`;});
+          ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
+          ingHtml+='</div>';
+        }
+        addMsg('ai','✅ '+f.nombre+' registrado desde favoritos',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN},mealIdx,ingTexto);
+        showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
+      },300);
+    }
   } else {
     // Sin macros guardados — pedir a la IA que calcule
+    showView('viewMain');
     const lista=f.ingredientes&&f.ingredientes.length?f.ingredientes.map(i=>`${i.cantidad} de ${i.nombre.replace(/^[^\w]+/,'')}`).join(', '):f.nombre;
     setTimeout(()=>sendDirect(`Registra este favorito: ${f.nombre}. Ingredientes: ${lista}`),300);
   }
@@ -3449,31 +3506,9 @@ function favBuscadorUsar(id) {
   const favs = loadFavs();
   const f = favs.find(x => x.id === id);
   if (!f || !f.kcal) return;
-  const mealId = _buscadorMealId || _buscadorFechaFutura ? _buscadorMealId : '';
-
-  // Si es día futuro
-  if (_buscadorFechaFutura && _buscadorFechaFutura !== getToday()) {
-    const key = 'macroai_dia_' + _buscadorFechaFutura;
-    const d = JSON.parse(localStorage.getItem(key) || 'null') || { fecha: _buscadorFechaFutura, comidas: [] };
-    const ingTexto = f.ingredientes ? f.ingredientes.map(i => i.nombre + ':' + i.cantidad).join('\n') : '';
-    d.comidas.push({ nombre: f.nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
-      kcal: f.kcal, prot: f.prot, ch: f.ch, grasa: f.grasa, ingredientes: ingTexto, mealId });
-    localStorage.setItem(key, JSON.stringify(d));
-    cerrarBuscador();
-    cargarDiarioPorFecha(_buscadorFechaFutura);
-    showToast('⭐ ' + f.nombre + ' · ' + f.kcal + ' kcal');
-    return;
-  }
-
-  // Día actual
-  const ingTexto = f.ingredientes ? f.ingredientes.map(i => i.nombre + ':' + i.cantidad).join('\n') : '';
-  S.comidas.push({ nombre: f.nombre, hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
-    kcal: f.kcal, prot: f.prot, ch: f.ch, grasa: f.grasa, ingredientes: ingTexto, mealId });
-  updateBars(); saveToday();
-  saveComidaSupabase({ nombre: f.nombre, fecha: TODAY, tipoDia: S.tipoDia,
-    kcal: f.kcal, prot: f.prot, ch: f.ch, grasa: f.grasa, ingredientes: ingTexto });
+  const fecha = _buscadorFechaFutura || _diarioFecha || getToday();
   cerrarBuscador();
-  showToast('⭐ ' + f.nombre + ' · ' + f.kcal + ' kcal');
+  setTimeout(() => mostrarSelectorComidaFav(id, fecha), 150);
 }
 
 function favBuscadorMenu(id, e) {
