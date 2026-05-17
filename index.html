@@ -1964,7 +1964,7 @@ function showView(id){
   document.getElementById(id).classList.add('active');
   closeContextMenu();
   // Sincronizar bottom nav
-  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil'};
+  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes'};
   const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
   if(bnMap[id]){const b=document.getElementById('bn-'+bnMap[id]);if(b)b.classList.add('active');}
@@ -1980,7 +1980,7 @@ function loadCfgUI(){
   setDayType(CFG.tipoDia,false);
   renderWeekDays();
   const adminBtn=document.getElementById('adminHeaderBtn');
-  if(adminBtn)adminBtn.style.display=CURRENT_USER?.email===ADMIN_EMAIL?'flex':'none';
+  if(adminBtn)adminBtn.style.display='none';
 }
 function setDayType(tipo,update=true){
   document.getElementById('btnEntreno').classList.toggle('active',tipo==='entreno');
@@ -3328,7 +3328,9 @@ function initApp(){
   const adminItem = document.getElementById('navAdminItem');
   if (adminItem) adminItem.style.display = CURRENT_USER?.email===ADMIN_EMAIL ? 'block' : 'none';
   const adminBtn = document.getElementById('adminHeaderBtn');
-  if (adminBtn) adminBtn.style.display = CURRENT_USER?.email===ADMIN_EMAIL ? 'flex' : 'none';
+  if (adminBtn) adminBtn.style.display = 'none';
+  const bnClientes = document.getElementById('bn-clientes');
+  if (bnClientes) bnClientes.style.display = CURRENT_USER?.email===ADMIN_EMAIL ? 'flex' : 'none';
 
   // Cargar perfil desde Supabase (macros del entrenador + modo_app + dias_entreno)
   cargarPerfilUsuario();
@@ -6450,6 +6452,11 @@ async function verMenuGenerado() {
     <span class="bn-label">Perfil</span>
     <span class="bn-dot"></span>
   </button>
+  <button class="bn-item" id="bn-clientes" onclick="bnNav('clientes')" style="display:none;">
+    <span class="bn-icon">👥</span>
+    <span class="bn-label">Clientes</span>
+    <span class="bn-dot"></span>
+  </button>
 </nav>
 
 <script>
@@ -6469,6 +6476,7 @@ function bnNav(tab) {
     case 'chat':      abrirChatIA(); break;
     case 'favoritos': showView('viewFavoritos'); break;
     case 'perfil':    showView('viewConfig'); break;
+    case 'clientes':  showView('viewAdmin'); loadAdminUsers(); break;
   }
 }
 
