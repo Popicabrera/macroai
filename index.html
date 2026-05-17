@@ -4672,6 +4672,8 @@ async function cargarDiarioPorFecha(fecha) {
       const dayTypeEl = document.getElementById('dayType');
       if(pillDot) pillDot.className='pdot'+(mFuturo.tipo==='descanso'?' rest':'');
       if(dayTypeEl) dayTypeEl.textContent=mFuturo.tipo==='entreno'?'Día de entreno':'Día de descanso';
+      // Actualizar objetivos con los macros del día correcto
+      S.kcalObj=mFuturo.kcal; S.prot=mFuturo.prot; S.ch=mFuturo.ch; S.grasa=mFuturo.grasa;
       document.getElementById('kcalResta').textContent = mFuturo.kcal;
       document.getElementById('kcalObj').textContent = 'de ' + mFuturo.kcal + ' kcal';
       document.getElementById('protResta').textContent = mFuturo.prot;
@@ -5008,12 +5010,23 @@ function _diarioFavModal(nombreDefault, macros, ingRaw) {
 
 
 function _diarioRenderFuturo(fecha) {
-  // Actualizar pill entreno/descanso según el día de la semana
+  // Actualizar pill y macros según el día de la semana
   const mFut = getMacrosParaFecha(fecha);
   const pillDot = document.getElementById('pillDot');
   const dayTypeEl = document.getElementById('dayType');
   if(pillDot) pillDot.className='pdot'+(mFut.tipo==='descanso'?' rest':'');
   if(dayTypeEl) dayTypeEl.textContent=mFut.tipo==='entreno'?'Día de entreno':'Día de descanso';
+  S.kcalObj=mFut.kcal; S.prot=mFut.prot; S.ch=mFut.ch; S.grasa=mFut.grasa;
+  const kcalRestEl=document.getElementById('kcalResta');
+  const kcalObjEl=document.getElementById('kcalObj');
+  if(kcalRestEl) kcalRestEl.textContent=mFut.kcal;
+  if(kcalObjEl) kcalObjEl.textContent='de '+mFut.kcal+' kcal';
+  const protEl=document.getElementById('protResta');
+  const chEl=document.getElementById('chResta');
+  const grasaEl=document.getElementById('grasaResta');
+  if(protEl) protEl.textContent=mFut.prot;
+  if(chEl) chEl.textContent=mFut.ch;
+  if(grasaEl) grasaEl.textContent=mFut.grasa;
 
   // Renderiza el diario MFP normal para días futuros — permite planificar
   const container = document.getElementById('mfpDiario');
