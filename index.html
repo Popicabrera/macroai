@@ -1123,6 +1123,14 @@ function enterApp(){
   });
   // Ping al Worker para despertarlo antes de que el usuario lo necesite
   fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
+  // Sincronizar favoritos e historial desde Supabase (fix incógnito)
+  loadFavsFromSupa().catch(()=>{});
+  syncHistorialDesdeSupabase().then(()=>{
+    // Re-renderizar inicio buscador si está abierto
+    if(document.getElementById('viewBuscador')?.classList.contains('active')){
+      renderBuscadorInicio();
+    }
+  }).catch(()=>{});
   initApp();
 }
 
@@ -1341,7 +1349,38 @@ function usarDespensa(){
 
 // ── FAVORITOS ──
 function loadFavs(){try{return JSON.parse(localStorage.getItem('macroai_favs')||'[]');}catch(e){return[];}}
-function saveFavs(arr){localStorage.setItem('macroai_favs',JSON.stringify(arr));}
+function saveFavs(arr){
+  localStorage.setItem('macroai_favs',JSON.stringify(arr));
+  _syncFavsToSupa(arr).catch(()=>{});
+}
+
+async function _syncFavsToSupa(arr){
+  if(!CURRENT_USER)return;
+  await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{method:'DELETE'});
+  if(!arr.length)return;
+  await supaFetch('/rest/v1/favoritos_macroai',{
+    method:'POST',
+    headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:arr})
+  });
+}
+
+async function loadFavsFromSupa(){
+  if(!CURRENT_USER)return;
+  try{
+    const res=await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id+'&limit=1&select=datos');
+    const rows=await res.json();
+    if(!Array.isArray(rows)||!rows.length)return;
+    const remoto=rows[0].datos||[];
+    if(!Array.isArray(remoto)||!remoto.length)return;
+    const local=loadFavs();
+    const remotIds=new Set(remoto.map(f=>f.id));
+    const soloLocales=local.filter(f=>!remotIds.has(f.id));
+    const merged=[...remoto,...soloLocales];
+    localStorage.setItem('macroai_favs',JSON.stringify(merged));
+    if(soloLocales.length)_syncFavsToSupa(merged).catch(()=>{});
+  }catch(e){}
+}
 
 function guardarFavorito(nombre,texto,macros,ingredientesRaw){
   const favs=loadFavs();
@@ -3574,6 +3613,11 @@ function abrirBuscador(mealId, mealName) {
   renderBuscadorInicio();
   showView('viewBuscador');
   setTimeout(() => document.getElementById('buscadorInput').focus(), 300);
+  // Sync desde Supabase si recientes vacíos (incógnito / dispositivo nuevo)
+  const tieneRecientes = getHistorialAlimentosIndividuales(1).length > 0;
+  if(!tieneRecientes){
+    syncHistorialDesdeSupabase().then(()=>renderBuscadorInicio()).catch(()=>{});
+  }
 }
 
 function buscadorLimpiar() {
@@ -3757,6 +3801,25 @@ function getHistorialAlimentosIndividuales(max) {
     }
   }
   return result;
+}
+
+// Carga días recientes desde Supabase y los mete en localStorage (fix incógnito)
+async function syncHistorialDesdeSupabase(){
+  if(!CURRENT_USER)return;
+  try{
+    const res=await supaFetch('/rest/v1/registros_macroai?select=fecha,comidas&usuario_id=eq.'+CURRENT_USER.id+'&order=fecha.desc&limit=14');
+    const rows=await res.json();
+    if(!Array.isArray(rows)||!rows.length)return;
+    rows.forEach(row=>{
+      if(!row.fecha||!Array.isArray(row.comidas)||!row.comidas.length)return;
+      const key='macroai_dia_'+row.fecha;
+      // Solo escribir si no hay datos locales o están vacíos
+      const local=JSON.parse(localStorage.getItem(key)||'null');
+      if(!local||!local.comidas||!local.comidas.length){
+        localStorage.setItem(key,JSON.stringify({comidas:row.comidas}));
+      }
+    });
+  }catch(e){}
 }
 
 // Botón + del historial: selecciona el alimento y pre-rellena los gramos de la última vez
@@ -5023,6 +5086,11 @@ function abrirBuscadorFuturo(fecha, mealId, mealName) {
   renderBuscadorInicio();
   showView('viewBuscador');
   setTimeout(() => document.getElementById('buscadorInput').focus(), 300);
+  // Sync desde Supabase si recientes vacíos (incógnito / dispositivo nuevo)
+  const tieneRecientes = getHistorialAlimentosIndividuales(1).length > 0;
+  if(!tieneRecientes){
+    syncHistorialDesdeSupabase().then(()=>renderBuscadorInicio()).catch(()=>{});
+  }
 }
 
 function eliminarComidaFutura(fecha, mealId, idx) {
