@@ -6154,14 +6154,7 @@ async function renderAdminMacros() {
       <div class="am-field"><span class="am-field-label">Hidratos (g)</span><input class="am-field-input" id="amMHcD" type="number" inputmode="numeric" value="${perfil?.hc_descanso || 170}"></div>
       <div class="am-field"><span class="am-field-label">Grasas (g)</span><input class="am-field-input" id="amMGrasaD" type="number" inputmode="numeric" value="${perfil?.g_descanso || 60}"></div>
     </div>
-    <div class="am-section" style="margin-bottom:16px;">
-      <div class="am-section-hdr">Modo de la app</div>
-      <div style="display:flex;gap:8px;padding:10px 14px;">
-        <div id="amMModoMacros" onclick="amMSetModo('macros')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='macros'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='macros'?'#fff':'var(--muted)'};">📊 Macros</div>
-        <div id="amMModoMenu" onclick="amMSetModo('menu')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='menu'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='menu'?'#fff':'var(--muted)'};">🥗 Menú</div>
-        <input type="hidden" id="amMModoApp" value="${perfil?.modo_app||'macros'}">
-      </div>
-    </div>
+    <input type="hidden" id="amMModoApp" value="macros">
     <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">
       💾 Guardar macros
     </button>
@@ -6187,7 +6180,7 @@ async function guardarMacros() {
     p_descanso:    parseInt(document.getElementById('amMProtD').value) || 150,
     hc_descanso:   parseInt(document.getElementById('amMHcD').value)  || 170,
     g_descanso:    parseInt(document.getElementById('amMGrasaD').value) || 60,
-    modo_app:      document.getElementById('amMModoApp')?.value || 'macros'
+    modo_app:      'macros'
   };
   try {
     const res = await supaAdmin('/rest/v1/perfiles_macroai', {
@@ -6265,14 +6258,7 @@ async function renderAdminMenuPerfil(seccion) {
     <!-- Configuración -->
     <div class="am-section">
       <div class="am-section-hdr">Configuración</div>
-      <div class="am-field" style="flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:4px;">
-        <span class="am-field-label">Modo de la app</span>
-        <div style="display:flex;gap:8px;width:100%;">
-          <div id="amModoMacros" onclick="amSetModo('macros')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='macros'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='macros'?'#fff':'var(--muted)'};">📊 Macros</div>
-          <div id="amModoMenu" onclick="amSetModo('menu')" style="flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:${(perfil?.modo_app||'macros')==='menu'?'var(--accent)':'var(--s2)'};color:${(perfil?.modo_app||'macros')==='menu'?'#fff':'var(--muted)'};">🥗 Menú</div>
-        </div>
-        <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'macros'}">
-      </div>
+      <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'macros'}">
       <div class="am-field">
         <span class="am-field-label">Comidas al día</span>
         <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
@@ -6367,7 +6353,7 @@ async function guardarPerfil() {
   const grasaD = parseInt(document.getElementById('amGrasaD').value) || 60;
   const comidas = parseInt(document.getElementById('amComidas').value) || 4;
   const prefs = document.getElementById('amPrefs').value.trim();
-  const modoApp = document.getElementById('amModoApp')?.value || 'macros';
+  const modoApp = 'menu';
 
   const payload = {
     cliente_email: _adminMenuEmail,
