@@ -6137,14 +6137,49 @@ let _drumModo = 'g';
 let _drumContainer = null;
 let _drumAutoSaveTimer = null;
 
+function drumCheckBar(calcKcal, objKcal, side) {
+  const diff = calcKcal - objKcal;
+  const ok = Math.abs(diff) <= 10;
+  const over = diff > 10;
+  const bg = ok ? 'rgba(46,125,50,0.08)' : over ? 'rgba(192,57,43,0.08)' : 'rgba(230,130,0,0.08)';
+  const border = ok ? 'rgba(46,125,50,0.3)' : over ? 'rgba(192,57,43,0.3)' : 'rgba(230,130,0,0.3)';
+  const color = ok ? 'var(--green,#2e7d32)' : over ? 'var(--accent)' : '#e65100';
+  const icon = ok ? '✓' : over ? '↑ Se pasa' : '↓ Falta';
+  const label = ok ? `${side} cuadra` : `${side}`;
+  return `<div id="chk${side}-\${cid}" style="display:flex;align-items:center;justify-content:space-between;background:${bg};border:1px solid ${border};border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:12px;font-weight:700;color:${color};">
+    <span>${icon} ${label}</span>
+    <span>${calcKcal} / ${objKcal} kcal</span>
+  </div>`;
+}
+
 function drumHTML(cid) {
   const v = _drumVals;
+  const calcE = v.hcE*4 + v.pE*4 + v.gE*9;
+  const calcD = v.hcD*4 + v.pD*4 + v.gD*9;
+  const okE = Math.abs(calcE - v.kcalE) <= 10;
+  const okD = Math.abs(calcD - v.kcalD) <= 10;
   const field = (label, id, val) => `
     <div class="am-field">
       <span class="am-field-label">${label}</span>
       <input class="am-field-input" id="${id}-${cid}" type="number" inputmode="numeric" value="${val}"
         style="width:80px;text-align:right;" oninput="drumFieldChange('${cid}')">
     </div>`;
+  const chkE = () => {
+    const diff = calcE - v.kcalE; const ok = Math.abs(diff)<=10; const over = diff>10;
+    const bg = ok?'rgba(46,125,50,0.08)':over?'rgba(192,57,43,0.08)':'rgba(230,130,0,0.08)';
+    const bc = ok?'rgba(46,125,50,0.3)':over?'rgba(192,57,43,0.3)':'rgba(230,130,0,0.3)';
+    const color = ok?'#2e7d32':over?'#c0341d':'#e65100';
+    const txt = ok?'✓ Entreno cuadra':over?'↑ Entreno se pasa':'↓ Entreno falta';
+    return `<div id="chkE-${cid}" style="display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${bc};border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:12px;font-weight:700;color:${color};"><span>${txt}</span><span>${calcE} / ${v.kcalE} kcal</span></div>`;
+  };
+  const chkD = () => {
+    const diff = calcD - v.kcalD; const ok = Math.abs(diff)<=10; const over = diff>10;
+    const bg = ok?'rgba(46,125,50,0.08)':over?'rgba(192,57,43,0.08)':'rgba(230,130,0,0.08)';
+    const bc = ok?'rgba(46,125,50,0.3)':over?'rgba(192,57,43,0.3)':'rgba(230,130,0,0.3)';
+    const color = ok?'#2e7d32':over?'#c0341d':'#e65100';
+    const txt = ok?'✓ Descanso cuadra':over?'↑ Descanso se pasa':'↓ Descanso falta';
+    return `<div id="chkD-${cid}" style="display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${bc};border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:12px;font-weight:700;color:${color};"><span>${txt}</span><span>${calcD} / ${v.kcalD} kcal</span></div>`;
+  };
   return `
   <div class="am-section" style="margin-bottom:10px;">
     <div class="am-section-hdr">Día de entreno</div>
@@ -6153,23 +6188,46 @@ function drumHTML(cid) {
     ${field('Proteína (g)',   'dPE',   v.pE)}
     ${field('Grasas (g)',     'dGE',   v.gE)}
   </div>
-  <div class="am-section" style="margin-bottom:14px;">
+  ${chkE()}
+  <div class="am-section" style="margin-bottom:10px;">
     <div class="am-section-hdr">Día de descanso</div>
     ${field('Calorías (kcal)','dKcalD',v.kcalD)}
     ${field('Hidratos (g)',   'dHcD',  v.hcD)}
     ${field('Proteína (g)',   'dPD',   v.pD)}
     ${field('Grasas (g)',     'dGD',   v.gD)}
-  </div>`;
+  </div>
+  ${chkD()}`;
 }
 
 function drumFieldChange(cid) {
   const g = (id) => parseInt(document.getElementById(id+'-'+cid)?.value)||0;
   _drumVals = {
-    kcalE: g('dKcalE'), kcalD: g('dKcalD'),
+    kcalE: g('dKcalE')||_drumVals.kcalE, kcalD: g('dKcalD')||_drumVals.kcalD,
     hcE: g('dHcE'), pE: g('dPE'), gE: g('dGE'),
     hcD: g('dHcD'), pD: g('dPD'), gD: g('dGD')
   };
-  drumScheduleAutoSave();
+  // Actualizar barras en tiempo real sin re-renderizar
+  const calcE = _drumVals.hcE*4 + _drumVals.pE*4 + _drumVals.gE*9;
+  const calcD = _drumVals.hcD*4 + _drumVals.pD*4 + _drumVals.gD*9;
+  const updateChk = (elId, calc, obj, labelOk, labelOver, labelUnder) => {
+    const el = document.getElementById(elId+'-'+cid);
+    if(!el) return;
+    const diff=calc-obj; const ok=Math.abs(diff)<=10; const over=diff>10;
+    const bg=ok?'rgba(46,125,50,0.08)':over?'rgba(192,57,43,0.08)':'rgba(230,130,0,0.08)';
+    const bc=ok?'rgba(46,125,50,0.3)':over?'rgba(192,57,43,0.3)':'rgba(230,130,0,0.3)';
+    const color=ok?'#2e7d32':over?'#c0341d':'#e65100';
+    const txt=ok?labelOk:over?labelOver:labelUnder;
+    el.style.background=bg; el.style.borderColor=bc; el.style.color=color;
+    el.innerHTML=`<span>${txt}</span><span>${calc} / ${obj} kcal</span>`;
+  };
+  updateChk('chkE', calcE, _drumVals.kcalE, '✓ Entreno cuadra','↑ Entreno se pasa','↓ Entreno falta');
+  updateChk('chkD', calcD, _drumVals.kcalD, '✓ Descanso cuadra','↑ Descanso se pasa','↓ Descanso falta');
+  // Botón guardar
+  const okE = Math.abs(calcE-_drumVals.kcalE)<=10;
+  const okD = Math.abs(calcD-_drumVals.kcalD)<=10;
+  const btn = document.querySelector('#'+cid+' .am-btn-secondary');
+  if(btn){ btn.style.opacity = (okE&&okD)?'1':'0.45'; btn.style.pointerEvents = (okE&&okD)?'auto':'none'; }
+  if(okE&&okD) drumScheduleAutoSave();
 }
 
 function drumKcalChange(key, cid, val) {
