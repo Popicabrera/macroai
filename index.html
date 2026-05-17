@@ -6295,6 +6295,33 @@ function drumRender(inner, idx) {
   inner.innerHTML = html;
 }
 
+function drumApplyVal(inner, key, containerId, rawVal) {
+  const isG = _drumModo === 'g';
+  if(isG) {
+    _drumVals[key] = rawVal;
+  } else {
+    const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
+    const factor = key.startsWith('g') ? 9 : 4;
+    _drumVals[key] = Math.round(kcal * rawVal / 100 / factor);
+  }
+  drumSyncKcal(containerId);
+  drumUpdateTotals(containerId);
+  drumScheduleAutoSave();
+}
+
+function drumSyncKcal(containerId) {
+  const kcalEInput = document.getElementById('drumKcalE-' + containerId);
+  const kcalDInput = document.getElementById('drumKcalD-' + containerId);
+  if(_drumModo === 'g') {
+    const calcE = _drumVals.pE*4 + _drumVals.hcE*4 + _drumVals.gE*9;
+    const calcD = _drumVals.pD*4 + _drumVals.hcD*4 + _drumVals.gD*9;
+    if(kcalEInput) kcalEInput.value = calcE;
+    if(kcalDInput) kcalDInput.value = calcD;
+    _drumVals.kcalE = calcE;
+    _drumVals.kcalD = calcD;
+  }
+}
+
 function drumSetupDrag(drum, key, containerId) {
   let startY=0, startIdx=0, active=false;
   const start = y => { startY=y; const inner=drum.querySelector('.drum-inner'); startIdx=inner._idx; active=true; };
@@ -6306,28 +6333,29 @@ function drumSetupDrag(drum, key, containerId) {
     if(newIdx !== inner._idx) {
       inner._idx = newIdx;
       const rawVal = inner._items[newIdx];
-      const isG = _drumModo === 'g';
-      if(key==='kcalE'||key==='kcalD') {
-        _drumVals[key] = rawVal;
-      } else if(isG) {
-        _drumVals[key] = rawVal;
-      } else {
-        const kcal = key.endsWith('E') ? _drumVals.kcalE : _drumVals.kcalD;
-        const factor = key.startsWith('g') ? 9 : 4;
-        _drumVals[key] = Math.round(kcal * rawVal / 100 / factor);
-      }
+      drumApplyVal(inner, key, containerId, rawVal);
       drumRender(inner, newIdx);
-      drumUpdateTotals(containerId);
-      drumScheduleAutoSave();
     }
   };
   const end = () => { active=false; };
-  drum.addEventListener('mousedown', e=>start(e.clientY));
+  drum.addEventListener('mousedown', e=>{ e.preventDefault(); start(e.clientY); });
   window.addEventListener('mousemove', e=>{ if(active) move(e.clientY); });
   window.addEventListener('mouseup', end);
   drum.addEventListener('touchstart', e=>start(e.touches[0].clientY), {passive:true});
-  drum.addEventListener('touchmove', e=>{ move(e.touches[0].clientY); }, {passive:true});
+  drum.addEventListener('touchmove', e=>{ e.preventDefault(); move(e.touches[0].clientY); }, {passive:false});
   drum.addEventListener('touchend', end);
+  drum.addEventListener('wheel', e => {
+    e.preventDefault();
+    const inner = drum.querySelector('.drum-inner');
+    const delta = e.deltaY > 0 ? 1 : -1;
+    const newIdx = Math.max(0, Math.min(inner._items.length-1, inner._idx + delta));
+    if(newIdx !== inner._idx) {
+      inner._idx = newIdx;
+      const rawVal = inner._items[newIdx];
+      drumApplyVal(inner, key, containerId, rawVal);
+      drumRender(inner, newIdx);
+    }
+  }, {passive:false});
 }
 
 function drumUpdateTotals(containerId) {
@@ -6424,10 +6452,25 @@ async function guardarMacros(silent=false, modoApp='macros') {
       if(!silent) showToast('✅ Macros guardados');
     } else {
       const err = await res.text();
-      console.error('guardarMacros:', err);
-      showToast('❌ Error guardando macros');
+      console.error('guardarMacros error:', res.status, err);
+      // Si falla upsert, intentar PATCH
+      try {
+        const patchRes = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(email), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(payload)
+        });
+        if(patchRes.ok || patchRes.status === 204) {
+          if(!silent) showToast('✅ Macros guardados');
+        } else {
+          showToast('❌ Error guardando macros');
+        }
+      } catch(e2) {
+        showToast('❌ Error guardando macros');
+      }
     }
   } catch(e) {
+    console.error('guardarMacros catch:', e);
     showToast('❌ Error de conexión');
   }
 }
