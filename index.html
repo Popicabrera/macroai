@@ -1556,7 +1556,7 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
         S.kcalC+=kcalN;S.protC+=protN;S.chC+=chN;S.grasaC+=grasaN;
         S.comidas.push(entrada);
         const mealIdx=S.comidas.length-1;
-        updateBars();saveToday();
+        updateBars();saveToday();renderMFPDiario();
         saveComidaSupabase({nombre:f.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
         let ingHtml='';
         if(f.ingredientes&&f.ingredientes.length){
