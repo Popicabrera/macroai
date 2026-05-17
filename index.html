@@ -6137,7 +6137,7 @@ let _drumAutoSaveTimer = null;
 
 const _drumRanges = {
   kcalE:[1000,4000,50], kcalD:[1000,4000,50],
-  g:  { pE:[50,300,5],  hcE:[30,500,5],  gE:[10,150,5],  pD:[50,300,5],  hcD:[30,500,5],  gD:[10,150,5]  },
+  g:  { pE:[50,300,1],  hcE:[30,500,1],  gE:[10,150,1],  pD:[50,300,1],  hcD:[30,500,1],  gD:[10,150,1]  },
   pct:{ pE:[5,55,1],    hcE:[10,75,1],   gE:[5,55,1],    pD:[5,55,1],    hcD:[10,75,1],   gD:[5,55,1]    }
 };
 
@@ -6172,25 +6172,13 @@ function drumHTML(containerId) {
     <div class="am-section" style="flex:1;margin-bottom:0;">
       <div class="am-section-hdr">Kcal entreno</div>
       <div class="am-field">
-        <div class="drum-col" style="padding:4px 0;">
-          <div class="drum-wrap" data-key="kcalE" data-cid="${containerId}">
-            <div class="drum-sel-bg"></div>
-            <div class="drum-inner"></div>
-          </div>
-          <div class="drum-unit">kcal</div>
-        </div>
+        <input class="am-field-input" id="drumKcalE-${containerId}" type="number" inputmode="numeric" value="${_drumVals.kcalE}" oninput="drumKcalChange('kcalE','${containerId}',this.value)" style="width:100%;text-align:center;font-size:18px;font-weight:700;">
       </div>
     </div>
     <div class="am-section" style="flex:1;margin-bottom:0;">
       <div class="am-section-hdr">Kcal descanso</div>
       <div class="am-field">
-        <div class="drum-col" style="padding:4px 0;">
-          <div class="drum-wrap" data-key="kcalD" data-cid="${containerId}">
-            <div class="drum-sel-bg"></div>
-            <div class="drum-inner"></div>
-          </div>
-          <div class="drum-unit">kcal</div>
-        </div>
+        <input class="am-field-input" id="drumKcalD-${containerId}" type="number" inputmode="numeric" value="${_drumVals.kcalD}" oninput="drumKcalChange('kcalD','${containerId}',this.value)" style="width:100%;text-align:center;font-size:18px;font-weight:700;">
       </div>
     </div>
   </div>
@@ -6249,12 +6237,18 @@ function drumHTML(containerId) {
   </div>`;
 }
 
+function drumKcalChange(key, containerId, val) {
+  const v = parseInt(val);
+  if(v > 500) { _drumVals[key] = v; drumScheduleAutoSave(); }
+}
+
 function drumInit(containerId) {
   const container = document.getElementById(containerId);
   if(!container) return;
   _drumContainer = containerId;
   container.querySelectorAll('.drum-wrap').forEach(drum => {
     const key = drum.dataset.key;
+    if(key === 'kcalE' || key === 'kcalD') return;
     drumBuild(drum, key);
     drumSetupDrag(drum, key, containerId);
   });
@@ -6307,7 +6301,7 @@ function drumSetupDrag(drum, key, containerId) {
   const move = y => {
     if(!active) return;
     const inner = drum.querySelector('.drum-inner');
-    const delta = Math.round((startY-y)/36);
+    const delta = Math.round((startY-y)/14);
     const newIdx = Math.max(0, Math.min(inner._items.length-1, startIdx+delta));
     if(newIdx !== inner._idx) {
       inner._idx = newIdx;
@@ -6404,6 +6398,10 @@ function amMSetModo(modo) {}
 
 async function guardarMacros(silent=false, modoApp='macros') {
   const email = drumGetMacrosEmail();
+  const kcalEInput = document.getElementById('drumKcalE-' + _drumContainer);
+  const kcalDInput = document.getElementById('drumKcalD-' + _drumContainer);
+  if(kcalEInput) _drumVals.kcalE = parseInt(kcalEInput.value) || _drumVals.kcalE;
+  if(kcalDInput) _drumVals.kcalD = parseInt(kcalDInput.value) || _drumVals.kcalD;
   const payload = {
     cliente_email: email,
     kcal_objetivo: _drumVals.kcalE,
