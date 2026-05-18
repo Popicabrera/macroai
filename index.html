@@ -3064,17 +3064,17 @@ function updateBars(){
   document.getElementById('chFill').style.width=p(S.chC,S.ch)+'%';
   document.getElementById('grasaFill').style.width=p(S.grasaC,S.grasa)+'%';
   // Restantes — mostrar como enteros
-  const kcalR=Math.max(0,Math.round(S.kcalObj-S.kcalC));
-  const protR=Math.max(0,Math.round(S.prot-S.protC));
-  const chR=Math.max(0,Math.round(S.ch-S.chC));
-  const grasaR=Math.max(0,Math.round(S.grasa-S.grasaC));
+  // Restantes — mostrar negativo si se pasa del objetivo
+  const kcalR=Math.round(S.kcalObj-S.kcalC);
+  const protR=Math.round(S.prot-S.protC);
+  const chR=Math.round(S.ch-S.chC);
+  const grasaR=Math.round(S.grasa-S.grasaC);
   document.getElementById('kcalResta').textContent=kcalR;
   document.getElementById('protResta').textContent=protR;
   document.getElementById('chResta').textContent=chR;
   document.getElementById('grasaResta').textContent=grasaR;
   document.getElementById('kcalObj').textContent='de '+S.kcalObj+' kcal';
-  // Color kcal: verde si queda, rojo si pasado
-  document.getElementById('kcalResta').style.color=kcalR<=0?'var(--red)':'var(--accent)';
+  document.getElementById('kcalResta').style.color=kcalR<0?'var(--red)':'var(--accent)';
   // Refrescar diario MFP si está visible
   if (document.getElementById('viewMain')?.classList.contains('active')) {
     renderMFPDiario();
@@ -4746,20 +4746,22 @@ function _diarioRenderVacio(esFuturo) {
 function _diarioRenderOtroDia(data, fecha) {
   const esFuturo = fecha > getToday();
 
-  // Panel macros — mostrar consumido
-  document.getElementById('kcalResta').textContent = data.kcalC;
-  document.getElementById('kcalObj').textContent = data.kcalC >= data.kcalObj
-    ? '⚠️ de ' + data.kcalObj + ' kcal'
-    : 'de ' + data.kcalObj + ' kcal';
-  document.getElementById('protResta').textContent = data.protC;
-  document.getElementById('chResta').textContent = data.chC;
-  document.getElementById('grasaResta').textContent = data.grasaC;
+  // Panel macros — mostrar restantes (negativo si pasado)
+  const _kcalR = Math.round(data.kcalObj - data.kcalC);
+  const _protR = Math.round(data.prot - data.protC);
+  const _chR   = Math.round(data.ch - data.chC);
+  const _grasaR= Math.round(data.grasa - data.grasaC);
+  document.getElementById('kcalResta').textContent = _kcalR;
+  document.getElementById('kcalObj').textContent = 'de ' + data.kcalObj + ' kcal';
+  document.getElementById('protResta').textContent = _protR;
+  document.getElementById('chResta').textContent = _chR;
+  document.getElementById('grasaResta').textContent = _grasaR;
 
   const pct = (v, t) => Math.min(100, Math.max(0, (v / (t || 1)) * 100));
   document.getElementById('protFill').style.width = pct(data.protC, data.prot) + '%';
   document.getElementById('chFill').style.width = pct(data.chC, data.ch) + '%';
   document.getElementById('grasaFill').style.width = pct(data.grasaC, data.grasa) + '%';
-  document.getElementById('kcalResta').style.color = data.kcalC > data.kcalObj ? 'var(--red)' : 'var(--accent)';
+  document.getElementById('kcalResta').style.color = _kcalR < 0 ? 'var(--red)' : 'var(--accent)';
 
   // Pill tipo día
   document.getElementById('dayType').textContent = data.tipoDia === 'entreno' ? 'Día de entreno' : 'Día de descanso';
