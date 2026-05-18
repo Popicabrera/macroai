@@ -5128,6 +5128,47 @@ function _diarioRenderFuturo(fecha) {
       if (body) body.style.display = 'block';
       if (chev) chev.style.transform = 'rotate(180deg)';
     }
+
+    // Long-press en header → guardar comida como favorito
+    if (items.length) {
+      const hdrEl = block.querySelector('div[style*="justify-content:space-between"]');
+      if (hdrEl) {
+        let _hdrTimer = null;
+        const _hdrStart = () => { _hdrTimer = setTimeout(() => {
+          if (navigator.vibrate) navigator.vibrate(40);
+          const ingRaw = items.map(item => {
+            const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
+            const nom = gm ? gm[1].trim() : item.nombre;
+            const cant = gm ? gm[2]+'g' : '';
+            return nom+':'+cant+':';
+          }).join('
+');
+          const ov = document.createElement('div');
+          ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+          ov.innerHTML = `
+            <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${meal.name}</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
+              <button id="_futHdrFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar como favorito</button>
+              <button id="_futHdrCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+            </div>`;
+          ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+          document.body.appendChild(ov);
+          ov.querySelector('#_futHdrFav').onclick = () => {
+            ov.remove();
+            _diarioFavModal(meal.name, {kcal: totalKcal, prot: totalProt, ch: totalCh, grasa: totalGrasa}, ingRaw);
+          };
+          ov.querySelector('#_futHdrCancel').onclick = () => ov.remove();
+        }, 600); };
+        const _hdrCancel = () => clearTimeout(_hdrTimer);
+        hdrEl.addEventListener('touchstart', _hdrStart, {passive: true});
+        hdrEl.addEventListener('touchend', _hdrCancel);
+        hdrEl.addEventListener('touchmove', _hdrCancel, {passive: true});
+        hdrEl.addEventListener('mousedown', _hdrStart);
+        hdrEl.addEventListener('mouseup', _hdrCancel);
+        hdrEl.addEventListener('mouseleave', _hdrCancel);
+      }
+    }
   });
 
   // Actualizar panel macros — siempre mostrar restantes sobre el objetivo
