@@ -3947,7 +3947,24 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
     } catch(e) { console.error('Claude fallback error:', e); }
   }
 
-  renderResultadosBuscador(resultados, query);
+  // Priorizar recientes — si algún resultado coincide con el historial, subirlo al principio
+  const historialReciente = getHistorialAlimentosIndividuales(50);
+  const queryNorm = query.toLowerCase().trim();
+  const recientes = [];
+  const resto = [];
+  resultados.forEach(r => {
+    const nombreNorm = r.nombre.toLowerCase();
+    const esReciente = historialReciente.some(h => {
+      const hn = h.nombre.toLowerCase();
+      // Coincidencia: el nombre del historial contiene la query o viceversa
+      return hn.includes(queryNorm) || queryNorm.includes(hn.replace(/\s*\(\d+(?:\.\d+)?g\)$/, '').trim());
+    });
+    if (esReciente) recientes.push({ ...r, _reciente: true });
+    else resto.push(r);
+  });
+  const resultadosOrdenados = [...recientes, ...resto];
+
+  renderResultadosBuscador(resultadosOrdenados, query);
 }
 
 async function cargarMisAlimentos() {
@@ -3990,10 +4007,13 @@ function renderResultadosBuscador(resultados, query) {
     const imgHtml = p.imagen
       ? `<img src="${p.imagen}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : '';
+    const recienteTag = p._reciente
+      ? `<span style="font-size:10px;font-weight:700;color:#2a9d5c;background:rgba(50,200,100,0.12);border:1px solid rgba(50,200,100,0.25);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle;">Reciente</span>`
+      : '';
     item.innerHTML = `
       ${imgHtml}
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}</div>
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}${recienteTag}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · HC${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
       </div>
       <span style="color:var(--accent);font-size:20px;flex-shrink:0;">›</span>`;
