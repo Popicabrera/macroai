@@ -3947,24 +3947,36 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
     } catch(e) { console.error('Claude fallback error:', e); }
   }
 
-  // Priorizar recientes — si algún resultado coincide con el historial, subirlo al principio
+  // Priorizar recientes — el último que usaste sube primero
   const historialReciente = getHistorialAlimentosIndividuales(50);
   const queryNorm = query.toLowerCase().trim();
-  const recientes = [];
-  const resto = [];
-  resultados.forEach(r => {
-    const nombreNorm = r.nombre.toLowerCase();
-    const esReciente = historialReciente.some(h => {
-      const hn = h.nombre.toLowerCase();
-      // Coincidencia: el nombre del historial contiene la query o viceversa
-      return hn.includes(queryNorm) || queryNorm.includes(hn.replace(/\s*\(\d+(?:\.\d+)?g\)$/, '').trim());
-    });
-    if (esReciente) recientes.push({ ...r, _reciente: true });
-    else resto.push(r);
-  });
-  const resultadosOrdenados = [...recientes, ...resto];
 
-  renderResultadosBuscador(resultadosOrdenados, query);
+  // Construir mapa: nombre normalizado → posición en historial (0 = más reciente)
+  const posHistorial = new Map();
+  historialReciente.forEach((h, i) => {
+    const hn = h.nombre.toLowerCase().replace(/\s*\(\d+(?:\.\d+)?g\)$/, '').trim();
+    if (!posHistorial.has(hn)) posHistorial.set(hn, i);
+  });
+
+  const resultadosConPrioridad = resultados.map(r => {
+    const rn = r.nombre.toLowerCase().replace(/\s*\(\d+(?:\.\d+)?g\)$/, '').trim();
+    // Buscar si el resultado coincide con algún reciente
+    let pos = Infinity;
+    posHistorial.forEach((i, hn) => {
+      if (rn.includes(hn) || hn.includes(rn)) {
+        if (i < pos) pos = i;
+      }
+    });
+    return { ...r, _recientePOS: pos, _reciente: pos < Infinity };
+  });
+
+  // Ordenar: recientes primero (por posición en historial), luego el resto
+  resultadosConPrioridad.sort((a, b) => {
+    if (a._recientePOS !== b._recientePOS) return a._recientePOS - b._recientePOS;
+    return 0;
+  });
+
+  renderResultadosBuscador(resultadosConPrioridad, query);
 }
 
 async function cargarMisAlimentos() {
@@ -4114,13 +4126,24 @@ function fsmRegistrar() {
   updateBars(); saveToday();
   saveComidaSupabase({ nombre, fecha:TODAY, tipoDia:S.tipoDia, kcal, prot, ch:hc, grasa, ingredientes:ingTexto });
 
-  // Guardar en BD compartida si viene de fuente externa (OFF, escáner, visión IA)
-  if (p.fuente === 'off' || p.fuente === 'openfoodfacts' || p.fuente === 'vision' || p.fuente === 'barcode') {
-    supaFetch('/rest/v1/alimentos_macroai', {
+  // Guardar en BD compartida si viene de fuente externa (OFF, escáner, foto, visión IA)
+  const _fuentesExternas = ['off', 'openfoodfacts', 'vision', 'barcode', 'foto', 'ia'];
+  if (_fuentesExternas.includes(p.fuente)) {
+    // Usar Worker con service key para evitar bloqueo RLS
+    fetch(WORKER_URL + '/save-food', {
       method: 'POST',
-      headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
-      body: JSON.stringify({ nombre:p.nombre, kcal_100:p.kcal_100, p_100:p.p_100, hc_100:p.hc_100, g_100:p.g_100, categoria:'OTROS', fuente: p.fuente || 'openfoodfacts' })
-    }).catch(()=>{});
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: p.nombre,
+        kcal_100: p.kcal_100 || 0,
+        p_100: p.p_100 || 0,
+        hc_100: p.hc_100 || 0,
+        g_100: p.g_100 || 0,
+        categoria: p.fuente === 'foto' || p.fuente === 'vision' || p.fuente === 'barcode' ? 'ESCANEADOS' : 'OTROS',
+        fuente: p.fuente || 'off',
+        creado_por: CURRENT_USER?.id || null,
+      })
+    }).catch(() => {});
   }
 
   fsmCerrar();
@@ -5845,7 +5868,7 @@ async function handleFotoProducto(e) {
     const data = await response.json();
 
     if (data.found) {
-      _fsmProductoSeleccionado = data;
+      _fsmProductoSeleccionado = { ...data, fuente: 'foto' };
       document.getElementById('fsmTitle').textContent = '📷 ' + data.nombre;
       document.getElementById('fsmSubtitle').textContent = 'Leído de la etiqueta nutricional';
       document.getElementById('fsmList').innerHTML = `
