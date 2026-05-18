@@ -3014,6 +3014,8 @@ function fsmCerrar() {
   document.getElementById('fsmOverlay').classList.remove('open');
   _fsmProductoSeleccionado = null;
   _mfpEditandoIdx = -1;
+  const _ner = document.getElementById('fsmNameEditRow');
+  if (_ner) _ner.style.display = 'none';
 }
 
 // ── sendDirect MEJORADO: intercepta búsquedas de alimentos ──
@@ -4024,6 +4026,9 @@ function seleccionarAlimentoBuscador(producto) {
   document.getElementById('fsmGramStep').style.display = 'flex';
   document.getElementById('fsmGramos').value = '';
   document.getElementById('fsmPreview').textContent = '';
+  // Ocultar campo nombre editable (búsqueda normal)
+  const _ner = document.getElementById('fsmNameEditRow');
+  if (_ner) _ner.style.display = 'none';
   document.getElementById('fsmOverlay').classList.add('open');
   setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
 }
@@ -4039,7 +4044,13 @@ function fsmRegistrar() {
   const prot = Math.round(p.p_100 * f * 10) / 10;
   const hc   = Math.round(p.hc_100 * f * 10) / 10;
   const grasa= Math.round(p.g_100  * f * 10) / 10;
-  const nombre = `${p.nombre} (${g}g)`;
+  // Usar nombre editado si el campo está visible
+  const _nameEditRow = document.getElementById('fsmNameEditRow');
+  const _nameEditInp = document.getElementById('fsmNameEdit');
+  const _nombreBase = (_nameEditRow && _nameEditRow.style.display !== 'none' && _nameEditInp && _nameEditInp.value.trim())
+    ? _nameEditInp.value.trim()
+    : p.nombre;
+  const nombre = `${_nombreBase} (${g}g)`;
   const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
 
   // ── MODO EDICIÓN: reemplazar item existente ──
@@ -5617,6 +5628,13 @@ function _abrirFSMconResultado(result, ref) {
   document.getElementById('fsmGramStep').style.display = 'flex';
   document.getElementById('fsmGramos').value = '';
   document.getElementById('fsmPreview').textContent = '';
+  // Mostrar campo nombre editable (solo en escáner)
+  const nameEditRow = document.getElementById('fsmNameEditRow');
+  const nameEditInp = document.getElementById('fsmNameEdit');
+  if (nameEditRow && nameEditInp) {
+    nameEditRow.style.display = 'flex';
+    nameEditInp.value = result.nombre;
+  }
   document.getElementById('fsmOverlay').classList.add('open');
   setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
   const resBuscador = document.getElementById('buscadorResultados');
@@ -5798,6 +5816,11 @@ async function handleFotoProducto(e) {
     <div class="fsm-list" id="fsmList"></div>
     <!-- Paso 2: gramos -->
     <div id="fsmGramStep" style="display:none;flex-direction:column;gap:10px;">
+      <!-- Nombre editable (visible solo en escaneo) -->
+      <div id="fsmNameEditRow" style="display:none;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Nombre del producto</label>
+        <input id="fsmNameEdit" type="text" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--s2);font-size:13px;font-weight:600;color:var(--text);width:100%;box-sizing:border-box;" placeholder="Nombre del producto...">
+      </div>
       <div style="font-size:12px;color:var(--muted);">
         <span id="fsmSelectedName" style="font-weight:600;color:var(--text);"></span>
         <span id="fsmPer100" style="margin-left:6px;"></span>
