@@ -5176,18 +5176,22 @@ function futurMfpMenuItem(fecha,mealId,idx,e){
   const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];
   const mealIds=['desayuno','almuerzo','comida','merienda','cena'];
   let nombreItem='Alimento';
+  let itemMacros={kcal:0,prot:0,ch:0,grasa:0};
   try{
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
     if(d&&d.comidas){
       const its=d.comidas.filter(c=>c.mealId===mealId);
-      nombreItem=its[idx]?.nombre||'Alimento';
+      const it=its[idx];
+      if(it){ nombreItem=it.nombre||'Alimento'; itemMacros={kcal:it.kcal||0,prot:it.prot||0,ch:it.ch||0,grasa:it.grasa||0}; }
     }
   }catch(err){}
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
   let moverOpts=mealIds.map((id,i)=>`<button onclick="futurMfpMoverItem('${fecha}','${mealId}',${idx},'${id}');this.closest('[data-fut-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');
   overlay.innerHTML=`<div data-fut-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
-    <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${nombreItem}</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;">${nombreItem}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">HC${itemMacros.ch}g · P${itemMacros.prot}g · G${itemMacros.grasa}g · ${itemMacros.kcal} kcal</div>
+    <button id="_futFav" style="width:100%;padding:13px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
     <button onclick="eliminarComidaFutura('${fecha}','${mealId}',${idx});this.closest('[data-fut-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>
     ${moverOpts}
@@ -5195,6 +5199,11 @@ function futurMfpMenuItem(fecha,mealId,idx,e){
   </div>`;
   overlay.addEventListener('click',ev=>{if(ev.target===overlay)overlay.remove();});
   document.body.appendChild(overlay);
+  // Favoritos — fuera del innerHTML para capturar itemMacros correctamente
+  overlay.querySelector('#_futFav').onclick = () => {
+    overlay.remove();
+    _diarioFavModal(nombreItem, itemMacros, '');
+  };
 }
 
 function futurMfpMoverItem(fecha,mealId,idx,newMealId){
