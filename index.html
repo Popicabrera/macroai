@@ -1432,8 +1432,8 @@ function renderFavoritos(){
       ${ingHtml}
       ${f.kcal?`<div class="fav-macros">
         <div class="fav-m"><div class="fav-m-val" style="color:var(--accent)">${f.kcal}</div><div class="fav-m-lbl">kcal</div></div>
-        <div class="fav-m"><div class="fav-m-val" style="color:var(--red)">${f.prot}g</div><div class="fav-m-lbl">prot</div></div>
         <div class="fav-m"><div class="fav-m-val" style="color:var(--yellow)">${f.ch}g</div><div class="fav-m-lbl">ch</div></div>
+        <div class="fav-m"><div class="fav-m-val" style="color:var(--red)">${f.prot}g</div><div class="fav-m-lbl">prot</div></div>
         <div class="fav-m"><div class="fav-m-val" style="color:var(--blue)">${f.grasa}g</div><div class="fav-m-lbl">grasa</div></div>
       </div>`:''}
       <div class="fav-actions">
@@ -1602,7 +1602,7 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
         if(f.ingredientes&&f.ingredientes.length){
           ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
           f.ingredientes.forEach(i=>{ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(i.nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(i.cantidad)}</div></div></div>`;});
-          ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
+          ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
           ingHtml+='</div>';
         }
         addMsg('ai','✅ '+f.nombre+' registrado desde favoritos',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN},mealIdx,ingTexto);
@@ -2129,7 +2129,7 @@ async function renderHistorialDia(){
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">${c.kcal} kcal</div>
-              <div style="font-size:10px;color:var(--muted)">P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g</div>
+              <div style="font-size:10px;color:var(--muted)">CH${c.ch||0}g · P${c.prot||0}g · G${c.grasa||0}g</div>
             </div>
           </div>
           ${ingHtml}
@@ -2208,7 +2208,7 @@ function histUsarHoy(fecha,ci){
           const cant=fc>=0?l.substring(fc+1).split(':')[0].trim():'';
           ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(nom)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(cant)}</div></div></div>`;
         });
-        ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
+        ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal ✓</span></div></div>`;
         ingHtml+='</div>';
       }
     }
@@ -2236,7 +2236,7 @@ function histCopiarComida(fecha,ci){
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+fecha)||'null');
     if(!d||!d.comidas[ci])return;
     const c=d.comidas[ci];
-    const txt=`${c.nombre||'Comida'}\n${c.kcal}kcal · P${c.prot||0}g · CH${c.ch||0}g · G${c.grasa||0}g${c.ingredientes?'\n'+c.ingredientes:''}`;
+    const txt=`${c.nombre||'Comida'}\n${c.kcal}kcal · CH${c.ch||0}g · P${c.prot||0}g · G${c.grasa||0}g${c.ingredientes?'\n'+c.ingredientes:''}`;
     navigator.clipboard.writeText(txt).catch(()=>{});
     showToast('📋 Copiado');
   }catch(e){}
@@ -2424,7 +2424,7 @@ function parseAI(raw){
     S.planDia=plan;
     let h='<div class="day-plan-card">';
     items.forEach(i=>{const em=emojis[i.name]||'🍽️';const lbl=i.name.charAt(0).toUpperCase()+i.name.slice(1);
-      h+=`<div class="dp-item"><div class="dp-l"><div class="dp-em">${em}</div><div class="dp-name">${lbl}</div></div><div><div class="dp-k">${i.kcal} kcal</div><div class="dp-m">P${i.prot}g · CH${i.ch}g · G${i.grasa}g</div></div></div>`;});
+      h+=`<div class="dp-item"><div class="dp-l"><div class="dp-em">${em}</div><div class="dp-name">${lbl}</div></div><div><div class="dp-k">${i.kcal} kcal</div><div class="dp-m">CH${i.ch}g · P${i.prot}g · G${i.grasa}g</div></div></div>`;});
     h+='</div>';elements.push({type:'html',content:h});text=text.replace(planMatch[0],'').trim();
   }
   const ingMatch=text.match(/\[INGREDIENTES\]([\s\S]*?)\[\/INGREDIENTES\]/);
@@ -2527,7 +2527,7 @@ function parseAI(raw){
             }
             // Actualizar badge
             const badges=document.querySelectorAll('.meal-edit-badge span');
-            badges.forEach(b=>{if(b.textContent.includes(_nombre.substring(0,10)))b.textContent=`${newKcal} kcal · P${newProt}g · CH${newCh}g · G${newGrasa}g`;});
+            badges.forEach(b=>{if(b.textContent.includes(_nombre.substring(0,10)))b.textContent=`${newKcal} kcal · CH${newCh}g · P${newProt}g · G${newGrasa}g`;});
           }
           saveToday();
         });
@@ -2566,7 +2566,7 @@ function parseAI(raw){
             '<div class="reparto-info"><div class="reparto-nombre">' + b.nombre + '</div><div class="reparto-titulo">' + b.titulo + '</div></div>' +
             '<div class="reparto-kcal">' + b.kcal + ' kcal</div>' +
           '</div>' +
-          '<div class="reparto-macros">P ' + b.prot + 'g \u00B7 CH ' + b.ch + 'g \u00B7 G ' + b.grasa + 'g</div>' +
+          '<div class="reparto-macros">CH ' + b.ch + 'g \u00B7 P ' + b.prot + 'g \u00B7 G ' + b.grasa + 'g</div>' +
           ingHtml +
           '<div class="reparto-btns">' +
             '<button class="reparto-btn-add" onclick="registrarDesdeReparto(' + i + ')">\u2795 A\u00F1adir al diario</button>' +
@@ -2776,7 +2776,7 @@ function setMealTipo(mealIdx, btn, tipo){
     const badge = msgDiv.querySelector('.meal-edit-badge span');
     if(badge){
       const m = S.comidas[mealIdx];
-      badge.innerHTML = `<strong style="color:var(--accent)">${tipo}</strong> · ${m.kcal} kcal · P${m.prot}g · CH${m.ch}g · G${m.grasa}g`;
+      badge.innerHTML = `<strong style="color:var(--accent)">${tipo}</strong> · ${m.kcal} kcal · CH${m.ch}g · P${m.prot}g · G${m.grasa}g`;
     }
     // Actualizar plan-hdr
     const hdr = msgDiv.querySelector('.plan-hdr');
@@ -2808,7 +2808,7 @@ function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1,in
     const m=S.comidas[mealIdx];
     const tipoLabel=m.tipo||'';
     h+=`<div class="meal-edit-badge" style="margin-top:8px;padding:6px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <span>${tipoLabel?'<strong style="color:var(--accent)">'+tipoLabel+'</strong> · ':''}${m.kcal} kcal · P${m.prot}g · CH${m.ch}g · G${m.grasa}g</span>
+      <span>${tipoLabel?'<strong style="color:var(--accent)">'+tipoLabel+'</strong> · ':''}${m.kcal} kcal · CH${m.ch}g · P${m.prot}g · G${m.grasa}g</span>
       <span style="color:var(--accent);font-size:10px;font-weight:600;">mantén para editar</span>
     </div>`;
     // Selector tipo comida si aún no tiene tipo asignado
@@ -3006,7 +3006,7 @@ function fsmActualizarPreview() {
   const hc   = Math.round(p.hc_100 * f * 10) / 10;
   const grasa= Math.round(p.g_100  * f * 10) / 10;
   document.getElementById('fsmPreview').innerHTML =
-    `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · P${prot}g · HC${hc}g · G${grasa}g`;
+    `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · HC${hc}g · P${prot}g · G${grasa}g`;
 }
 
 
@@ -3399,7 +3399,7 @@ function renderMFPDiario() {
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot}g · HC${item.ch}g · G${item.grasa}g</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
@@ -3416,7 +3416,7 @@ function renderMFPDiario() {
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
             <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `P${totalProt}g · HC${totalCh}g · G${totalGrasa}g` : 'Sin registrar'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `HC${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -3475,7 +3475,7 @@ function mfpMealMenu(mealId, mealName, totalKcal, totalProt, totalCh, totalGrasa
   overlay.innerHTML = `
     <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${mealName}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${totalKcal} kcal · P${totalProt}g · CH${totalCh}g · G${totalGrasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
       <button onclick="this.closest('[data-meal-menu]').parentElement.remove();mfpGuardarMealFavorito('${mealId}','${mealName}');"
         style="width:100%;padding:13px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;">
         ⭐ Guardar como favorito
@@ -3507,7 +3507,7 @@ function mfpGuardarMealFavorito(mealId, mealName) {
   overlay.innerHTML = `
     <div data-fav-nombre style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">⭐ Guardar favorito</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${totalKcal} kcal · P${totalProt}g · CH${totalCh}g · G${totalGrasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;">Nombre del favorito</div>
       <input id="favNombreInput" type="text" value="${mealName}"
         style="width:100%;background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:8px;">
@@ -3653,7 +3653,7 @@ function renderBuscadorInicio() {
         style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · P${item.p_100}g · HC${item.hc_100}g · G${item.g_100}g · por 100g</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · HC${item.hc_100}g · P${item.p_100}g · G${item.g_100}g · por 100g</div>
         </div>
         <div class="reciente-add-btn" data-ri="${idx}"
           style="width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:var(--accent);font-weight:700;cursor:pointer;">＋</div>
@@ -3673,7 +3673,7 @@ function renderBuscadorInicio() {
         <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⭐</div>
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="favBuscadorUsar(${f.id})">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · P${f.prot}g · CH${f.ch}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
         </div>
         <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,211,61,0.15);border:1px solid rgba(255,211,61,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:#b8860b;font-weight:700;"
              onclick="event.stopPropagation();favBuscadorUsar(${f.id})">＋</div>
@@ -3753,7 +3753,7 @@ function favBuscadorMenu(id, e) {
   overlay.innerHTML = `
     <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;">⭐ ${escapeHtml(f.nombre)}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${f.kcal} kcal · P${f.prot}g · CH${f.ch}g · G${f.grasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g</div>
       <button onclick="favBuscadorUsar(${f.id});this.closest('[data-fav-menu]').parentElement.remove();"
         style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;cursor:pointer;">
         ＋ Añadir a ${escapeHtml(_buscadorMealName||'comida')}
@@ -3992,7 +3992,7 @@ function renderResultadosBuscador(resultados, query) {
       ${imgHtml}
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · P${p.p_100}g · HC${p.hc_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · HC${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
       </div>
       <span style="color:var(--accent);font-size:20px;flex-shrink:0;">›</span>`;
     res.appendChild(item);
@@ -4251,7 +4251,7 @@ function renderDiario(){
           <div class="meal-em">${m.emoji}</div>
           <div>
             <div class="meal-name">${m.name}</div>
-            <div class="meal-sub">${hasItems?`P${Math.round(totalProt)}g · CH${Math.round(totalCh)}g · G${Math.round(totalGrasa)}g`:hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
+            <div class="meal-sub">${hasItems?`CH${Math.round(totalCh)}g · P${Math.round(totalProt)}g · G${Math.round(totalGrasa)}g`:hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
           </div>
         </div>
         <div class="meal-hdr-right">
@@ -4480,7 +4480,7 @@ Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
       resultEl.innerHTML=`${itemsHtml}
         <div style="display:flex;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid rgba(192,57,43,0.2);">
           <span style="font-weight:700;">TOTAL</span>
-          <span style="color:var(--accent);font-weight:800;">${kcalN} kcal · P${protN}g · CH${chN}g · G${grasaN}g</span>
+          <span style="color:var(--accent);font-weight:800;">${kcalN} kcal · CH${chN}g · P${protN}g · G${grasaN}g</span>
         </div>`;
       btn.textContent='✓ Añadir más';
       btn.disabled=false;btn.style.opacity='1';
@@ -4516,7 +4516,7 @@ Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
 
 function sugerirConIA(mealId,mealName){
   setMainMode('chat');
-  const restantes=`${S.kcalObj-S.kcalC}kcal, P${S.prot-S.protC}g, CH${S.ch-S.chC}g, G${S.grasa-S.grasaC}g`;
+  const restantes=`${S.kcalObj-S.kcalC}kcal, CH${S.ch-S.chC}g, P${S.prot-S.protC}g, G${S.grasa-S.grasaC}g`;
   const desp=DESP.length?` Tengo en despensa: ${despNombres().slice(0,8).join(', ')}.`:'';
   setTimeout(()=>sendDirect(`Sugiere algo para mi ${mealName}. Me quedan ${restantes}.${desp} Que encaje bien con lo que ya llevo hoy.`),100);
 }
@@ -4790,7 +4790,7 @@ function _diarioRenderOtroDia(data, fecha) {
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
         </div>
         <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
       </div>`).join('');
@@ -4803,7 +4803,7 @@ function _diarioRenderOtroDia(data, fecha) {
             <span style="font-size:18px;">${MEAL_EMOJIS[mid]||'🍽️'}</span>
             <div>
               <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${MEAL_NAMES[mid]||mid}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${totalProt}g · HC${totalCh}g · G${totalGrasa}g</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
             </div>
           </div>
           <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${totalKcal} kcal</span>
@@ -4824,7 +4824,7 @@ function _diarioRenderOtroDia(data, fecha) {
               <span style="font-size:18px;">🍽️</span>
               <div>
                 <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${escapeHtml(item.nombre||'Comida')}</div>
-                <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
               </div>
             </div>
             <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${item.kcal||0} kcal</span>
@@ -4874,7 +4874,7 @@ function _diarioRenderOtroDia(data, fecha) {
       ov2.innerHTML = `
         <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${mealName}</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · P${totalProt}g · CH${totalCh}g · G${totalGrasa}g</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
           <button id="_hdrFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar como favorito</button>
           <button id="_hdrCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
         </div>`;
@@ -4908,7 +4908,7 @@ function _diarioItemMenu(el, data, fecha) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
   overlay.innerHTML = `<div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
     <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px;color:var(--text);">${escapeHtml(item.nombre||'Alimento')}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g · ${item.kcal||0} kcal</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g · ${item.kcal||0} kcal</div>
     <button id="_dioFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
     <button id="_dioHoy" style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;cursor:pointer;text-align:left;">↩ Copiar a hoy</button>
     <button id="_dioDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);margin-bottom:12px;cursor:pointer;text-align:left;">🗑️ Borrar de este día</button>
@@ -4980,7 +4980,7 @@ function _diarioFavModal(nombreDefault, macros, ingRaw) {
   ov.innerHTML = `
     <div data-fav-nombre style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">⭐ Guardar favorito</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${macros.kcal} kcal · P${macros.prot}g · CH${macros.ch}g · G${macros.grasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${macros.kcal} kcal · CH${macros.ch}g · P${macros.prot}g · G${macros.grasa}g</div>
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;">Nombre del favorito</div>
       <input id="_dioFavInput" type="text" value="${escapeHtml(nombreDefault)}"
         style="width:100%;background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:16px;box-sizing:border-box;">
@@ -5058,7 +5058,7 @@ function _diarioRenderFuturo(fecha) {
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">P${item.prot||0}g · HC${item.ch||0}g · G${item.grasa||0}g</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
@@ -5071,7 +5071,7 @@ function _diarioRenderFuturo(fecha) {
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
             <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `P${totalProt}g · HC${totalCh}g · G${totalGrasa}g` : 'Sin planificar'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `HC${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin planificar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
