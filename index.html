@@ -5141,8 +5141,7 @@ function _diarioRenderFuturo(fecha) {
             const nom = gm ? gm[1].trim() : item.nombre;
             const cant = gm ? gm[2]+'g' : '';
             return nom+':'+cant+':';
-          }).join('
-');
+          }).join('\n');
           const ov = document.createElement('div');
           ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
           ov.innerHTML = `
