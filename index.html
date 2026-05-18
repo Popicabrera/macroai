@@ -6441,55 +6441,90 @@ async function renderAdminMenuPerfil(seccion) {
       💾 Guardar perfil
     </button>
 
-    </div><div id="amSeccionMenu"><!-- Separador generación -->
-    <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú semanal</div>
+    </div><div id="amSeccionMenu">
+
+    <!-- Título sección -->
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú con IA</div>
+
+    <!-- Tipo de día -->
+    <div class="am-section" style="margin-bottom:10px;">
+      <div class="am-section-hdr">Tipo de día</div>
+      <div style="padding:10px 14px 14px;display:flex;gap:8px;">
+        <button id="amTipoDiaEntreno" onclick="amSetTipoDia('entreno')"
+          style="flex:1;padding:10px 8px;border-radius:10px;border:1px solid rgba(192,57,43,0.4);background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          Entreno
+        </button>
+        <button id="amTipoDiaDescanso" onclick="amSetTipoDia('descanso')"
+          style="flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          Descanso
+        </button>
+      </div>
+      <input type="hidden" id="amTipoDia" value="entreno">
+    </div>
+
+    <!-- Instrucciones de reparto -->
+    <div class="am-section" style="margin-bottom:10px;">
+      <div class="am-section-hdr">Instrucciones de reparto (opcional)</div>
+      <div style="padding:6px 14px 4px;font-size:11px;color:var(--muted);line-height:1.5;">
+        Dile a la IA cómo repartir los macros entre comidas. En lenguaje natural.
+      </div>
+      <div style="padding:6px 14px 14px;">
+        <textarea id="amInstrucciones" style="width:100%;min-height:72px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
+          placeholder="Ej: la comida que sea la más alta en HC, desayuno dulce con avena, cena ligera sin muchos HC, merienda pequeña..."></textarea>
+      </div>
+    </div>
+
+    <!-- Nombre del menú -->
+    <div class="am-section" style="margin-bottom:10px;">
+      <div class="am-section-hdr">Nombre del menú</div>
+      <div style="padding:8px 14px 14px;">
+        <input id="amNombreMenu" type="text" style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;"
+          placeholder="Ej: Semana 20 mayo — Volumen">
+      </div>
+    </div>
 
     <!-- Opción A: IA sugiere -->
     <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Opción A — La IA sugiere</div>
-      <div style="padding:10px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
-        La IA elige ingredientes equilibrados de tu BD y calcula las cantidades para cuadrar los macros.
+      <div class="am-section-hdr">Opción A — La IA elige los alimentos</div>
+      <div style="padding:8px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
+        La IA selecciona ingredientes de tu BD y calcula los gramos para cuadrar los macros.
       </div>
       <div style="padding:0 14px 14px;">
         <button class="am-btn-primary" id="amGenBtnA" onclick="generarMenu('sugerir')">
-          ✨ Sugerir menú automático
+          ✨ Generar menú automático
         </button>
       </div>
     </div>
 
     <!-- Opción B: tú mandas ingredientes -->
-    <div class="am-section">
-      <div class="am-section-hdr">Opción B — Tú eliges los ingredientes</div>
-      <div style="padding:10px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
-        Escribe qué ingredientes quieres cada día. La IA busca en tu BD y calcula los gramos exactos.
+    <div class="am-section" style="margin-bottom:10px;">
+      <div class="am-section-hdr">Opción B — Tú eliges los alimentos</div>
+      <div style="padding:8px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
+        Escribe los ingredientes por comida. La IA calcula los gramos exactos.
       </div>
       <div style="padding:0 14px;">
-        <textarea id="amTextoMenu" style="width:100%;min-height:140px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
-          placeholder="Lunes: pollo, arroz, brócoli
-Martes: merluza, patata, espinacas
-Miércoles: ternera, pasta, tomate
-Jueves: salmón, quinoa, judías verdes
-Viernes: huevos, avena, plátano
-Sábado: atún, arroz, lechuga
-Domingo: pollo, patata, zanahoria"></textarea>
+        <textarea id="amTextoMenu" style="width:100%;min-height:120px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
+          placeholder="Desayuno: avena, leche semidesnatada, plátano
+Comida: pollo, arroz, brócoli, aceite de oliva
+Merienda: yogur natural, nueces
+Cena: salmón, patata, espinacas"></textarea>
       </div>
       <div style="padding:10px 14px 14px;">
         <button class="am-btn-primary" id="amGenBtnB" onclick="generarMenu('confirmar')">
-          🥗 Calcular menú con mis ingredientes
+          🥗 Calcular con mis ingredientes
         </button>
       </div>
     </div>
 
-    <!-- Ver menú generado -->
-    <button class="am-btn-secondary" onclick="verMenuGenerado()" style="margin-top:8px;">
-      📋 Ver menú generado
-    </button>
+    <!-- Preview resultado -->
+    </div><div id="amMenuPreview" style="margin-top:4px;"></div>
 
-    <!-- Preview -->
-    </div><div id="amMenuPreview" style="margin-top:16px;"></div>
+    <!-- Menús guardados de este cliente -->
+    <div id="amMenusGuardados" style="margin-top:8px;"></div>
   `;
   drumInit('adminMenuBody');
   if(seccion==='menu'){setTimeout(()=>{const el=document.getElementById('amSeccionMenu');if(el)el.scrollIntoView({behavior:'smooth'});},150);}
+  setTimeout(()=>cargarMenusGuardados(),200);
 }
 
 function amSetModo(modo) {
@@ -6542,105 +6577,150 @@ async function guardarPerfil() {
   }
 }
 
+function amSetTipoDia(tipo) {
+  document.getElementById('amTipoDia').value = tipo;
+  const btnE = document.getElementById('amTipoDiaEntreno');
+  const btnD = document.getElementById('amTipoDiaDescanso');
+  if (btnE) { btnE.style.background = tipo==='entreno'?'var(--accent)':'var(--s2)'; btnE.style.color = tipo==='entreno'?'#fff':'var(--muted)'; btnE.style.borderColor = tipo==='entreno'?'rgba(192,57,43,0.4)':'var(--border)'; }
+  if (btnD) { btnD.style.background = tipo==='descanso'?'var(--accent)':'var(--s2)'; btnD.style.color = tipo==='descanso'?'#fff':'var(--muted)'; btnD.style.borderColor = tipo==='descanso'?'rgba(192,57,43,0.4)':'var(--border)'; }
+}
+
 async function generarMenu(modo) {
   const btnId = modo === 'sugerir' ? 'amGenBtnA' : 'amGenBtnB';
   const btn = document.getElementById(btnId);
-  const kcal  = _drumVals.kcalE || 2200;
-  const prot  = _drumVals.pE || 160;
-  const hc    = _drumVals.hcE || 220;
-  const grasa = _drumVals.gE || 65;
-  const comidas = parseInt(document.getElementById('amComidas').value) || 4;
-  const prefs = document.getElementById('amPrefs').value.trim();
-  const texto_menu = modo === 'confirmar' ? document.getElementById('amTextoMenu').value.trim() : '';
-  const semana = getLunesSemana(_adminMenuSemanaOffset);
+  const tipoDia    = document.getElementById('amTipoDia')?.value || 'entreno';
+  const instrucciones = document.getElementById('amInstrucciones')?.value.trim() || '';
+  const nombre_menu   = document.getElementById('amNombreMenu')?.value.trim() || '';
+  const comidas    = parseInt(document.getElementById('amComidas')?.value) || 4;
+  const prefs      = document.getElementById('amPrefs')?.value.trim() || '';
+  const texto_menu = modo === 'confirmar' ? (document.getElementById('amTextoMenu')?.value.trim() || '') : '';
 
-  if (modo === 'confirmar' && !texto_menu) {
-    showToast('Escribe los ingredientes primero');
-    return;
-  }
+  if (modo === 'confirmar' && !texto_menu) { showToast('Escribe los ingredientes primero'); return; }
 
+  const SPINNER = '<span style="width:14px;height:14px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Generando...';
   btn.disabled = true;
-  btn.innerHTML = '<span style="width:14px;height:14px;border:2px solid rgba(8,8,16,0.3);border-top-color:#080810;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Generando...';
+  btn.innerHTML = SPINNER;
+
+  const preview = document.getElementById('amMenuPreview');
+  preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>La IA está calculando el menú...</div>`;
 
   try {
     const res = await fetch(WORKER_URL + '/generate-menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cliente_email: _adminMenuEmail,
-        kcal_objetivo: kcal, p_objetivo: prot, hc_objetivo: hc, g_objetivo: grasa,
+        cliente_email:  _adminMenuEmail,
+        kcal_objetivo:  _drumVals.kcalE || 2200,
+        p_objetivo:     _drumVals.pE    || 160,
+        hc_objetivo:    _drumVals.hcE   || 220,
+        g_objetivo:     _drumVals.gE    || 65,
+        kcal_descanso:  _drumVals.kcalD || 1900,
+        p_descanso:     _drumVals.pD    || 150,
+        hc_descanso:    _drumVals.hcD   || 170,
+        g_descanso:     _drumVals.gD    || 60,
+        tipo_dia, instrucciones, nombre_menu,
         comidas_dia: comidas, preferencias: prefs,
-        semana, modo, texto_menu
+        modo, texto_menu
       })
     });
     const data = await res.json();
     if (data.ok) {
-      showToast(`✅ Menú generado (${data.filas} items)`);
-      verMenuGenerado();
+      showToast('✅ Menú guardado correctamente');
+      renderMenuPreview(data.menu, data.kcal_total, data.prot_total, data.hc_total, data.grasa_total, nombre_menu || `Menú ${tipoDia}`);
+      cargarMenusGuardados();
     } else {
+      preview.innerHTML = '';
       showToast('❌ ' + (data.error || 'Error generando menú'));
     }
   } catch(e) {
+    preview.innerHTML = '';
     showToast('❌ Error de conexión');
   }
 
   btn.disabled = false;
-  btn.innerHTML = modo === 'sugerir' ? '✨ Sugerir menú automático' : '🥗 Calcular menú con mis ingredientes';
+  btn.innerHTML = modo === 'sugerir' ? '✨ Generar menú automático' : '🥗 Calcular con mis ingredientes';
 }
 
-async function verMenuGenerado() {
-  const semana = getLunesSemana(_adminMenuSemanaOffset);
+function renderMenuPreview(menu, kcal_total, prot_total, hc_total, grasa_total, nombre) {
   const preview = document.getElementById('amMenuPreview');
-  preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando menú...</div>`;
+  if (!menu?.comidas?.length) { preview.innerHTML = ''; return; }
 
+  const EMOJI_MOMENTO = { desayuno:'🌅', almuerzo:'🍎', comida:'☀️', merienda:'🍎', cena:'🌙' };
+
+  let comidasHtml = '';
+  menu.comidas.forEach(c => {
+    const momentoKey = (c.momento || '').toLowerCase();
+    const emoji = EMOJI_MOMENTO[momentoKey] || '🍽️';
+    const kcalComida = Math.round(c.alimentos.reduce((a, i) => a + (i.kcal || 0), 0));
+    const alimentosStr = c.alimentos.map(a => `<span style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text);white-space:nowrap;">${a.nombre} ${a.g}g</span>`).join('');
+    comidasHtml += `
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">${emoji} ${c.momento}</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--accent);">${kcalComida} kcal</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">${alimentosStr}</div>
+      </div>`;
+  });
+
+  preview.innerHTML = `
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px;">Menú generado</div>
+    <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--accent-dim);border-bottom:1px solid rgba(192,57,43,0.15);">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${nombre || 'Menú'}</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${kcal_total} kcal</span>
+      </div>
+      <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);">
+        P ${prot_total}g · HC ${hc_total}g · G ${grasa_total}g
+      </div>
+      ${comidasHtml}
+    </div>`;
+}
+
+async function cargarMenusGuardados() {
+  const cont = document.getElementById('amMenusGuardados');
+  if (!cont) return;
+  cont.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;"><div class="auth-spinner"></div>Cargando menús...</div>`;
   try {
-    const res = await supaFetch(`/rest/v1/menus_semanales?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&semana=eq.${semana}&order=dia.asc,nombre_comida.asc&select=*`);
-    const filas = await res.json();
-
-    if (!Array.isArray(filas) || !filas.length) {
-      preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No hay menú para esta semana.</div>`;
+    const res = await supaAdmin(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&order=created_at.desc&select=*`);
+    const menus = await res.json();
+    if (!Array.isArray(menus) || !menus.length) {
+      cont.innerHTML = '';
       return;
     }
-
-    // Agrupar por día y comida
-    const porDia = {};
-    filas.forEach(f => {
-      if (!porDia[f.dia]) porDia[f.dia] = {};
-      if (!porDia[f.dia][f.nombre_comida]) porDia[f.dia][f.nombre_comida] = [];
-      porDia[f.dia][f.nombre_comida].push(f);
-    });
-
-    let html = `<div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Menú generado — ${formatSemanaLabel(semana)}</div>`;
-
-    for (let dia = 1; dia <= 7; dia++) {
-      if (!porDia[dia]) continue;
-      const totalKcal = Math.round(Object.values(porDia[dia]).flat().reduce((a, f) => a + (f.kcal || 0), 0));
-
-      let comidasHtml = '';
-      for (const [nombreComida, items] of Object.entries(porDia[dia])) {
-        const alimentosStr = items.map(i => `${i.alimento_nombre} ${i.cantidad_g}g`).join(' + ');
-        const kcalComida = Math.round(items.reduce((a, i) => a + (i.kcal || 0), 0));
-        comidasHtml += `
-          <div class="am-menu-comida-row">
-            <span class="am-comida-nombre-col">${nombreComida}</span>
-            <span class="am-comida-alimento">${alimentosStr}</span>
-            <span class="am-comida-kcal">${kcalComida}</span>
-          </div>`;
-      }
-
+    const EMOJI_TIPO = { entreno:'⚡', descanso:'💤', ambos:'📅' };
+    let html = `<div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:16px 0 8px;">Menús guardados</div>`;
+    menus.forEach(m => {
+      const fecha = new Date(m.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+      const emoji = EMOJI_TIPO[m.tipo_dia] || '🥗';
       html += `
-        <div class="am-menu-dia">
-          <div class="am-menu-dia-hdr">
-            <span class="am-menu-dia-titulo">${DIAS_SEMANA[dia - 1]}</span>
-            <span class="am-menu-dia-kcal">${totalKcal} kcal</span>
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="verMenuGuardado('${m.id}')">
+          <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${emoji} ${m.nombre || 'Menú'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${fecha} · ${m.kcal_total||'—'} kcal · P${m.prot_total||'—'}g HC${m.hc_total||'—'}g G${m.grasa_total||'—'}g</div>
           </div>
-          ${comidasHtml}
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span style="font-size:10px;padding:3px 7px;border-radius:6px;background:${m.activo?'rgba(50,200,100,0.12)':'var(--s2)'};color:${m.activo?'#2a9d5c':'var(--muted)'};">${m.activo?'Activo':'Inactivo'}</span>
+            <span style="font-size:18px;color:var(--muted);">›</span>
+          </div>
         </div>`;
-    }
-    preview.innerHTML = html;
-  } catch (e) {
-    preview.innerHTML = `<div style="text-align:center;padding:20px;color:var(--red);font-size:13px;">Error cargando el menú.</div>`;
+    });
+    cont.innerHTML = html;
+  } catch(e) {
+    cont.innerHTML = '';
   }
+}
+
+async function verMenuGuardado(menuId) {
+  try {
+    const res = await supaAdmin(`/rest/v1/menus_macroai?id=eq.${menuId}&select=*&limit=1`);
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) return;
+    const m = rows[0];
+    renderMenuPreview(m, m.kcal_total, m.prot_total, m.hc_total, m.grasa_total, m.nombre);
+    const el = document.getElementById('amMenuPreview');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  } catch(e) {}
 }
 </script>
 
