@@ -135,7 +135,7 @@ body{
 .has-bottom-nav [style*="overflow-y: auto"]{
   padding-bottom:72px !important;
 }
-.main-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0;padding-bottom:72px;}
+.main-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0;padding-bottom:120px;touch-action:pan-y;}
 
 /* HEADER */
 .header{flex-shrink:0;padding:10px 12px 8px;display:flex;justify-content:space-between;align-items:center;
@@ -3472,8 +3472,8 @@ function renderMFPDiario() {
       const gramMatch = item.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
       const gramosActuales = gramMatch ? gramMatch[1] : '';
       itemsHtml += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);"
-             ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchEnd()"
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);touch-action:pan-y;"
+             ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchMove(event)"
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
@@ -3486,9 +3486,9 @@ function renderMFPDiario() {
     });
 
     block.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;"
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;touch-action:pan-y;"
            onclick="mfpToggleMeal('body-${meal.id}','chev-${meal.id}')"
-           ontouchstart="mfpMealTouchStart('${meal.id}',event)" ontouchend="mfpMealTouchEnd()" ontouchmove="mfpMealTouchEnd()"
+           ontouchstart="mfpMealTouchStart('${meal.id}',event)" ontouchend="mfpMealTouchEnd()" ontouchmove="mfpMealTouchMove(event)"
            oncontextmenu="event.preventDefault();${items.length ? `mfpMealMenu('${meal.id}','${meal.name}',${totalKcal},${totalProt},${totalCh},${totalGrasa},event)` : ''}">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
@@ -3532,7 +3532,9 @@ function mfpToggleMeal(bodyId, chevId) {
 
 // ── LONG-PRESS EN HEADER DE COMIDA → guardar como favorito ──
 let _mfpMealTimer = null;
+let _mfpTouchStartY = 0;
 function mfpMealTouchStart(mealId, e) {
+  _mfpTouchStartY = e.touches[0].clientY;
   _mfpMealTimer = setTimeout(() => {
     const items = S.comidas.filter(c => c.mealId === mealId);
     if (!items.length) return;
@@ -3546,6 +3548,10 @@ function mfpMealTouchStart(mealId, e) {
   }, 600);
 }
 function mfpMealTouchEnd() { clearTimeout(_mfpMealTimer); }
+function mfpMealTouchMove(e) {
+  // Si el dedo se mueve más de 8px verticalmente es scroll — cancelar long-press sin bloquear scroll
+  if (Math.abs(e.touches[0].clientY - _mfpTouchStartY) > 8) clearTimeout(_mfpMealTimer);
+}
 
 function mfpMealMenu(mealId, mealName, totalKcal, totalProt, totalCh, totalGrasa) {
   const overlay = document.createElement('div');
@@ -3613,7 +3619,7 @@ function mfpGuardarMealFavorito(mealId, mealName) {
   }, 100);
 }
 
-function mfpTouchStart(idx,e){window._mfpTimer=setTimeout(()=>mfpMenuItem(idx,e),600);} function mfpTouchEnd(){clearTimeout(window._mfpTimer);} function mfpMenuItem(idx,e){   if(e)e.preventDefault();   const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];   const mealIds=['desayuno','almuerzo','comida','merienda','cena'];   const overlay=document.createElement('div');   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';   let moverOpts=mealIds.map((id,i)=>`<button onclick="mfpMoverItem(${idx},'${id}');this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');   overlay.innerHTML=`<div data-mfp-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">     <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${S.comidas[idx]?.nombre||'Alimento'}</div>     <button onclick="mfpEliminarItem(${idx});this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>     ${moverOpts}     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:4px;">Cancelar</button>   </div>`;   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});   document.body.appendChild(overlay); } function mfpMoverItem(idx,newMealId){   if(!S.comidas[idx])return;   S.comidas[idx].mealId=newMealId;   updateBars();saveToday();renderMFPDiario();showToast('↩ Movido a '+newMealId); } function mfpEliminarItem(globalIdx) {
+function mfpTouchStart(idx,e){window._mfpTouchY=e.touches[0].clientY;window._mfpTimer=setTimeout(()=>mfpMenuItem(idx,e),600);} function mfpTouchEnd(){clearTimeout(window._mfpTimer);} function mfpTouchMove(e){if(Math.abs(e.touches[0].clientY-window._mfpTouchY)>8)clearTimeout(window._mfpTimer);} function mfpMenuItem(idx,e){   if(e)e.preventDefault();   const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];   const mealIds=['desayuno','almuerzo','comida','merienda','cena'];   const overlay=document.createElement('div');   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';   let moverOpts=mealIds.map((id,i)=>`<button onclick="mfpMoverItem(${idx},'${id}');this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');   overlay.innerHTML=`<div data-mfp-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">     <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${S.comidas[idx]?.nombre||'Alimento'}</div>     <button onclick="mfpEliminarItem(${idx});this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>     ${moverOpts}     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:4px;">Cancelar</button>   </div>`;   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});   document.body.appendChild(overlay); } function mfpMoverItem(idx,newMealId){   if(!S.comidas[idx])return;   S.comidas[idx].mealId=newMealId;   updateBars();saveToday();renderMFPDiario();showToast('↩ Movido a '+newMealId); } function mfpEliminarItem(globalIdx) {
   if (globalIdx < 0 || globalIdx >= S.comidas.length) return;
   const item = S.comidas[globalIdx];
   S.comidas.splice(globalIdx, 1);
