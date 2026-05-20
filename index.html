@@ -428,16 +428,16 @@ body{
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;}
 
 /* FAVORITOS */
-.fav-card{background:var(--s1);border:1px solid rgba(255,211,61,0.25);border-radius:14px;overflow:hidden;}
-.fav-hdr-row{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
-.fav-name{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;}
-.fav-date{font-size:11px;color:var(--muted);}
-.fav-macros{display:flex;padding:10px 14px;gap:12px;}
+.fav-card{background:var(--s1);border:1px solid rgba(255,211,61,0.25);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+.fav-hdr-row{padding:9px 12px;display:flex;justify-content:space-between;align-items:center;}
+.fav-name{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;flex:1;margin-right:8px;}
+.fav-date{font-size:10px;color:var(--muted);white-space:nowrap;}
+.fav-macros{display:flex;padding:0 12px 8px;gap:6px;flex-wrap:wrap;}
 .fav-m{flex:1;text-align:center;}
-.fav-m-val{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;}
-.fav-m-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
-.fav-actions{display:flex;gap:8px;padding:0 14px 12px;}
-.fav-use-btn{flex:1;padding:9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);
+.fav-m-val{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;}
+.fav-m-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;}
+.fav-actions{display:flex;gap:6px;padding:0 12px 10px;}
+.fav-use-btn{flex:1;padding:7px 6px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);
   border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--accent);
   cursor:pointer;text-align:center;}
 .fav-del-btn{padding:9px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);
@@ -1423,7 +1423,7 @@ function renderFavoritos(){
   favs.forEach(f=>{
     const card=document.createElement('div');card.className='fav-card';
     const ingHtml=f.ingredientes&&f.ingredientes.length?
-      `<div style="padding:6px 14px 2px;font-size:11px;color:var(--muted);">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:8px;">• ${escapeHtml(i.nombre)} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
+      `<div style="padding:2px 12px 4px;font-size:10px;color:var(--muted);line-height:1.6;">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:6px;">• ${escapeHtml(i.nombre)} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
     card.innerHTML=`
       <div class="fav-hdr-row">
         <div class="fav-name">⭐ ${escapeHtml(f.nombre)}</div>
@@ -1431,10 +1431,10 @@ function renderFavoritos(){
       </div>
       ${ingHtml}
       ${f.kcal?`<div class="fav-macros">
-        <div class="fav-m"><div class="fav-m-val" style="color:var(--accent)">${f.kcal}</div><div class="fav-m-lbl">kcal</div></div>
-        <div class="fav-m"><div class="fav-m-val" style="color:var(--yellow)">${f.ch}g</div><div class="fav-m-lbl">ch</div></div>
-        <div class="fav-m"><div class="fav-m-val" style="color:var(--red)">${f.prot}g</div><div class="fav-m-lbl">prot</div></div>
-        <div class="fav-m"><div class="fav-m-val" style="color:var(--blue)">${f.grasa}g</div><div class="fav-m-lbl">grasa</div></div>
+        <span style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);">${f.kcal} kcal</span>
+        <span style="background:rgba(230,160,0,0.08);border:1px solid rgba(230,160,0,0.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--yellow);">HC ${f.ch}g</span>
+        <span style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.15);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--red);">P ${f.prot}g</span>
+        <span style="background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--blue);">G ${f.grasa}g</span>
       </div>`:''}
       <div class="fav-actions">
         <button class="fav-use-btn" onclick="usarFavorito(${f.id})">↩ Registrar ahora</button>
