@@ -5634,14 +5634,22 @@ async function _obtenerStreamCamara() {
 }
 
 async function _iniciarVideoConStream(video, stream) {
-  video.srcObject = stream;
+  // Configurar atributos ANTES de asignar srcObject — crítico en iOS
   video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
   video.setAttribute('muted', '');
   video.muted = true;
+  video.autoplay = true;
+  video.srcObject = stream;
+
   // iOS puede pausar el vídeo automáticamente — relanzar si ocurre
   video.onpause = () => {
-    if (_scannerActivo) { try { video.play(); } catch(e) {} }
+    if (_scannerActivo) { video.play().catch(()=>{}); }
   };
+  video.oncanplay = () => {
+    if (_scannerActivo) { video.play().catch(()=>{}); }
+  };
+
   // Si iOS corta el track del stream, intentar reabrir
   stream.getVideoTracks().forEach(track => {
     track.onended = async () => {
@@ -5653,18 +5661,26 @@ async function _iniciarVideoConStream(video, stream) {
       }
     };
   });
-  // Intentar play; en iOS a veces necesita un pequeño delay
-  try {
-    await video.play();
-  } catch(e) {
-    await new Promise(r => setTimeout(r, 300));
+
+  // Esperar a que el vídeo tenga datos antes de hacer play
+  await new Promise(resolve => {
+    if (video.readyState >= 2) { resolve(); return; }
+    video.onloadedmetadata = resolve;
+    setTimeout(resolve, 2000); // fallback timeout
+  });
+
+  try { await video.play(); } catch(e) {
+    // En iOS a veces necesita un frame de delay
+    await new Promise(r => requestAnimationFrame(r));
     try { await video.play(); } catch(e2) {}
   }
 }
 
 function _mostrarErrorCamara() {
-  cerrarEscaner();
-  // Mostrar panel de error en lugar de toast fugaz
+  _scannerActivo = false;
+  if (_scannerLoop) { cancelAnimationFrame(_scannerLoop); _scannerLoop = null; }
+  if (_scannerStream) { _scannerStream.getTracks().forEach(t => t.stop()); _scannerStream = null; }
+  // Mostrar panel de error sin cerrar el overlay
   const overlay = document.getElementById('scannerOverlay');
   overlay.style.display = 'flex';
   overlay.innerHTML = `
