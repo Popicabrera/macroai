@@ -1967,6 +1967,7 @@ function showView(id){
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
   if(bnMap[id]){const b=document.getElementById('bn-'+bnMap[id]);if(b)b.classList.add('active');}
   if(id==='viewConfig'){loadCfgUI();cargarPerfilUsuario();}
+  if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
   if(id==='viewMiMenu')cargarMiMenu();
@@ -2795,6 +2796,7 @@ function showToast(msg){
 
 // ── MESSAGES ──
 function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1,ingredientesRaw=''){
+  // guardar al final de esta función — se hace via setTimeout para capturar el DOM ya renderizado
   const msgs=document.getElementById('messages');
   const div=document.createElement('div');div.className=`msg ${role}`;
   if(mealIdx>=0)div.dataset.mealIdx=mealIdx;
@@ -2830,6 +2832,7 @@ function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1,in
     msgs.appendChild(qr);
   }
   msgs.scrollTop=msgs.scrollHeight;
+  setTimeout(()=>saveChatHistory(),150);
 }
 function removeQR(){document.querySelectorAll('.quick-replies').forEach(el=>el.remove());}
 function addTyping(){
@@ -3311,8 +3314,49 @@ function _closeNavMenuOutside(e){
 }
 function closeNavMenu(){document.getElementById('navMenu').style.display='none';}
 
+// ── CHAT PERSISTENCIA ──
+function _chatKey(){ return 'macroai_chat_' + getToday(); }
+
+function saveChatHistory(){
+  try {
+    const msgs = document.getElementById('messages');
+    if (!msgs) return;
+    // Guardar HTML del chat + historial IA (sin imágenes base64 para no saturar localStorage)
+    const historialSinImg = S.historial.filter(m => typeof m.content === 'string');
+    localStorage.setItem(_chatKey(), JSON.stringify({
+      html: msgs.innerHTML,
+      historial: historialSinImg
+    }));
+  } catch(e) {}
+}
+
+function loadChatHistory(){
+  try {
+    const saved = localStorage.getItem(_chatKey());
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+    if (!data?.html) return false;
+    const msgs = document.getElementById('messages');
+    if (!msgs) return false;
+    msgs.innerHTML = data.html;
+    if (Array.isArray(data.historial)) S.historial = data.historial;
+    // Re-attachar listeners a los mensajes restaurados
+    msgs.querySelectorAll('.msg.ai').forEach(div => {
+      const txt = div.querySelector('.msg-text')?.textContent || '';
+      attachMsgListeners(div, 'ai', txt, null, '');
+    });
+    // Re-attachar botones de opciones rápidas
+    msgs.querySelectorAll('.quick-reply-btn').forEach(btn => {
+      if (!btn.onclick) btn.onclick = () => sendDirect(btn.textContent.trim());
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
 function borrarConversacion(){
   if(!confirm('¿Borrar toda la conversación y resetear los macros de hoy?'))return;
+  localStorage.removeItem(_chatKey());
+  _chatIniciado = false;
   S.historial=[];
   S.comidas=[]; S.kcalC=0; S.protC=0; S.chC=0; S.grasaC=0;
   saveToday(); updateBars();
@@ -3323,6 +3367,30 @@ function borrarConversacion(){
   callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal. No hay nada registrado aún. Usa [OPCIONES]: ¿Qué como hoy?|Registrar comida|Generar menú completo`)
     .then(raw=>{removeTyping();const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw);addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||'');})
     .catch(()=>{removeTyping();addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]);});
+}
+
+// ── INIT CHAT VIEW ──
+let _chatIniciado = false;
+function initChatView(){
+  const msgs = document.getElementById('messages');
+  if (!msgs) return;
+  // Si ya hay mensajes visibles, no hacer nada
+  if (msgs.children.length > 0) return;
+  // Intentar restaurar conversación de hoy
+  const restored = loadChatHistory();
+  if (restored) {
+    // Scroll al final
+    msgs.scrollTop = msgs.scrollHeight;
+    return;
+  }
+  // No hay historial — iniciar de cero
+  if (_chatIniciado) return;
+  _chatIniciado = true;
+  addTyping();
+  const nombreUsuario = CURRENT_USER?.nombre || CURRENT_USER?.email?.split('@')[0] || '';
+  callAI(`Saluda brevemente${nombreUsuario?' a '+nombreUsuario:''}. Hoy es ${S.tipoDia}, tiene ${S.kcalObj} kcal, lleva ${S.kcalC} kcal consumidas. Usa [OPCIONES]: ¿Qué como ahora?|Generar menú completo|Analizar mi día`)
+    .then(raw => { removeTyping(); const{text:t,elements,opciones,mealIdx,ingredientesRaw:ir}=parseAI(raw); addMsg('ai',t,elements,opciones,null,mealIdx??-1,ir||''); saveChatHistory(); })
+    .catch(() => { removeTyping(); addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]); saveChatHistory(); });
 }
 
 // ── INIT ──
@@ -3694,7 +3762,7 @@ function renderBuscadorInicio() {
         <div style="flex:1;">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;">Leer etiqueta nutricional</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">Apunta la cámara a la tabla de nutrición</div>
-
+          <div style="font-size:11px;margin-top:5px;color:var(--accent);font-weight:500;" onclick="event.stopPropagation();abrirEscaner()">〒 Escanear código de barras</div>
         </div>
         <span style="color:var(--muted);font-size:18px;">›</span>
       </div>
