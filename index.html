@@ -1952,7 +1952,7 @@ function getYesterdayComidas(){
 async function saveComidaSupabase(comida){
   if(!CURRENT_USER)return;
   try{await supaFetch('/rest/v1/historial_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({usuario_id:CURRENT_USER.id,fecha:comida.fecha,comida:comida.nombre,ingredientes:comida.ingredientes||'',calorias:comida.kcal,proteinas:comida.prot,carbos:comida.ch,grasas:comida.grasa})});}
+    body:JSON.stringify({usuario_id:CURRENT_USER.id,fecha:comida.fecha,comida:(comida.nombre||'').replace(/\s*\(\d+(?:\.\d+)?g\)\s*$/, '').trim(),ingredientes:comida.ingredientes||'',calorias:comida.kcal,proteinas:comida.prot,carbos:comida.ch,grasas:comida.grasa})});}
   catch(e){}
 }
 
@@ -3872,12 +3872,14 @@ function getHistorialAlimentosIndividuales(max) {
     for (let j = comidas.length - 1; j >= 0 && result.length < max; j--) {
       const c = comidas[j];
       if (!c.kcal_100 || !c.nombre) continue;
-      const key = c.nombre.toLowerCase().trim();
+      // Quitar los gramos del nombre para deduplicar y mostrar limpio
+      const nombreLimpio = c.nombre.replace(/\s*\(\d+(?:\.\d+)?g\)\s*$/, '').trim();
+      const key = nombreLimpio.toLowerCase();
       if (vistos.has(key)) continue;
       vistos.add(key);
       const gramMatch = c.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
       result.push({
-        nombre: c.nombre,
+        nombre: nombreLimpio,
         kcal_100: c.kcal_100,
         p_100: c.p_100 || 0,
         hc_100: c.hc_100 || 0,
