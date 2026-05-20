@@ -5619,6 +5619,45 @@ let _scannerBuscando = false; // evita llamadas simultáneas
 let _scannerUltimoEAN = null;
 let _visionContador = 0;       // frames estables antes de capturar
 
+
+// ── Helper cámara compatible iOS/Android ──
+async function _obtenerStreamCamara() {
+  // iOS Safari rechaza constraints de resolución — intentar de más específico a más simple
+  const opciones = [
+    { video: { facingMode: { exact: 'environment' } } },
+    { video: { facingMode: 'environment' } },
+    { video: true }
+  ];
+  for (const c of opciones) {
+    try { return await navigator.mediaDevices.getUserMedia(c); } catch(e) {}
+  }
+  return null;
+}
+
+function _mostrarErrorCamara() {
+  cerrarEscaner();
+  // Mostrar panel de error en lugar de toast fugaz
+  const overlay = document.getElementById('scannerOverlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:32px;text-align:center;gap:16px;">
+      <div style="font-size:48px;">📷</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;">Sin acceso a la cámara</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.75);line-height:1.6;">
+        Para usar el escáner necesitas dar permiso de cámara.<br><br>
+        <strong style="color:#fff;">En iPhone/Safari:</strong><br>
+        Ajustes → Safari → Cámara → Permitir<br><br>
+        <strong style="color:#fff;">En Android/Chrome:</strong><br>
+        Toca el icono 🔒 en la barra de dirección → Cámara → Permitir
+      </div>
+      <button onclick="document.getElementById('scannerOverlay').style.display='none'"
+        style="margin-top:8px;padding:14px 32px;background:#c0392b;border:none;border-radius:14px;
+               font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;">
+        Cerrar
+      </button>
+    </div>`;
+}
+
 async function abrirEscanerVision() {
   _scannerModo = 'vision';
   _scannerUltimoEAN = null;
@@ -5631,17 +5670,14 @@ async function abrirEscanerVision() {
   document.getElementById('scannerCaptureBtn').style.display = 'block';
   overlay.style.display = 'flex';
   _scannerActivo = true;
-  try {
-    _scannerStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    video.srcObject = _scannerStream;
-    await video.play();
-    _loopEscaner();
-  } catch(e) {
-    cerrarEscaner();
-    showToast('No se pudo acceder a la cámara.');
-  }
+  const stream = await _obtenerStreamCamara();
+  if (!stream) { _mostrarErrorCamara(); return; }
+  _scannerStream = stream;
+  video.srcObject = stream;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('muted', '');
+  try { await video.play(); } catch(e) {}
+  _loopEscaner();
 }
 
 async function abrirEscaner() {
@@ -5658,17 +5694,14 @@ async function abrirEscaner() {
   hint.textContent = 'Apunta al código de barras';
   overlay.style.display = 'flex';
   _scannerActivo = true;
-  try {
-    _scannerStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    video.srcObject = _scannerStream;
-    await video.play();
-    _loopEscaner();
-  } catch(e) {
-    cerrarEscaner();
-    showToast('No se pudo acceder a la cámara.');
-  }
+  const stream = await _obtenerStreamCamara();
+  if (!stream) { _mostrarErrorCamara(); return; }
+  _scannerStream = stream;
+  video.srcObject = stream;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('muted', '');
+  try { await video.play(); } catch(e) {}
+  _loopEscaner();
 }
 
 function _loopEscaner() {
