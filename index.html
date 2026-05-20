@@ -5622,7 +5622,6 @@ let _visionContador = 0;       // frames estables antes de capturar
 
 // ── Helper cámara compatible iOS/Android ──
 async function _obtenerStreamCamara() {
-  // iOS Safari rechaza constraints de resolución — intentar de más específico a más simple
   const opciones = [
     { video: { facingMode: { exact: 'environment' } } },
     { video: { facingMode: 'environment' } },
@@ -5632,6 +5631,35 @@ async function _obtenerStreamCamara() {
     try { return await navigator.mediaDevices.getUserMedia(c); } catch(e) {}
   }
   return null;
+}
+
+async function _iniciarVideoConStream(video, stream) {
+  video.srcObject = stream;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('muted', '');
+  video.muted = true;
+  // iOS puede pausar el vídeo automáticamente — relanzar si ocurre
+  video.onpause = () => {
+    if (_scannerActivo) { try { video.play(); } catch(e) {} }
+  };
+  // Si iOS corta el track del stream, intentar reabrir
+  stream.getVideoTracks().forEach(track => {
+    track.onended = async () => {
+      if (!_scannerActivo) return;
+      const nuevoStream = await _obtenerStreamCamara();
+      if (nuevoStream && _scannerActivo) {
+        _scannerStream = nuevoStream;
+        await _iniciarVideoConStream(video, nuevoStream);
+      }
+    };
+  });
+  // Intentar play; en iOS a veces necesita un pequeño delay
+  try {
+    await video.play();
+  } catch(e) {
+    await new Promise(r => setTimeout(r, 300));
+    try { await video.play(); } catch(e2) {}
+  }
 }
 
 function _mostrarErrorCamara() {
@@ -5673,10 +5701,7 @@ async function abrirEscanerVision() {
   const stream = await _obtenerStreamCamara();
   if (!stream) { _mostrarErrorCamara(); return; }
   _scannerStream = stream;
-  video.srcObject = stream;
-  video.setAttribute('playsinline', '');
-  video.setAttribute('muted', '');
-  try { await video.play(); } catch(e) {}
+  await _iniciarVideoConStream(video, stream);
   _loopEscaner();
 }
 
@@ -5697,10 +5722,7 @@ async function abrirEscaner() {
   const stream = await _obtenerStreamCamara();
   if (!stream) { _mostrarErrorCamara(); return; }
   _scannerStream = stream;
-  video.srcObject = stream;
-  video.setAttribute('playsinline', '');
-  video.setAttribute('muted', '');
-  try { await video.play(); } catch(e) {}
+  await _iniciarVideoConStream(video, stream);
   _loopEscaner();
 }
 
