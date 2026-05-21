@@ -5818,8 +5818,41 @@ function _loopEscaner() {
       } catch(e) {}
 
     } else {
-      // ── MODO 2: visión — solo captura manual con botón "Capturar ahora"
-      // El loop se mantiene vivo para que el video siga activo
+      // ── MODO 2: capturar etiqueta nutricional con Vision ──
+      _visionContador++;
+      if (_visionContador < 90) { // ~3s de estabilización
+        _scannerLoop = requestAnimationFrame(loop);
+        return;
+      }
+      _visionContador = 0;
+      // Capturar frame del video
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const base64 = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+      // Mandar a Claude Vision
+      toast.textContent = '🔍 Leyendo etiqueta...';
+      toast.style.display = 'block';
+      try {
+        const res = await fetch(WORKER_URL + '/foto-producto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg', usuario_id: CURRENT_USER?.id || null })
+        });
+        const data = await res.json();
+        if (data.found && data.kcal_100 > 0) {
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+          cerrarEscaner();
+          _abrirFSMconResultado({ ...data, fuente: 'vision' }, _scannerUltimoEAN || 'etiqueta');
+          return;
+        } else {
+          // No legible aún — reintentar
+          toast.textContent = 'Acerca más la etiqueta...';
+        }
+      } catch(e) {
+        toast.textContent = 'Acerca más la etiqueta...';
+      }
     }
 
     _scannerLoop = requestAnimationFrame(loop);
