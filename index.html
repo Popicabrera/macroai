@@ -1598,6 +1598,25 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
         const mealIdx=S.comidas.length-1;
         updateBars();saveToday();renderMFPDiario();
         saveComidaSupabase({nombre:f.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto});
+        // Guardar en alimentos_macroai si es un favorito de un solo ingrediente
+        if(f.ingredientes&&f.ingredientes.length===1){
+          const ing=f.ingredientes[0];
+          const gramos=parseFloat((ing.cantidad||'').replace(/[^\d.]/g,''))||0;
+          if(gramos>0&&kcalN>0){
+            const factor=100/gramos;
+            fetch(WORKER_URL+'/save-food',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                nombre:f.nombre,
+                kcal_100:Math.round(kcalN*factor),
+                p_100:Math.round(protN*factor*10)/10,
+                hc_100:Math.round(chN*factor*10)/10,
+                g_100:Math.round(grasaN*factor*10)/10,
+                categoria:'ESCANEADOS',fuente:'favorito',
+                creado_por:CURRENT_USER?.id||null
+              })
+            }).catch(()=>{});
+          }
+        }
         let ingHtml='';
         if(f.ingredientes&&f.ingredientes.length){
           ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
