@@ -1768,7 +1768,7 @@ async function buscarEnWorker(nombre) {
     const res = await fetch(WORKER_URL + '/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: nombre })
+      body: JSON.stringify({ query: nombre, usuario_id: currentUser?.id || null })
     });
     const data = await res.json();
     if (data.found) return data;
