@@ -5771,9 +5771,9 @@ async function abrirEscaner() {
 }
 
 function _loopEscaner() {
-  const detector = new BarcodeDetector({
-    formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']
-  });
+  const detector = (_scannerModo === 'barcode' && 'BarcodeDetector' in window)
+    ? new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code'] })
+    : null;
   const video = document.getElementById('scannerVideo');
   const toast = document.getElementById('scannerToast');
 
@@ -5789,7 +5789,7 @@ function _loopEscaner() {
       return;
     }
 
-    if (_scannerModo === 'barcode') {
+    if (_scannerModo === 'barcode' && detector) {
       // ── MODO 1: detectar código de barras ──
       try {
         const codes = await detector.detect(video);
