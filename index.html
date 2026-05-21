@@ -5913,6 +5913,8 @@ async function _capturarAhora() {
   const video = document.getElementById('scannerVideo');
   const toast = document.getElementById('scannerToast');
   if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+  // Parar el loop para que no interfiera con la captura manual
+  if (_scannerLoop) { cancelAnimationFrame(_scannerLoop); _scannerLoop = null; }
   toast.textContent = '🔍 Leyendo etiqueta...';
   toast.style.display = 'block';
   document.getElementById('scannerCaptureBtn').style.display = 'none';
