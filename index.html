@@ -5774,9 +5774,9 @@ async function abrirEscaner() {
 }
 
 function _loopEscaner() {
-  const detector = new BarcodeDetector({
-    formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']
-  });
+  const detector = (_scannerModo === 'barcode' && 'BarcodeDetector' in window)
+    ? new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code'] })
+    : null;
   const video = document.getElementById('scannerVideo');
   const toast = document.getElementById('scannerToast');
 
@@ -5812,12 +5812,8 @@ function _loopEscaner() {
               _abrirFSMconResultado(result, ean);
               return;
             } else {
-              _scannerModo = 'vision';
-              _visionContador = 0;
-              toast.style.display = 'none';
-              document.getElementById('scannerHint').textContent = 'Apunta a la etiqueta nutricional';
-              document.getElementById('scannerHint').style.color = '#c0392b';
-              document.getElementById('scannerCaptureBtn').style.display = 'block';
+              cerrarEscaner();
+              showToast('Producto no encontrado. Búscalo por nombre.');
             }
           }
         }
