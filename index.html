@@ -3903,16 +3903,14 @@ function getHistorialAlimentosIndividuales(max) {
     for (let j = comidas.length - 1; j >= 0 && result.length < max; j--) {
       const c = comidas[j];
       if (!c.kcal_100 || !c.nombre) continue;
-      // Deduplicar por nombre completo exacto (respeta nombres personalizados)
-      const key = c.nombre.toLowerCase().trim();
+      // Quitar los gramos del nombre para deduplicar y mostrar limpio
+      const nombreLimpio = c.nombre.replace(/\s*\(\d+(?:\.\d+)?g\)\s*$/, '').trim();
+      const key = nombreLimpio.toLowerCase();
       if (vistos.has(key)) continue;
       vistos.add(key);
-      // Quitar gramos solo para mostrar en el buscador, nombre original intacto
-      const nombreLimpio = c.nombre.replace(/\s*\(\d+(?:\.\d+)?g\)\s*$/, '').trim();
       const gramMatch = c.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
       result.push({
         nombre: nombreLimpio,
-        nombreCompleto: c.nombre,
         kcal_100: c.kcal_100,
         p_100: c.p_100 || 0,
         hc_100: c.hc_100 || 0,
@@ -4071,8 +4069,13 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
 
   const resultadosConPrioridad = resultados.map(r => {
     const rn = r.nombre.toLowerCase().replace(/\s*\(\d+(?:\.\d+)?g\)$/, '').trim();
-    // Coincidencia exacta: solo marca como reciente si el nombre es idéntico
-    const pos = posHistorial.has(rn) ? posHistorial.get(rn) : Infinity;
+    // Buscar si el resultado coincide con algún reciente
+    let pos = Infinity;
+    posHistorial.forEach((i, hn) => {
+      if (rn.includes(hn) || hn.includes(rn)) {
+        if (i < pos) pos = i;
+      }
+    });
     return { ...r, _recientePOS: pos, _reciente: pos < Infinity };
   });
 
@@ -5841,7 +5844,7 @@ function _loopEscaner() {
         const res = await fetch(WORKER_URL + '/foto-producto', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg', usuario_id: CURRENT_USER?.id || null })
+          body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg' })
         });
         const data = await res.json();
         if (data.found && data.kcal_100 > 0) {
@@ -5868,7 +5871,7 @@ async function _buscarEAN(ean) {
     const r = await fetch(WORKER_URL + '/barcode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ean, usuario_id: CURRENT_USER?.id || null })
+      body: JSON.stringify({ ean })
     });
     const d = await r.json();
     if (d.found && d.nombre && d.nombre !== 'undefined' && (d.kcal_100 > 0 || d.p_100 > 0)) return d;
@@ -5928,7 +5931,7 @@ async function _capturarAhora() {
     const res = await fetch(WORKER_URL + '/foto-producto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg', usuario_id: CURRENT_USER?.id || null })
+      body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg' })
     });
     const data = await res.json();
     if (data.found && data.kcal_100 > 0) {
@@ -6040,7 +6043,7 @@ async function handleFotoProducto(e) {
     const response = await fetch(WORKER_URL + '/foto-producto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg', usuario_id: CURRENT_USER?.id || null })
+      body: JSON.stringify({ imagen: base64, mediaType: 'image/jpeg' })
     });
     const data = await response.json();
 
