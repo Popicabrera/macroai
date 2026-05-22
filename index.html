@@ -1579,7 +1579,18 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
     if(f.ingredientes&&f.ingredientes.length){
       ingTexto=f.ingredientes.map(i=>`${i.nombre}:${i.cantidad}`).join('\n');
     }
-    const entrada={nombre:f.nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId};
+    // Calcular _100 para que aparezca en recientes
+    let kcal_100=0,p_100=0,hc_100=0,g_100=0;
+    if(f.ingredientes&&f.ingredientes.length===1){
+      const ing=f.ingredientes[0];
+      const gramos=parseFloat((ing.cantidad||'').replace(/[^\d.]/g,''))||0;
+      if(gramos>0){const factor=100/gramos;kcal_100=Math.round(kcalN*factor);p_100=Math.round(protN*factor*10)/10;hc_100=Math.round(chN*factor*10)/10;g_100=Math.round(grasaN*factor*10)/10;}
+    } else if(f.kcal_100>0) {
+      kcal_100=f.kcal_100;p_100=f.p_100||0;hc_100=f.hc_100||0;g_100=f.g_100||0;
+    } else {
+      kcal_100=kcalN;p_100=protN;hc_100=chN;g_100=grasaN;
+    }
+    const entrada={nombre:f.nombre,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),kcal:kcalN,prot:protN,ch:chN,grasa:grasaN,ingredientes:ingTexto,mealId,kcal_100,p_100,hc_100,g_100};
     if(!esHoy){
       // Día pasado o futuro — guardar en localStorage de ese día
       const key='macroai_dia_'+fecha;
