@@ -5166,6 +5166,11 @@ function _diarioRenderOtroDia(data, fecha) {
       const itemsDeMeal = data.comidas.filter(c => (c.mealId || c.tipo?.toLowerCase() || 'sin-categoría') === mid);
       // Construir ingredientes raw
       const ingRaw = itemsDeMeal.map(item => {
+        // Si tiene ingredientes guardados (formato "nombre:cantidad:"), usarlos directamente
+        if (item.ingredientes && item.ingredientes.trim()) {
+          return item.ingredientes.trim();
+        }
+        // Fallback: intentar parsear del nombre "Arroz (220g)"
         const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
         const nom = gm ? gm[1].trim() : item.nombre;
         const cant = gm ? gm[2]+'g' : '';
@@ -5408,6 +5413,9 @@ function _diarioRenderFuturo(fecha) {
         const _hdrStart = () => { _hdrTimer = setTimeout(() => {
           if (navigator.vibrate) navigator.vibrate(40);
           const ingRaw = items.map(item => {
+            if (item.ingredientes && item.ingredientes.trim()) {
+              return item.ingredientes.trim();
+            }
             const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
             const nom = gm ? gm[1].trim() : item.nombre;
             const cant = gm ? gm[2]+'g' : '';
