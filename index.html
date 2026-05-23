@@ -454,7 +454,7 @@ body{
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;}
 
 /* FAVORITOS */
-.fav-card{background:var(--s1);border:1px solid rgba(255,211,61,0.25);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+.fav-card{background:var(--s1);border:1px solid rgba(255,211,61,0.25);border-radius:12px;overflow:visible;margin-bottom:8px;}
 .fav-hdr-row{padding:9px 12px;display:flex;justify-content:space-between;align-items:center;}
 .fav-name{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;flex:1;margin-right:8px;}
 .fav-date{font-size:10px;color:var(--muted);white-space:nowrap;}
@@ -1413,9 +1413,10 @@ async function loadFavsFromSupa(){
     if(!Array.isArray(remoto)||!remoto.length)return;
     const local=loadFavs();
     const localIds=new Set(local.map(f=>f.id));
-    // Local siempre gana. Supabase solo aporta los que no existen en local.
-    const soloRemoto=remoto.filter(rf=>!localIds.has(rf.id));
-    if(!soloRemoto.length)return; // local ya tiene todo, no tocar nada
+    // Deduplicar también por nombre+kcal para evitar duplicados por distinto id
+    const localKeys=new Set(local.map(f=>f.nombre+'|'+f.kcal+'|'+(f.fecha||'')));
+    const soloRemoto=remoto.filter(rf=>!localIds.has(rf.id)&&!localKeys.has(rf.nombre+'|'+rf.kcal+'|'+(rf.fecha||'')));
+    if(!soloRemoto.length)return;
     const final=[...local,...soloRemoto];
     localStorage.setItem('macroai_favs',JSON.stringify(final));
   }catch(e){}
@@ -1452,7 +1453,11 @@ function guardarFavorito(nombre,texto,macros,ingredientesRaw){
 
 function renderFavoritos(){
   const body=document.getElementById('favBody');
-  const favs=loadFavs();
+  // Deduplicar por nombre+kcal+fecha antes de renderizar
+  let favs=loadFavs();
+  const seen=new Set();
+  favs=favs.filter(f=>{const k=f.nombre+'|'+f.kcal+'|'+(f.fecha||'');if(seen.has(k))return false;seen.add(k);return true;});
+  saveFavs(favs);
   if(!favs.length){
     body.innerHTML='<div class="fav-empty">⭐<br><br>Aún no tienes favoritos.<br><br>Mantén pulsado cualquier mensaje<br>de la IA para guardarlo como favorito.</div>';
     return;
