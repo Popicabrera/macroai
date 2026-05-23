@@ -5197,17 +5197,7 @@ function _diarioRenderOtroDia(data, fecha) {
       const totalGrasa= parseFloat(hdr.dataset.grasa)||0;
       const itemsDeMeal = data.comidas.filter(c => (c.mealId || c.tipo?.toLowerCase() || 'sin-categoría') === mid);
       // Construir ingredientes raw
-      const ingRaw = itemsDeMeal.map(item => {
-        // Si tiene ingredientes guardados (formato "nombre:cantidad:"), usarlos directamente
-        if (item.ingredientes && item.ingredientes.trim()) {
-          return item.ingredientes.trim();
-        }
-        // Fallback: intentar parsear del nombre "Arroz (220g)"
-        const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
-        const nom = gm ? gm[1].trim() : item.nombre;
-        const cant = gm ? gm[2]+'g' : '';
-        return nom+':'+cant+':';
-      }).join('\n');
+      const ingRaw = _buildIngRaw(itemsDeMeal);
 
       // Bottom sheet igual que mfpMealMenu
       const ov2 = document.createElement('div');
@@ -5444,15 +5434,7 @@ function _diarioRenderFuturo(fecha) {
         let _hdrTimer = null;
         const _hdrStart = () => { _hdrTimer = setTimeout(() => {
           if (navigator.vibrate) navigator.vibrate(40);
-          const ingRaw = items.map(item => {
-            if (item.ingredientes && item.ingredientes.trim()) {
-              return item.ingredientes.trim();
-            }
-            const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
-            const nom = gm ? gm[1].trim() : item.nombre;
-            const cant = gm ? gm[2]+'g' : '';
-            return nom+':'+cant+':';
-          }).join('\n');
+          const ingRaw = _buildIngRaw(items);
           const ov = document.createElement('div');
           ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
           ov.innerHTML = `
@@ -6480,6 +6462,31 @@ async function handleFotoProducto(e) {
 
 <script>
 // ══════════════════════════════════════════
+
+// ── Normaliza ingredientes de cualquier item a formato "nombre:cantidad:" ──
+function _buildIngRaw(items) {
+  const stripEmoji = s => (s||'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/gu,'').trim();
+  return items.map(item => {
+    // Si tiene ingredientes guardados, parsearlos línea a línea
+    if (item.ingredientes && item.ingredientes.trim()) {
+      const lines = item.ingredientes.trim().split('\n')
+        .filter(l => l.trim() && !l.trim().startsWith('TOTAL:'))
+        .map(l => {
+          const clean = stripEmoji(l);
+          const parts = clean.split(':');
+          const nom = (parts[0]||'').trim();
+          const cant = (parts[1]||'').trim();
+          return nom ? nom + ':' + cant + ':' : null;
+        }).filter(Boolean);
+      if (lines.length) return lines.join('\n');
+    }
+    // Fallback: nombre del item (puede incluir gramos entre paréntesis)
+    const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
+    const nom = stripEmoji(gm ? gm[1].trim() : item.nombre);
+    const cant = gm ? gm[2]+'g' : '';
+    return nom + ':' + cant + ':';
+  }).join('\n');
+}
 // ── MOTOR DE MENÚS ──
 // ══════════════════════════════════════════
 
