@@ -3523,7 +3523,7 @@ function renderMFPDiario() {
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div class="meal-name">${meal.name}</div>
             <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `HC${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
           </div>
         </div>
