@@ -1723,20 +1723,20 @@ function editarFavorito(id){
     const cantidadesInputs=[...overlay.querySelectorAll('[data-ing-cantidad]')];
     const nuevosIngs=nombresInputs.map((inp,i)=>({nombre:inp.value.trim(),cantidad:cantidadesInputs[i]?.value.trim()||''})).filter(x=>x.nombre);
     const nuevoNombre=overlay.querySelector('#favEditNombre').value.trim()||f.nombre;
-    const nuevoKcal=parseInt(overlay.querySelector('#favEditKcal').value)||0;
-    const nuevoProt=parseInt(overlay.querySelector('#favEditProt').value)||0;
-    const nuevoCh=parseInt(overlay.querySelector('#favEditCh').value)||0;
-    const nuevoGrasa=parseInt(overlay.querySelector('#favEditGrasa').value)||0;
-    const idx=favs.findIndex(x=>x.id===id);
+    const nuevoKcal=Math.round(parseFloat(overlay.querySelector('#favEditKcal').value)||0);
+    const nuevoProt=Math.round((parseFloat(overlay.querySelector('#favEditProt').value)||0)*10)/10;
+    const nuevoCh=Math.round((parseFloat(overlay.querySelector('#favEditCh').value)||0)*10)/10;
+    const nuevoGrasa=Math.round((parseFloat(overlay.querySelector('#favEditGrasa').value)||0)*10)/10;
+    const freshFavs=loadFavs();const idx=freshFavs.findIndex(x=>x.id===id);
     if(idx>=0){
-      favs[idx].nombre=nuevoNombre;
-      favs[idx].ingredientes=nuevosIngs;
-      favs[idx].kcal=nuevoKcal;
-      favs[idx].prot=nuevoProt;
-      favs[idx].ch=nuevoCh;
-      favs[idx].grasa=nuevoGrasa;
+      freshFavs[idx].nombre=nuevoNombre;
+      freshFavs[idx].ingredientes=nuevosIngs;
+      freshFavs[idx].kcal=nuevoKcal;
+      freshFavs[idx].prot=nuevoProt;
+      freshFavs[idx].ch=nuevoCh;
+      freshFavs[idx].grasa=nuevoGrasa;
     }
-    saveFavs(favs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
+    saveFavs(freshFavs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
   });
 }
 
