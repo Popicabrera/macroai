@@ -1753,23 +1753,25 @@ function loadToday(){
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+getToday())||'null');
     if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}
   }catch(e){}
-  // Luego sincronizar desde Supabase — fuente de verdad, sobrescribe si tiene mas datos
+  // Sincronizar desde Supabase — usa updated_at para decidir quién tiene el dato más reciente
   if(CURRENT_USER){
     supaFetch('/rest/v1/registros_macroai?select=*&usuario_id=eq.'+CURRENT_USER.id+'&fecha=eq.'+getToday())
       .then(r=>r.json()).then(rows=>{
         if(!Array.isArray(rows)||!rows.length)return;
         const r=rows[0];
-        if(!r.comidas||!r.comidas.length)return;
-        // Usar Supabase si tiene al menos tantas comidas como localStorage
-        if((r.comidas||[]).length >= S.comidas.length){
-          S.comidas=r.comidas||[];
-          // updateBars() recalcula S.kcalC/protC/chC/grasaC desde S.comidas automáticamente
-          updateBars();
-          const d2={fecha:getToday(),tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
-            kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
-          localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d2));
-          renderMFPDiario();
-        }
+        // Solo sobrescribir si Supabase tiene updated_at más reciente que localStorage
+        const localRaw=localStorage.getItem('macroai_dia_'+getToday());
+        const localUpdated=localRaw?JSON.parse(localRaw).updated_at||'':'' ;
+        const supaUpdated=r.updated_at||'';
+        if(supaUpdated && supaUpdated<=localUpdated)return; // localStorage es más reciente
+        if(!r.comidas||!Array.isArray(r.comidas))return;
+        S.comidas=r.comidas;
+        updateBars();
+        const d2={fecha:getToday(),tipoDia:r.tipo_dia||S.tipoDia,kcalObj:r.kcal_objetivo||S.kcalObj,
+          protObj:r.prot_objetivo||S.prot,chObj:r.ch_objetivo||S.ch,grasaObj:r.grasa_objetivo||S.grasa,
+          kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas,updated_at:supaUpdated};
+        localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d2));
+        renderMFPDiario();
       }).catch(()=>{});
   }
 }
@@ -1931,7 +1933,8 @@ async function enriquecerIng100(items) {
 }
 
 function saveToday(){
-  const d={fecha:getToday(),tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas};
+  const _now=new Date().toISOString();
+  const d={fecha:getToday(),tipoDia:S.tipoDia,kcalObj:S.kcalObj,protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas,updated_at:_now};
   localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d));
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
   if(!idx.includes(getToday())){idx.push(getToday());localStorage.setItem('macroai_dias',JSON.stringify(idx));}
@@ -1967,6 +1970,7 @@ function saveFechaSupabase(fecha, d){
 
 // Guarda un día pasado/futuro en localStorage + Supabase
 function saveDiaFecha(fecha, d){
+  if(!d.updated_at)d.updated_at=new Date().toISOString();
   localStorage.setItem('macroai_dia_'+fecha, JSON.stringify(d));
   const idx=JSON.parse(localStorage.getItem('macroai_dias')||'[]');
   if(!idx.includes(fecha)){idx.push(fecha);localStorage.setItem('macroai_dias',JSON.stringify(idx));}
