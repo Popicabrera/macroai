@@ -1382,18 +1382,12 @@ async function loadFavsFromSupa(){
     const remoto=rows[0].datos||[];
     if(!Array.isArray(remoto)||!remoto.length)return;
     const local=loadFavs();
-    const localMap=new Map(local.map(f=>[f.id,f]));
-    // Merge: si el mismo id existe en local Y local tiene kcal_100, local gana (más completo)
-    const merged=remoto.map(rf=>{
-      const lf=localMap.get(rf.id);
-      if(lf&&lf.ingredientes&&lf.ingredientes.length&&lf.ingredientes[0].kcal_100!=null)return lf;
-      return rf;
-    });
-    const remotIds=new Set(remoto.map(f=>f.id));
-    const soloLocales=local.filter(f=>!remotIds.has(f.id));
-    const final=[...merged,...soloLocales];
+    const localIds=new Set(local.map(f=>f.id));
+    // Local siempre gana. Supabase solo aporta los que no existen en local.
+    const soloRemoto=remoto.filter(rf=>!localIds.has(rf.id));
+    if(!soloRemoto.length)return; // local ya tiene todo, no tocar nada
+    const final=[...local,...soloRemoto];
     localStorage.setItem('macroai_favs',JSON.stringify(final));
-    if(soloLocales.length||merged.some((f,i)=>f!==remoto[i]))_syncFavsToSupa(final).catch(()=>{});
   }catch(e){}
 }
 
