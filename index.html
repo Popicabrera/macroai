@@ -334,37 +334,63 @@ body{
 .scrollable{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0;}
 
 /* CONFIG */
-.cfg-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0;}
-.cfg2-sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
-.cfg2-title{padding:10px 14px;background:rgba(192,57,43,0.06);border-bottom:1px solid var(--border);
+.cfg-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 24px;display:flex;flex-direction:column;gap:0;min-height:0;}
+/* ── PERFIL HERO ── */
+.perfil-hero{padding:18px 16px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);}
+.perfil-avatar{width:54px;height:54px;border-radius:18px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-1px;}
+.perfil-info-block{flex:1;min-width:0;}
+.perfil-nombre-txt{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.perfil-email-txt{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.perfil-modo-badge{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:4px 10px;border-radius:8px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.2);font-size:11px;font-weight:700;color:var(--accent);}
+.perfil-modo-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+/* ── SECCIONES ── */
+.cfg2-sec{background:var(--s1);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin:12px 14px 0;}
+.cfg2-title{padding:9px 14px;background:rgba(192,57,43,0.06);border-bottom:1px solid var(--border);display:flex;align-items:center;
   font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
-.cfg2-daytoggle{display:flex;gap:10px;padding:12px 14px;}
-.cfg2-weekrow{display:flex;gap:5px;padding:8px 14px 10px;justify-content:space-between;}
-.cfg2-weekbtn{flex:1;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--s3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all 0.2s;}
+/* ── MACROS GRID ── */
+.cfg2-macros-grid{display:grid;grid-template-columns:1fr 1fr;padding:12px;gap:0;}
+.cfg2-macro-col{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;}
+.cfg2-macro-col.entreno{background:rgba(192,57,43,0.07);margin-right:5px;}
+.cfg2-macro-col.descanso{background:rgba(91,141,184,0.08);margin-left:5px;}
+.cfg2-macro-col-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;}
+.cfg2-macro-col.entreno .cfg2-macro-col-label{color:var(--accent);}
+.cfg2-macro-col.descanso .cfg2-macro-col-label{color:var(--blue);}
+.cfg2-macro-kcal{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
+.cfg2-macro-kcal span{font-size:11px;font-weight:400;color:var(--muted);}
+.cfg2-macro-pills{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;}
+.cfg2-pill{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;}
+.cfg2-pill-hc{background:rgba(232,168,56,0.15);color:#a0720a;}
+.cfg2-pill-p{background:rgba(192,57,43,0.10);color:var(--accent);}
+.cfg2-pill-g{background:rgba(91,141,184,0.12);color:#3a6a96;}
+/* ── DÍAS SEMANA ── */
+.cfg2-weekrow{display:flex;gap:5px;padding:10px 14px 10px;justify-content:space-between;}
+.cfg2-weekbtn{flex:1;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--s3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--muted);transition:all 0.2s;}
 .cfg2-weekbtn.active{background:var(--accent);border-color:var(--accent);color:#f5f0e8;}
 .cfg2-weekbtn.hoy{box-shadow:0 0 0 2px var(--accent);}
-.cfg2-daybtn{flex:1;padding:12px 8px;border-radius:11px;border:1px solid var(--border);background:var(--s3);
-  display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all 0.2s;}
+.cfg2-daytoggle{display:flex;gap:8px;padding:0 14px 12px;}
+.cfg2-daybtn{flex:1;padding:10px 8px;border-radius:11px;border:1px solid var(--border);background:var(--s3);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;}
 .cfg2-daybtn.active{background:var(--accent-dim);border-color:rgba(192,57,43,0.4);}
-.cfg2-dayicon{font-size:22px;}
-.cfg2-daylbl{font-size:13px;font-weight:600;color:var(--muted);}
+.cfg2-daylbl{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);}
 .cfg2-daybtn.active .cfg2-daylbl{color:var(--accent);}
+/* ── BOTONES ── */
+.save-btn{margin:14px 14px 0;padding:15px;background:var(--accent);border:none;border-radius:13px;
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:calc(100% - 28px);display:block;}
+.cfg-logout-btn{margin:8px 14px 0;padding:13px;background:transparent;border:1px solid var(--border);border-radius:12px;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;width:calc(100% - 28px);display:block;}
+/* ── COMPAT (clases antiguas que aún se usan en admin) ── */
+.cfg2-daytoggle-old{display:flex;gap:10px;padding:12px 14px;}
 .cfg2-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .cfg2-col{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
-.cfg2-col-hdr{padding:9px 12px;border-bottom:1px solid var(--border);
-  font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;text-align:center;}
+.cfg2-col-hdr{padding:9px 12px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;text-align:center;}
 .entreno-hdr{background:rgba(192,57,43,0.07);color:var(--accent);}
 .descanso-hdr{background:rgba(107,184,246,0.07);color:var(--blue);}
 .cfg2-field{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;}
 .cfg2-field:last-child{border-bottom:none;}
 .cfg2-field-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:600;}
-.cfg2-inp{background:var(--s3);border:1px solid var(--border);border-radius:7px;
-  padding:5px 8px;width:100%;text-align:right;color:var(--text);font-family:'Space Grotesk',sans-serif;
-  font-size:16px;font-weight:700;outline:none;}
+.cfg2-inp{background:var(--s3);border:1px solid var(--border);border-radius:7px;padding:5px 8px;width:100%;text-align:right;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;outline:none;}
 .cfg2-inp:focus{border-color:rgba(192,57,43,0.4);}
 .cfg2-unit{font-size:10px;color:var(--muted);text-align:right;}
-.save-btn{margin:0 14px 20px;padding:15px;background:var(--accent);border:none;border-radius:13px;
-  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:calc(100% - 28px);}
 .cfg-logout-row{padding:14px;border-top:1px solid var(--border);margin-top:4px;}
 .cfg-user-info{font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;}
 .cfg-user-info strong{color:var(--text);}
@@ -887,28 +913,37 @@ body{
     </div>
   </div>
   <div class="cfg-body">
-    <div id="perfilInfoBox" style="padding:14px;background:var(--s1);border-radius:14px;border:1px solid var(--border);margin-bottom:4px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;" id="perfilNombre">—</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="perfilEmail">—</div>
-      <div style="margin-top:10px;display:flex;gap:8px;">
-        <div id="modoAppBadge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--accent-dim);color:var(--accent);">Modo Macros</div>
+    <!-- HERO -->
+    <div class="perfil-hero" id="perfilInfoBox">
+      <div class="perfil-avatar" id="perfilAvatar">?</div>
+      <div class="perfil-info-block">
+        <div class="perfil-nombre-txt" id="perfilNombre">—</div>
+        <div class="perfil-email-txt" id="perfilEmail">—</div>
+        <div class="perfil-modo-badge">
+          <div class="perfil-modo-dot"></div>
+          <span id="modoAppBadge">Modo Macros</span>
+        </div>
       </div>
     </div>
+    <!-- MACROS -->
     <div class="cfg2-sec" id="perfilMacrosBox">
-      <div class="cfg2-title" style="font-size:10px;">Macros asignados por tu entrenador</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 14px;">
-        <div style="background:var(--s2);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Entreno</div>
-          <div id="perfilMacrosE" style="font-size:12px;color:var(--text);line-height:1.7;">—</div>
+      <div class="cfg2-title">Macros asignados por tu entrenador</div>
+      <div class="cfg2-macros-grid">
+        <div class="cfg2-macro-col entreno">
+          <div class="cfg2-macro-col-label">Entreno</div>
+          <div class="cfg2-macro-kcal" id="perfilKcalE">— <span>kcal</span></div>
+          <div class="cfg2-macro-pills" id="perfilMacrosE">—</div>
         </div>
-        <div style="background:var(--s2);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descanso</div>
-          <div id="perfilMacrosD" style="font-size:12px;color:var(--text);line-height:1.7;">—</div>
+        <div class="cfg2-macro-col descanso">
+          <div class="cfg2-macro-col-label">Descanso</div>
+          <div class="cfg2-macro-kcal" id="perfilKcalD">— <span>kcal</span></div>
+          <div class="cfg2-macro-pills" id="perfilMacrosD">—</div>
         </div>
       </div>
     </div>
+    <!-- DÍAS ENTRENO -->
     <div class="cfg2-sec">
-      <div class="cfg2-title">Mis días de entreno · <span id="hoyLabel" style="font-weight:400;text-transform:none;letter-spacing:0;"></span></div>
+      <div class="cfg2-title">Mis días de entreno <span id="hoyLabel" style="font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px;"></span></div>
       <div class="cfg2-weekrow" id="weekRow">
         <div class="cfg2-weekbtn" id="wd1" onclick="toggleWeekDay(1)">L</div>
         <div class="cfg2-weekbtn" id="wd2" onclick="toggleWeekDay(2)">M</div>
@@ -918,17 +953,17 @@ body{
         <div class="cfg2-weekbtn" id="wd6" onclick="toggleWeekDay(6)">S</div>
         <div class="cfg2-weekbtn" id="wd0" onclick="toggleWeekDay(0)">D</div>
       </div>
-      <div style="display:flex;gap:8px;padding:0 14px 12px;">
-        <div class="cfg2-daybtn" id="btnEntreno" onclick="setDayType('entreno')" style="flex:1;padding:8px 4px;gap:2px;">
+      <div class="cfg2-daytoggle">
+        <div class="cfg2-daybtn" id="btnEntreno" onclick="setDayType('entreno')">
           <div class="cfg2-daylbl">Entreno</div>
         </div>
-        <div class="cfg2-daybtn" id="btnDescanso" onclick="setDayType('descanso')" style="flex:1;padding:8px 4px;gap:2px;">
+        <div class="cfg2-daybtn" id="btnDescanso" onclick="setDayType('descanso')">
           <div class="cfg2-daylbl">Descanso</div>
         </div>
       </div>
     </div>
-    <button class="save-btn" onclick="guardarDiasEntreno()">✓ Guardar mis días</button>
-    <button class="save-btn" onclick="doLogout()" style="margin-top:8px;margin-bottom:24px;background:transparent;border:1px solid var(--border);color:var(--muted);">Cerrar sesión</button>
+    <button class="save-btn" onclick="guardarDiasEntreno()">Guardar mis días</button>
+    <button class="cfg-logout-btn" onclick="doLogout()">Cerrar sesión</button>
   </div>
 </div>
 </div>
@@ -7228,14 +7263,20 @@ async function cargarPerfilUsuario() {
       const badge = document.getElementById('modoAppBadge');
       if (badge) {
         badge.textContent = _MODO_APP === 'menu' ? 'Modo Menú' : 'Modo Macros';
-        badge.style.background = _MODO_APP === 'menu' ? 'rgba(63,240,192,0.12)' : 'var(--accent-dim)';
-        badge.style.color = _MODO_APP === 'menu' ? 'var(--teal)' : 'var(--accent)';
+        badge.closest('.perfil-modo-badge').style.background = _MODO_APP === 'menu' ? 'rgba(63,240,192,0.12)' : 'var(--accent-dim)';
+        badge.closest('.perfil-modo-badge').style.borderColor = _MODO_APP === 'menu' ? 'rgba(63,240,192,0.3)' : 'rgba(192,57,43,0.2)';
+        badge.closest('.perfil-modo-badge').style.color = _MODO_APP === 'menu' ? 'var(--teal)' : 'var(--accent)';
+        badge.closest('.perfil-modo-badge').querySelector('.perfil-modo-dot').style.background = _MODO_APP === 'menu' ? 'var(--teal)' : 'var(--accent)';
       }
-      // Mostrar macros asignados (solo lectura)
+      // Macros asignados — kcal grande + pills HC/P/G
+      const kE = document.getElementById('perfilKcalE');
+      const kD = document.getElementById('perfilKcalD');
       const mE = document.getElementById('perfilMacrosE');
       const mD = document.getElementById('perfilMacrosD');
-      if (mE) mE.innerHTML = `${p.kcal_objetivo||'—'} kcal<br>P ${p.p_objetivo||'—'}g · HC ${p.hc_objetivo||'—'}g · G ${p.g_objetivo||'—'}g`;
-      if (mD) mD.innerHTML = `${p.kcal_descanso||'—'} kcal<br>P ${p.p_descanso||'—'}g · HC ${p.hc_descanso||'—'}g · G ${p.g_descanso||'—'}g`;
+      if (kE) kE.innerHTML = `${p.kcal_objetivo||'—'} <span>kcal</span>`;
+      if (kD) kD.innerHTML = `${p.kcal_descanso||'—'} <span>kcal</span>`;
+      if (mE) mE.innerHTML = `<span class="cfg2-pill cfg2-pill-hc">HC ${p.hc_objetivo||'—'}g</span><span class="cfg2-pill cfg2-pill-p">P ${p.p_objetivo||'—'}g</span><span class="cfg2-pill cfg2-pill-g">G ${p.g_objetivo||'—'}g</span>`;
+      if (mD) mD.innerHTML = `<span class="cfg2-pill cfg2-pill-hc">HC ${p.hc_descanso||'—'}g</span><span class="cfg2-pill cfg2-pill-p">P ${p.p_descanso||'—'}g</span><span class="cfg2-pill cfg2-pill-g">G ${p.g_descanso||'—'}g</span>`;
       // Aplicar macros al estado si los tiene el entrenador asignados
       if (p.kcal_objetivo) {
         CFG.entreno = {kcal: p.kcal_objetivo, prot: p.p_objetivo||100, ch: p.hc_objetivo||250, grasa: p.g_objetivo||44};
@@ -7258,8 +7299,15 @@ async function cargarPerfilUsuario() {
   // Rellenar nombre/email en perfil
   const pN = document.getElementById('perfilNombre');
   const pE = document.getElementById('perfilEmail');
-  if (pN) pN.textContent = CURRENT_USER.nombre || CURRENT_USER.email?.split('@')[0] || '—';
-  if (pE) pE.textContent = CURRENT_USER.email || '—';
+  const pA = document.getElementById('perfilAvatar');
+  const _pNombre = CURRENT_USER.nombre || CURRENT_USER.email?.split('@')[0] || '';
+  if (pN) pN.textContent = _pNombre;
+  if (pE) pE.textContent = CURRENT_USER.email || '';
+  if (pA) {
+    const _parts = _pNombre.trim().split(/\s+/);
+    const _initials = _parts.length >= 2 ? (_parts[0][0] + _parts[1][0]).toUpperCase() : _pNombre.substring(0, 2).toUpperCase();
+    pA.textContent = _initials;
+  }
 }
 
 // Guardar días de entreno del cliente en Supabase
