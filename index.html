@@ -3674,11 +3674,15 @@ function mfpGuardarMealFavorito(mealId, mealName) {
   // Ingredientes: un item por línea "Nombre:Xg:"
   const ingredientes = items.map(item => {
     const gm = item.nombre.match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
-    const gramos = gm ? parseFloat(gm[2]) : null;
     const nombreBase = gm ? gm[1].trim() : item.nombre;
+    // Calcular gramos desde kcal y kcal_100 si no viene en el nombre
+    let gramos = gm ? parseFloat(gm[2]) : null;
+    if (gramos === null && item.kcal_100 > 0 && item.kcal > 0) {
+      gramos = Math.round(item.kcal / item.kcal_100 * 100 * 10) / 10;
+    }
     return {
       nombre: nombreBase,
-      cantidad: gm ? gm[2]+'g' : '',
+      cantidad: gramos ? gramos+'g' : '',
       gramos: gramos,
       kcal: item.kcal||0, prot: item.prot||0, ch: item.ch||0, grasa: item.grasa||0,
       kcal_100: item.kcal_100||null, p_100: item.p_100||null, hc_100: item.hc_100||null, g_100: item.g_100||null
