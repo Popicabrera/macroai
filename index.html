@@ -1659,7 +1659,8 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
 
 function editarFavorito(id){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
-  const tieneMacrosPorIng=f.ingredientes&&f.ingredientes.length&&f.ingredientes[0].kcal_100!=null;
+  const tieneMacrosPorIng=f.ingredientes&&f.ingredientes.length&&f.ingredientes[0].kcal_100!=null&&f.ingredientes[0].kcal_100>0&&f.ingredientes[0].gramos!=null&&f.ingredientes[0].gramos>0;
+  console.log('FAV ing[0]:', JSON.stringify(f.ingredientes&&f.ingredientes[0]));
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;';
 
