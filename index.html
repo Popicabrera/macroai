@@ -1480,17 +1480,42 @@ function renderFavoritos(){
         <span style="background:rgba(230,160,0,0.08);border:1px solid rgba(230,160,0,0.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--yellow);">HC ${f.ch}g</span>
         <span style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.15);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--red);">P ${f.prot}g</span>
         <span style="background:rgba(107,184,246,0.08);border:1px solid rgba(107,184,246,0.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--blue);">G ${f.grasa}g</span>
-      </div>`:''}
-      <div class="fav-actions">
-        <button class="fav-use-btn" onclick="usarFavorito(${f.id})">↩ Registrar ahora</button>
-        <button class="fav-use-btn" style="background:rgba(255,211,61,0.08);border-color:rgba(255,211,61,0.25);" onclick="editarFavorito(${f.id})">✏️ Editar</button>
-        <button class="fav-del-btn" onclick="eliminarFavorito(${f.id})">🗑️</button>
-      </div>`;
+      </div>`:''}`;
+    // Long-press → bottom sheet
+    let _favTimer=null;
+    const _favStart=()=>{_favTimer=setTimeout(()=>{if(navigator.vibrate)navigator.vibrate(40);_favMenu(f.id,f.nombre);},600);};
+    const _favCancel=()=>clearTimeout(_favTimer);
+    card.addEventListener("touchstart",_favStart,{passive:true});
+    card.addEventListener("touchend",_favCancel);
+    card.addEventListener("touchmove",_favCancel,{passive:true});
+    card.addEventListener("mousedown",_favStart);
+    card.addEventListener("mouseup",_favCancel);
+    card.addEventListener("mouseleave",_favCancel);
     body.appendChild(card);
   });
 }
 
 // Muestra bottom sheet para elegir comida (y opcionalmente día) al registrar un favorito
+
+function _favMenu(id, nombre) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">⭐ ${escapeHtml(nombre)}</div>
+      <button id="_fmReg" style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:8px;">↩ Registrar ahora</button>
+      <button id="_fmEdit" style="width:100%;padding:14px;background:rgba(255,211,61,0.08);border:1px solid rgba(255,211,61,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#a07800;cursor:pointer;margin-bottom:8px;">Editar</button>
+      <button id="_fmDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Eliminar</button>
+      <button id="_fmCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_fmReg').onclick = () => { ov.remove(); usarFavorito(id); };
+  ov.querySelector('#_fmEdit').onclick = () => { ov.remove(); editarFavorito(id); };
+  ov.querySelector('#_fmDel').onclick = () => { ov.remove(); eliminarFavorito(id); };
+  ov.querySelector('#_fmCancel').onclick = () => ov.remove();
+}
+
 function mostrarSelectorComidaFav(id, fechaForzada) {
   const favs = loadFavs(); const f = favs.find(x => x.id === id); if (!f) return;
   const fecha = fechaForzada || _diarioFecha || getToday();
