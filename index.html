@@ -1357,20 +1357,15 @@ function saveFavs(arr){
 
 async function _syncFavsToSupa(arr){
   if(!CURRENT_USER)return;
-  await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{
-    method:'POST',
-    headers:{'Prefer':'resolution=merge-duplicates,return=minimal','Content-Type':'application/json'},
-    body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:arr})
-  }).catch(async()=>{
-    // fallback: delete + insert
+  try{
     await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{method:'DELETE'});
     if(!arr.length)return;
     await supaFetch('/rest/v1/favoritos_macroai',{
       method:'POST',
-      headers:{'Prefer':'return=minimal'},
+      headers:{'Prefer':'return=minimal','Content-Type':'application/json'},
       body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:arr})
     });
-  });
+  }catch(e){console.warn('sync favs error',e);}
 }
 
 async function loadFavsFromSupa(){
@@ -1660,7 +1655,6 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
 function editarFavorito(id){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
   const tieneMacrosPorIng=f.ingredientes&&f.ingredientes.length&&f.ingredientes[0].kcal_100!=null&&f.ingredientes[0].kcal_100>0&&f.ingredientes[0].gramos!=null&&f.ingredientes[0].gramos>0;
-  console.log('FAV ing[0]:', JSON.stringify(f.ingredientes&&f.ingredientes[0]));
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;';
 
@@ -3724,7 +3718,18 @@ function mfpGuardarMealFavorito(mealId, mealName) {
     document.getElementById('favNombreCancel').onclick = () => overlay.remove();
     const doGuardar = () => {
       const nombre = (document.getElementById('favNombreInput').value.trim()) || mealName;
-      guardarFavorito(nombre, '', { kcal:totalKcal, prot:totalProt, ch:totalCh, grasa:totalGrasa }, ingRaw);
+      // Guardar directamente con ingredientes completos (con kcal_100)
+      const favs=loadFavs();
+      favs.unshift({
+        id:Date.now(),
+        nombre:nombre,
+        texto:'',
+        ingredientes:ingredientes,
+        kcal:totalKcal, prot:totalProt, ch:totalCh, grasa:totalGrasa,
+        fecha:new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'})
+      });
+      saveFavs(favs);
+      renderFavoritos();
       overlay.remove();
       showToast('⭐ ' + nombre + ' guardado en favoritos');
     };
