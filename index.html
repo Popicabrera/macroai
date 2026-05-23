@@ -1434,7 +1434,8 @@ function guardarFavorito(nombre,texto,macros,ingredientesRaw){
       const rest=lt.substring(firstColon+1);
       const secondColon=rest.indexOf(':');
       const grams=secondColon>=0?rest.substring(0,secondColon).trim():rest.trim();
-      if(namePart)ingredientes.push({nombre:namePart,cantidad:grams});
+      const _cleanName=namePart.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/gu,'').trim();
+      if(_cleanName)ingredientes.push({nombre:_cleanName,cantidad:grams});
     });
   }
   const fav={
@@ -1465,8 +1466,9 @@ function renderFavoritos(){
   body.innerHTML='';
   favs.forEach(f=>{
     const card=document.createElement('div');card.className='fav-card';
+    const _stripEmoji=s=>(s||'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/gu,'').trim();
     const ingHtml=f.ingredientes&&f.ingredientes.length?
-      `<div style="padding:2px 12px 4px;font-size:10px;color:var(--muted);line-height:1.6;">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:6px;">• ${escapeHtml(i.nombre)} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
+      `<div style="padding:2px 12px 4px;font-size:10px;color:var(--muted);line-height:1.6;">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:6px;">• ${escapeHtml(_stripEmoji(i.nombre))} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
     card.innerHTML=`
       <div class="fav-hdr-row">
         <div class="fav-name">⭐ ${escapeHtml(f.nombre)}</div>
