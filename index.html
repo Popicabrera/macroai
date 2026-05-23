@@ -349,7 +349,7 @@ body{
   font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 /* ── MACROS GRID ── */
 .cfg2-macros-grid{display:grid;grid-template-columns:1fr 1fr;padding:12px;gap:0;}
-.cfg2-macro-col{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;}
+.cfg2-macro-col{border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;gap:6px;}
 .cfg2-macro-col.entreno{background:rgba(192,57,43,0.07);margin-right:5px;}
 .cfg2-macro-col.descanso{background:rgba(91,141,184,0.08);margin-left:5px;}
 .cfg2-macro-col-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;}
@@ -358,7 +358,7 @@ body{
 .cfg2-macro-kcal{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
 .cfg2-macro-kcal span{font-size:11px;font-weight:400;color:var(--muted);}
 .cfg2-macro-pills{display:flex;gap:4px;flex-wrap:nowrap;margin-top:2px;overflow:hidden;}
-.cfg2-pill{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;white-space:nowrap;}
+.cfg2-pill{font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;white-space:nowrap;}
 .cfg2-pill-hc{background:rgba(232,168,56,0.15);color:#a0720a;}
 .cfg2-pill-p{background:rgba(192,57,43,0.10);color:var(--accent);}
 .cfg2-pill-g{background:rgba(91,141,184,0.12);color:#3a6a96;}
@@ -7296,26 +7296,32 @@ async function cargarPerfilUsuario() {
       renderWeekDays();
     }
   } catch(e) { console.warn('cargarPerfilUsuario:', e); }
-  // Rellenar nombre/email en perfil
+  // Rellenar nombre/email en perfil — siempre consulta la BD
   const pN = document.getElementById('perfilNombre');
   const pE = document.getElementById('perfilEmail');
   const pA = document.getElementById('perfilAvatar');
-  const _pNombre = CURRENT_USER.nombre || CURRENT_USER.email?.split('@')[0] || '';
-  if (pN) pN.textContent = _pNombre;
   if (pE) pE.textContent = CURRENT_USER.email || '';
-  if (pA) {
-    const _realNombre = (CURRENT_USER.nombre || '').trim();
-    if (_realNombre) {
-      // Nombre real: mostrar primer nombre
-      const _firstName = _realNombre.split(/\s+/)[0];
-      pA.textContent = _firstName.charAt(0).toUpperCase() + _firstName.slice(1).toLowerCase();
-      pA.style.fontSize = _firstName.length > 5 ? '11px' : '13px';
-    } else {
-      // Sin nombre: mostrar 2 iniciales del email
-      const _emailPart = (CURRENT_USER.email || '').split('@')[0];
-      pA.textContent = _emailPart.substring(0, 2).toUpperCase();
-      pA.style.fontSize = '18px';
+  try {
+    const uRes = await supaFetch('/rest/v1/usuarios_macroai?select=nombre&email=eq.' + encodeURIComponent(CURRENT_USER.email) + '&limit=1');
+    const uRows = await uRes.json();
+    const _realNombre = (Array.isArray(uRows) && uRows.length && uRows[0].nombre) ? uRows[0].nombre.trim() : '';
+    // Actualizar CURRENT_USER y localStorage con el nombre real
+    if (_realNombre) { CURRENT_USER.nombre = _realNombre; localStorage.setItem('macroai_user', JSON.stringify(CURRENT_USER)); }
+    const _displayNombre = _realNombre || CURRENT_USER.email?.split('@')[0] || '';
+    if (pN) pN.textContent = _displayNombre;
+    if (pA) {
+      if (_realNombre) {
+        const _firstName = _realNombre.split(/\s+/)[0];
+        const _fn = _firstName.charAt(0).toUpperCase() + _firstName.slice(1).toLowerCase();
+        pA.textContent = _fn;
+        pA.style.fontSize = _fn.length > 5 ? '11px' : '13px';
+      } else {
+        pA.textContent = (_displayNombre).substring(0, 2).toUpperCase();
+        pA.style.fontSize = '18px';
+      }
     }
+  } catch(e) {
+    if (pN) pN.textContent = CURRENT_USER.email?.split('@')[0] || '';
   }
 }
 
