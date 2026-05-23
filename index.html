@@ -1357,12 +1357,19 @@ function saveFavs(arr){
 
 async function _syncFavsToSupa(arr){
   if(!CURRENT_USER)return;
-  await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{method:'DELETE'});
-  if(!arr.length)return;
-  await supaFetch('/rest/v1/favoritos_macroai',{
+  await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{
     method:'POST',
-    headers:{'Prefer':'return=minimal'},
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal','Content-Type':'application/json'},
     body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:arr})
+  }).catch(async()=>{
+    // fallback: delete + insert
+    await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{method:'DELETE'});
+    if(!arr.length)return;
+    await supaFetch('/rest/v1/favoritos_macroai',{
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:arr})
+    });
   });
 }
 
@@ -3674,7 +3681,6 @@ function mfpMealMenu(mealId, mealName, totalKcal, totalProt, totalCh, totalGrasa
 function mfpGuardarMealFavorito(mealId, mealName) {
   const items = S.comidas.filter(c => c.mealId === mealId);
   if (!items.length) return;
-  console.log('DEBUG items[0]:', JSON.stringify(items[0]));
   const totalKcal  = Math.round(items.reduce((a,c) => a+(c.kcal||0), 0));
   const totalProt  = Math.round(items.reduce((a,c) => a+(c.prot||0), 0)*10)/10;
   const totalCh    = Math.round(items.reduce((a,c) => a+(c.ch||0), 0)*10)/10;
