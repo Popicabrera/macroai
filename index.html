@@ -1723,20 +1723,20 @@ function editarFavorito(id){
     const cantidadesInputs=[...overlay.querySelectorAll('[data-ing-cantidad]')];
     const nuevosIngs=nombresInputs.map((inp,i)=>({nombre:inp.value.trim(),cantidad:cantidadesInputs[i]?.value.trim()||''})).filter(x=>x.nombre);
     const nuevoNombre=overlay.querySelector('#favEditNombre').value.trim()||f.nombre;
-    const nuevoKcal=Math.round(parseFloat(overlay.querySelector('#favEditKcal').value)||0);
-    const nuevoProt=Math.round((parseFloat(overlay.querySelector('#favEditProt').value)||0)*10)/10;
-    const nuevoCh=Math.round((parseFloat(overlay.querySelector('#favEditCh').value)||0)*10)/10;
-    const nuevoGrasa=Math.round((parseFloat(overlay.querySelector('#favEditGrasa').value)||0)*10)/10;
-    const freshFavs=loadFavs();const idx=freshFavs.findIndex(x=>x.id===id);
+    const nuevoKcal=parseInt(overlay.querySelector('#favEditKcal').value)||0;
+    const nuevoProt=parseInt(overlay.querySelector('#favEditProt').value)||0;
+    const nuevoCh=parseInt(overlay.querySelector('#favEditCh').value)||0;
+    const nuevoGrasa=parseInt(overlay.querySelector('#favEditGrasa').value)||0;
+    const idx=favs.findIndex(x=>x.id===id);
     if(idx>=0){
-      freshFavs[idx].nombre=nuevoNombre;
-      freshFavs[idx].ingredientes=nuevosIngs;
-      freshFavs[idx].kcal=nuevoKcal;
-      freshFavs[idx].prot=nuevoProt;
-      freshFavs[idx].ch=nuevoCh;
-      freshFavs[idx].grasa=nuevoGrasa;
+      favs[idx].nombre=nuevoNombre;
+      favs[idx].ingredientes=nuevosIngs;
+      favs[idx].kcal=nuevoKcal;
+      favs[idx].prot=nuevoProt;
+      favs[idx].ch=nuevoCh;
+      favs[idx].grasa=nuevoGrasa;
     }
-    saveFavs(freshFavs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
+    saveFavs(favs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
   });
 }
 
@@ -4982,7 +4982,7 @@ function _diarioRenderOtroDia(data, fecha) {
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:18px;">${MEAL_EMOJIS[mid]||'🍽️'}</span>
             <div>
-              <div class="meal-name">${MEAL_NAMES[mid]||mid}</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${MEAL_NAMES[mid]||mid}</div>
               <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
             </div>
           </div>
@@ -5053,7 +5053,7 @@ function _diarioRenderOtroDia(data, fecha) {
       ov2.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
       ov2.innerHTML = `
         <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${mealName}</div>
+          <div class="meal-name">${mealName}</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
           <button id="_hdrFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar como favorito</button>
           <button id="_hdrCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
