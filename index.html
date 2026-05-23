@@ -357,7 +357,7 @@ body{
 .cfg2-macro-col.descanso .cfg2-macro-col-label{color:var(--blue);}
 .cfg2-macro-kcal{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
 .cfg2-macro-kcal span{font-size:11px;font-weight:400;color:var(--muted);}
-.cfg2-macro-pills{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;}
+.cfg2-macro-pills{display:flex;gap:4px;flex-wrap:nowrap;margin-top:2px;overflow:hidden;}
 .cfg2-pill{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;}
 .cfg2-pill-hc{background:rgba(232,168,56,0.15);color:#a0720a;}
 .cfg2-pill-p{background:rgba(192,57,43,0.10);color:var(--accent);}
@@ -7304,8 +7304,18 @@ async function cargarPerfilUsuario() {
   if (pN) pN.textContent = _pNombre;
   if (pE) pE.textContent = CURRENT_USER.email || '';
   if (pA) {
-    const _firstName = _pNombre.trim().split(/\s+/)[0];
-    pA.textContent = _firstName.charAt(0).toUpperCase() + _firstName.slice(1).toLowerCase();
+    const _realNombre = (CURRENT_USER.nombre || '').trim();
+    if (_realNombre) {
+      // Nombre real: mostrar primer nombre
+      const _firstName = _realNombre.split(/\s+/)[0];
+      pA.textContent = _firstName.charAt(0).toUpperCase() + _firstName.slice(1).toLowerCase();
+      pA.style.fontSize = _firstName.length > 5 ? '11px' : '13px';
+    } else {
+      // Sin nombre: mostrar 2 iniciales del email
+      const _emailPart = (CURRENT_USER.email || '').split('@')[0];
+      pA.textContent = _emailPart.substring(0, 2).toUpperCase();
+      pA.style.fontSize = '18px';
+    }
   }
 }
 
