@@ -358,7 +358,7 @@ body{
 .cfg2-macro-kcal{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
 .cfg2-macro-kcal span{font-size:11px;font-weight:400;color:var(--muted);}
 .cfg2-macro-pills{display:flex;gap:4px;flex-wrap:nowrap;margin-top:2px;overflow:hidden;}
-.cfg2-pill{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;}
+.cfg2-pill{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;white-space:nowrap;}
 .cfg2-pill-hc{background:rgba(232,168,56,0.15);color:#a0720a;}
 .cfg2-pill-p{background:rgba(192,57,43,0.10);color:var(--accent);}
 .cfg2-pill-g{background:rgba(91,141,184,0.12);color:#3a6a96;}
@@ -1067,7 +1067,7 @@ async function doLogin(){
     if(error){showMsg('loginMsg',error.message);return;}
     SUPA_TOKEN=data.session.access_token;CURRENT_USER={id:data.user.id,email:data.user.email};
     if(data.user.email!==ADMIN_EMAIL){
-      const chk=await supaFetch('/rest/v1/usuarios_macroai?select=activo,nombre&id=eq.'+data.user.id);
+      const chk=await supaFetch('/rest/v1/usuarios_macroai?select=activo,nombre&email=eq.'+encodeURIComponent(data.user.email));
       const chkData=await chk.json();
       if(chkData&&chkData[0]&&chkData[0].activo===false){SUPA_TOKEN=null;CURRENT_USER=null;showMsg('loginMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');return;}
       if(chkData&&chkData[0]&&chkData[0].nombre)CURRENT_USER.nombre=chkData[0].nombre;
