@@ -1003,7 +1003,7 @@ const SUPA_URL='https://wgjzelrqfyvlnxikbijl.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzkxMDEsImV4cCI6MjA5MjcxNTEwMX0.grES_8m9TDG5KY8U6SeBgqAohhX5gtqqIWt0iTcaB3o';
 const CODIGO_VALIDO='POPI2025';
 const ADMIN_EMAIL='joseju.popi@hotmail.es';
-const WORKER_URL='https://macroai-pruebas.joseju-popi.workers.dev';
+const WORKER_URL='https://macroai.joseju-popi.workers.dev';
 const SUPA_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEzOTEwMSwiZXhwIjoyMDkyNzE1MTAxfQ.BFH-QFpbkP9hlfr6kWTgeTT3JcopXQfR2dM-yu7B9Gc';
 
 let SUPA_TOKEN=null,CURRENT_USER=null,db=null;
@@ -7057,8 +7057,20 @@ async function renderAdminMenuPerfil(seccion) {
 
     </div><div id="amSeccionMenu">
 
-    <!-- Título sección -->
-    <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">Generar menú con IA</div>
+    <!-- ── TABS IA / MANUAL ── -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <button id="amTabIA" onclick="amSwitchTab('ia')"
+        style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid rgba(192,57,43,0.4);background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+        ✨ Generar con IA
+      </button>
+      <button id="amTabManual" onclick="amSwitchTab('manual')"
+        style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+        ✏️ Manual
+      </button>
+    </div>
+
+    <!-- ════ PANEL IA ════ -->
+    <div id="amPanelIA">
 
     <!-- Tipo de día -->
     <div class="am-section" style="margin-bottom:10px;">
@@ -7128,6 +7140,13 @@ Cena: salmón, patata, espinacas"></textarea>
           🥗 Calcular con mis ingredientes
         </button>
       </div>
+    </div>
+
+    </div><!-- /amPanelIA -->
+
+    <!-- ════ PANEL MANUAL ════ -->
+    <div id="amPanelManual" style="display:none;">
+      <div id="amManualBody"></div>
     </div>
 
     <!-- Preview resultado -->
@@ -7336,6 +7355,407 @@ async function verMenuGuardado(menuId) {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   } catch(e) {}
 }
+
+// ══════════════════════════════════════════
+// ── PANEL ADMIN MENÚ MANUAL ──
+// ══════════════════════════════════════════
+
+const AM_MOMENTOS  = ['desayuno','almuerzo','comida','merienda','cena'];
+const AM_NOMBRES   = ['Desayuno','Almuerzo','Comida','Merienda','Cena'];
+const AM_EMOJIS    = {desayuno:'🌅',almuerzo:'🍎',comida:'☀️',merienda:'🍎',cena:'🌙'};
+
+// Estado del editor manual
+let _amManualDia    = 0;   // 0=Lun ... 6=Dom
+let _amManualTipo   = {};  // { 0:'entreno', 1:'descanso', ... }
+let _amManualComidas = {}; // { 0: { desayuno:[{nombre,g,kcal_100,p_100,hc_100,g_100}], ... }, ... }
+let _amManualNombre = '';
+let _amManualBuscTimer = null;
+let _amManualBuscMomento = null; // qué comida está buscando ahora
+
+function amSwitchTab(tab) {
+  const ia  = document.getElementById('amPanelIA');
+  const man = document.getElementById('amPanelManual');
+  const btnIA  = document.getElementById('amTabIA');
+  const btnMan = document.getElementById('amTabManual');
+  if (!ia || !man) return;
+  if (tab === 'ia') {
+    ia.style.display  = '';
+    man.style.display = 'none';
+    btnIA.style.background  = 'var(--accent)'; btnIA.style.color  = '#fff'; btnIA.style.borderColor = 'rgba(192,57,43,0.4)';
+    btnMan.style.background = 'var(--s2)';     btnMan.style.color = 'var(--muted)'; btnMan.style.borderColor = 'var(--border)';
+  } else {
+    ia.style.display  = 'none';
+    man.style.display = '';
+    btnMan.style.background = 'var(--accent)'; btnMan.style.color = '#fff'; btnMan.style.borderColor = 'rgba(192,57,43,0.4)';
+    btnIA.style.background  = 'var(--s2)';     btnIA.style.color  = 'var(--muted)'; btnIA.style.borderColor = 'var(--border)';
+    amManualRender();
+  }
+}
+
+function amManualRender() {
+  const body = document.getElementById('amManualBody');
+  if (!body) return;
+
+  const DIAS = ['L','M','X','J','V','S','D'];
+  const DIAS_FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+  // Píldoras de días
+  let diasHtml = '<div style="display:flex;gap:5px;margin-bottom:14px;">';
+  DIAS.forEach((d, i) => {
+    const sel = i === _amManualDia;
+    diasHtml += `<div onclick="amManualSelDia(${i})"
+      style="flex:1;padding:8px 0;text-align:center;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${sel?'rgba(192,57,43,0.4)':'var(--border)'};background:${sel?'var(--accent)':'var(--s2)'};color:${sel?'#fff':'var(--text)'};transition:all 0.15s;">${d}</div>`;
+  });
+  diasHtml += '</div>';
+
+  const dia = _amManualDia;
+  const tipo = _amManualTipo[dia] || 'entreno';
+  if (!_amManualComidas[dia]) _amManualComidas[dia] = {};
+
+  // Selector tipo día
+  const tipHtml = `
+    <div class="am-section" style="margin-bottom:12px;">
+      <div class="am-section-hdr">${DIAS_FULL[dia]} — Tipo de día</div>
+      <div style="padding:10px 14px 12px;display:flex;gap:8px;">
+        <button onclick="amManualSetTipo(${dia},'entreno')"
+          style="flex:1;padding:9px 6px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${tipo==='entreno'?'rgba(192,57,43,0.4)':'var(--border)'};background:${tipo==='entreno'?'var(--accent)':'var(--s2)'};color:${tipo==='entreno'?'#fff':'var(--muted)'};">
+          ⚡ Entreno
+        </button>
+        <button onclick="amManualSetTipo(${dia},'descanso')"
+          style="flex:1;padding:9px 6px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${tipo==='descanso'?'rgba(192,57,43,0.4)':'var(--border)'};background:${tipo==='descanso'?'var(--accent)':'var(--s2)'};color:${tipo==='descanso'?'#fff':'var(--muted)'};">
+          💤 Descanso
+        </button>
+      </div>
+    </div>`;
+
+  // Macros del cliente para este tipo de día
+  const kcalObj = tipo === 'entreno' ? (_drumVals.kcalE||2200) : (_drumVals.kcalD||1900);
+  const pObj    = tipo === 'entreno' ? (_drumVals.pE||160)    : (_drumVals.pD||150);
+  const hcObj   = tipo === 'entreno' ? (_drumVals.hcE||220)   : (_drumVals.hcD||170);
+  const gObj    = tipo === 'entreno' ? (_drumVals.gE||65)     : (_drumVals.gD||60);
+
+  // Calcular totales actuales del día
+  const tots = amManualTotalesDia(dia);
+
+  // Panel totales
+  const totHtml = `
+    <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;" id="amManTotKcal">${Math.round(tots.kcal)} kcal</span>
+        <span style="font-size:11px;color:var(--muted);">Objetivo: ${kcalObj} kcal</span>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--blue);" id="amManTotHC">${Math.round(tots.hc)}</div>
+          <div style="font-size:10px;color:var(--muted);">HC / ${hcObj}g</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--accent);" id="amManTotP">${Math.round(tots.p)}</div>
+          <div style="font-size:10px;color:var(--muted);">P / ${pObj}g</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--yellow);" id="amManTotG">${Math.round(tots.g)}</div>
+          <div style="font-size:10px;color:var(--muted);">G / ${gObj}g</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Comidas
+  let comidasHtml = '';
+  AM_MOMENTOS.forEach(momento => {
+    const items = _amManualComidas[dia][momento] || [];
+    const kcalM = items.reduce((a,i) => a + (i.kcal||0), 0);
+    const itemsHtml = items.map((it, idx) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(it.nombre)}</div>
+          <div style="font-size:10px;color:var(--muted);">HC${Math.round(it.hc)}g P${Math.round(it.p)}g G${Math.round(it.g)}g</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <input type="number" inputmode="numeric" value="${it.g}" min="1" max="999"
+            style="width:58px;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:5px 7px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;text-align:right;color:var(--text);outline:none;"
+            oninput="amManualUpdateGramos(${dia},'${momento}',${idx},this.value)">
+          <span style="font-size:10px;color:var(--muted);flex-shrink:0;">g</span>
+          <button onclick="amManualEliminar(${dia},'${momento}',${idx})"
+            style="width:26px;height:26px;border-radius:8px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);color:var(--accent);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+        </div>
+      </div>`).join('');
+
+    comidasHtml += `
+      <div class="am-section" style="margin-bottom:8px;">
+        <div class="am-section-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>${AM_EMOJIS[momento]} ${AM_NOMBRES[AM_MOMENTOS.indexOf(momento)]}</span>
+          <span style="font-weight:700;color:var(--accent);">${Math.round(kcalM)} kcal</span>
+        </div>
+        ${itemsHtml}
+        <!-- Buscador inline -->
+        <div style="padding:8px 12px;" id="amManBusc_${momento}">
+          <div style="position:relative;">
+            <input type="text" placeholder="Busca un alimento..."
+              style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:8px 32px 8px 12px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);outline:none;"
+              oninput="amManualBuscar(${dia},'${momento}',this.value)"
+              onkeydown="if(event.key==='Enter')amManualBuscarNow(${dia},'${momento}',this.value)">
+            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none;">🔍</span>
+          </div>
+          <div id="amManRes_${momento}" style="margin-top:4px;"></div>
+        </div>
+      </div>`;
+  });
+
+  // Nombre del menú y acciones
+  const accionesHtml = `
+    <div class="am-section" style="margin-bottom:12px;">
+      <div class="am-section-hdr">Nombre del menú</div>
+      <div style="padding:8px 12px 12px;">
+        <input id="amManNombre" type="text" value="${escapeHtml(_amManualNombre)}"
+          oninput="_amManualNombre=this.value"
+          style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);outline:none;"
+          placeholder="Ej: Semana 26 mayo — Volumen">
+      </div>
+    </div>
+    <button class="am-btn-primary" onclick="amManualGuardarDia()" style="margin-bottom:8px;">
+      💾 Guardar ${DIAS_FULL[dia]}
+    </button>
+    <button class="am-btn-secondary" onclick="amManualCopiarDesayunoMerienda()" style="margin-bottom:16px;">
+      📋 Copiar desayuno y merienda al resto de días
+    </button>`;
+
+  body.innerHTML = diasHtml + tipHtml + totHtml + comidasHtml + accionesHtml;
+}
+
+function amManualSelDia(dia) {
+  _amManualDia = dia;
+  amManualRender();
+}
+
+function amManualSetTipo(dia, tipo) {
+  _amManualTipo[dia] = tipo;
+  amManualRender();
+}
+
+function amManualTotalesDia(dia) {
+  const tots = { kcal:0, p:0, hc:0, g:0 };
+  if (!_amManualComidas[dia]) return tots;
+  AM_MOMENTOS.forEach(m => {
+    (_amManualComidas[dia][m] || []).forEach(it => {
+      tots.kcal += it.kcal || 0;
+      tots.p    += it.p    || 0;
+      tots.hc   += it.hc   || 0;
+      tots.g    += it.g    || 0;
+    });
+  });
+  return tots;
+}
+
+function _amCalcMacros(item, gramos) {
+  const f = gramos / 100;
+  return {
+    nombre: item.nombre,
+    g:    gramos,
+    kcal: Math.round((item.kcal_100||0) * f * 10) / 10,
+    p:    Math.round((item.p_100||0)    * f * 10) / 10,
+    hc:   Math.round((item.hc_100||0)  * f * 10) / 10,
+    g_grasa: Math.round((item.g_100||0)* f * 10) / 10,
+    // alias corto para el panel de totales
+    _p100: item.p_100||0, _hc100: item.hc_100||0, _g100: item.g_100||0, _k100: item.kcal_100||0
+  };
+}
+
+function amManualUpdateGramos(dia, momento, idx, val) {
+  const gramos = parseFloat(val) || 0;
+  if (!_amManualComidas[dia]?.[momento]?.[idx]) return;
+  const it = _amManualComidas[dia][momento][idx];
+  const f = gramos / 100;
+  it.g    = gramos;
+  it.kcal = Math.round((it._k100||0) * f * 10) / 10;
+  it.p    = Math.round((it._p100||0) * f * 10) / 10;
+  it.hc   = Math.round((it._hc100||0)* f * 10) / 10;
+  it.g_grasa = Math.round((it._g100||0)* f * 10) / 10;
+  // Actualizar totales sin re-render completo
+  const tots = amManualTotalesDia(dia);
+  const setT = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setT('amManTotKcal', Math.round(tots.kcal) + ' kcal');
+  setT('amManTotHC',   Math.round(tots.hc));
+  setT('amManTotP',    Math.round(tots.p));
+  setT('amManTotG',    Math.round(tots.g));
+}
+
+function amManualEliminar(dia, momento, idx) {
+  if (!_amManualComidas[dia]?.[momento]) return;
+  _amManualComidas[dia][momento].splice(idx, 1);
+  amManualRender();
+}
+
+function amManualBuscar(dia, momento, val) {
+  clearTimeout(_amManualBuscTimer);
+  const resEl = document.getElementById(`amManRes_${momento}`);
+  if (!resEl) return;
+  if (!val || val.length < 2) { resEl.innerHTML = ''; return; }
+  resEl.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:12px;">Buscando...</div>`;
+  _amManualBuscTimer = setTimeout(() => amManualBuscarNow(dia, momento, val), 600);
+}
+
+async function amManualBuscarNow(dia, momento, query) {
+  if (!query || query.length < 2) return;
+  const resEl = document.getElementById(`amManRes_${momento}`);
+  if (!resEl) return;
+  resEl.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:12px;">Buscando...</div>`;
+
+  try {
+    // Buscar directo en Supabase via admin (sin pasar por worker de cliente)
+    const q = encodeURIComponent(query.toLowerCase());
+    const res = await supaAdmin(`/rest/v1/alimentos_macroai?or=(nombre.ilike.*${q}*)&select=nombre,kcal_100,p_100,hc_100,g_100&order=nombre&limit=12`);
+    const rows = await res.json();
+
+    if (!Array.isArray(rows) || !rows.length) {
+      resEl.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:12px;">Sin resultados en BD. Prueba otro término.</div>`;
+      return;
+    }
+
+    resEl.innerHTML = rows.map((r, i) => `
+      <div onclick="amManualAnadir(${dia},'${momento}',${i})"
+        data-am-idx="${i}"
+        style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;background:var(--s2);border:1px solid var(--border);margin-bottom:4px;cursor:pointer;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.nombre)}</div>
+          <div style="font-size:10px;color:var(--muted);">HC${r.hc_100}g P${r.p_100}g G${r.g_100}g · por 100g</div>
+        </div>
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:18px;font-weight:700;flex-shrink:0;margin-left:8px;">＋</div>
+      </div>`).join('');
+
+    // Guardar los datos en el DOM para recuperarlos al clicar
+    resEl._amRows = rows;
+
+  } catch(e) {
+    resEl.innerHTML = `<div style="padding:8px;color:var(--red);font-size:12px;">Error buscando alimento.</div>`;
+  }
+}
+
+function amManualAnadir(dia, momento, rowIdx) {
+  const resEl = document.getElementById(`amManRes_${momento}`);
+  if (!resEl || !resEl._amRows) return;
+  const r = resEl._amRows[rowIdx];
+  if (!r) return;
+
+  // Gramos por defecto según el momento
+  const defaults = { desayuno:60, almuerzo:150, comida:200, merienda:80, cena:180 };
+  const g = defaults[momento] || 100;
+
+  if (!_amManualComidas[dia]) _amManualComidas[dia] = {};
+  if (!_amManualComidas[dia][momento]) _amManualComidas[dia][momento] = [];
+
+  const f = g / 100;
+  _amManualComidas[dia][momento].push({
+    nombre: r.nombre,
+    g,
+    kcal: Math.round((r.kcal_100||0) * f * 10) / 10,
+    p:    Math.round((r.p_100||0)    * f * 10) / 10,
+    hc:   Math.round((r.hc_100||0)  * f * 10) / 10,
+    g_grasa: Math.round((r.g_100||0) * f * 10) / 10,
+    // Guardar por 100g para recalcular al cambiar gramos
+    _k100: r.kcal_100||0, _p100: r.p_100||0, _hc100: r.hc_100||0, _g100: r.g_100||0
+  });
+
+  amManualRender();
+  // Hacer scroll a la comida añadida para que el usuario vea el item
+  setTimeout(() => {
+    const sec = document.getElementById(`amManBusc_${momento}`);
+    if (sec) sec.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 100);
+}
+
+async function amManualGuardarDia() {
+  const dia = _amManualDia;
+  const tipo = _amManualTipo[dia] || 'entreno';
+  const comidas = _amManualComidas[dia] || {};
+  const nombre = (_amManualNombre || '').trim() || `Menú manual`;
+
+  // Construir el objeto menu en el mismo formato que usa cargarMiMenu()
+  const menuComidas = AM_MOMENTOS
+    .filter(m => (comidas[m]||[]).length > 0)
+    .map(m => ({
+      momento: m,
+      alimentos: (comidas[m]||[]).map(it => ({
+        nombre: it.nombre,
+        g: it.g,
+        kcal: it.kcal,
+        p: it.p,
+        hc: it.hc,
+        grasa: it.g_grasa
+      }))
+    }));
+
+  if (!menuComidas.length) {
+    showToast('⚠️ Añade al menos un alimento');
+    return;
+  }
+
+  // Totales
+  const tots = amManualTotalesDia(dia);
+
+  const payload = {
+    cliente_email: _adminMenuEmail,
+    nombre,
+    tipo_dia: tipo,
+    menu: JSON.stringify({ comidas: menuComidas }),
+    kcal_total:  Math.round(tots.kcal),
+    prot_total:  Math.round(tots.p),
+    hc_total:    Math.round(tots.hc),
+    grasa_total: Math.round(tots.g),
+    activo: true
+  };
+
+  try {
+    // Desactivar los menús activos anteriores de este cliente
+    await supaAdmin(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&activo=eq.true`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ activo: false })
+    });
+
+    // Insertar el nuevo
+    const res = await supaAdmin('/rest/v1/menus_macroai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok || res.status === 201) {
+      showToast(`✅ ${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][dia]} guardado`);
+      cargarMenusGuardados();
+    } else {
+      const err = await res.text();
+      console.error('amManualGuardarDia:', err);
+      showToast('❌ Error guardando el día');
+    }
+  } catch(e) {
+    console.error('amManualGuardarDia:', e);
+    showToast('❌ Error de conexión');
+  }
+}
+
+function amManualCopiarDesayunoMerienda() {
+  const origen = _amManualDia;
+  const des = _amManualComidas[origen]?.desayuno;
+  const mer = _amManualComidas[origen]?.merienda;
+
+  if (!des?.length && !mer?.length) {
+    showToast('⚠️ No hay desayuno ni merienda en este día');
+    return;
+  }
+
+  let copiados = 0;
+  for (let d = 0; d < 7; d++) {
+    if (d === origen) continue;
+    if (!_amManualComidas[d]) _amManualComidas[d] = {};
+    if (des?.length) _amManualComidas[d].desayuno = JSON.parse(JSON.stringify(des));
+    if (mer?.length) _amManualComidas[d].merienda = JSON.parse(JSON.stringify(mer));
+    copiados++;
+  }
+  showToast(`✅ Copiado a ${copiados} días`);
+  amManualRender();
+}
+
 </script>
 
 <style>
