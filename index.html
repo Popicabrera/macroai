@@ -120,10 +120,10 @@ body{
 
 /* ══════════════ DESKTOP SIDEBAR LAYOUT ══════════════ */
 @media(min-width:900px){
-  body{flex-direction:row;align-items:stretch;justify-content:flex-start;}
   #desktopSidebar{display:flex!important;}
-  .view{max-width:none;}
   #bottomNav{display:none!important;}
+  .view{left:210px!important;}
+  #viewBuscador{left:210px!important;}
   .has-bottom-nav .scrollable,
   .has-bottom-nav [style*="overflow-y:auto"],
   .has-bottom-nav [style*="overflow-y: auto"]{padding-bottom:24px!important;}
@@ -131,15 +131,13 @@ body{
 #desktopSidebar{
   display:none;
   width:210px;
-  flex-shrink:0;
-  background:var(--s1);
-  border-right:1px solid var(--border);
   flex-direction:column;
   padding:28px 0 20px;
-  height:100vh;
-  position:sticky;
-  top:0;
-  z-index:200;
+  position:fixed;
+  top:0;left:0;bottom:0;
+  z-index:300;
+  background:var(--s1);
+  border-right:1px solid var(--border);
   overflow-y:auto;
 }
 .dsb-logo{padding:0 18px 22px;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
