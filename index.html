@@ -122,11 +122,12 @@ body{
 @media(min-width:900px){
   #desktopSidebar{display:flex!important;}
   #bottomNav{display:none!important;}
-  .view{left:210px!important;}
-  #viewBuscador{left:210px!important;}
+  .view,.view.active{left:210px!important;right:0!important;width:auto!important;}
   .has-bottom-nav .scrollable,
   .has-bottom-nav [style*="overflow-y:auto"],
   .has-bottom-nav [style*="overflow-y: auto"]{padding-bottom:24px!important;}
+  .aw{max-width:none!important;}
+  #viewChat,#viewBuscador{bottom:0!important;left:210px!important;}
 }
 #desktopSidebar{
   display:none;
