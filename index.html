@@ -121,6 +121,7 @@ body{
 /* ══════════════ DESKTOP SIDEBAR LAYOUT ══════════════ */
 @media(min-width:900px){
   body.app-ready #desktopSidebar{display:flex!important;}
+  body:not(.app-ready) #desktopSidebar{display:none!important;}
   #bottomNav{display:none!important;}
   body.app-ready .view,body.app-ready .view.active{left:180px!important;right:0!important;width:auto!important;}
   .has-bottom-nav .scrollable,
@@ -134,11 +135,6 @@ body{
   .mp-macro-div{margin:0 14px;}
 }
 /* sidebar fuera de #mainApp — se controla exclusivamente por body.app-ready en CSS, sin inline styles */
-/* Ocultar sidebar en pantalla de login, independientemente de inline styles */
-body.auth-active #desktopSidebar,
-body:not(.app-ready) #desktopSidebar{
-  display:none!important;
-}
 #desktopSidebar{
   display:none;
   width:180px;
@@ -1241,9 +1237,9 @@ function doLogout(){
   });
   document.body.classList.add('auth-active');
   document.body.classList.remove('app-ready');
-  // Sidebar se oculta automáticamente por CSS (body:not(.app-ready) #desktopSidebar)
+  // Sidebar oculto por CSS body:not(.app-ready) — no necesita inline style
   const sb = document.getElementById('desktopSidebar');
-  if(sb){ sb.style.display=''; } // limpiar cualquier inline style previo
+  if(sb){ sb.style.display=''; }
   const av=document.getElementById('dsbAvatar'); if(av) av.textContent='—';
   const nm=document.getElementById('dsbNombre'); if(nm) nm.textContent='';
   const rl=document.getElementById('dsbRol');   if(rl) rl.textContent='';
@@ -8102,7 +8098,7 @@ function initDesktopSidebar() {
   const nombre = CURRENT_USER?.nombre || CURRENT_USER?.email || '';
   const iniciales = nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || 'U';
   const sidebar = document.getElementById('desktopSidebar');
-  if(sidebar) sidebar.style.display = ''; // dejar que CSS body.app-ready lo muestre
+  if(sidebar) sidebar.style.display = ''; // CSS body.app-ready controla la visibilidad
 
   const av = document.getElementById('dsbAvatar');
   const nm = document.getElementById('dsbNombre');
