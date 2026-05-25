@@ -120,14 +120,14 @@ body{
 
 /* ══════════════ DESKTOP SIDEBAR LAYOUT ══════════════ */
 @media(min-width:900px){
-  #desktopSidebar{display:flex!important;}
+  body.app-ready #desktopSidebar{display:flex!important;}
   #bottomNav{display:none!important;}
-  .view,.view.active{left:180px!important;right:0!important;width:auto!important;}
+  body.app-ready .view,body.app-ready .view.active{left:180px!important;right:0!important;width:auto!important;}
   .has-bottom-nav .scrollable,
   .has-bottom-nav [style*="overflow-y:auto"],
   .has-bottom-nav [style*="overflow-y: auto"]{padding-bottom:24px!important;}
   .aw{max-width:900px!important;padding:0!important;margin:0 auto!important;}
-  #viewChat,#viewBuscador{bottom:0!important;left:180px!important;}
+  body.app-ready #viewChat,body.app-ready #viewBuscador{bottom:0!important;left:180px!important;}
   .macro-panel{padding:12px 20px 14px;}
   .mp-kcal-big{font-size:26px;}
   .mp-macro-rest{font-size:18px;}
@@ -1076,6 +1076,7 @@ async function supaAdmin(path,opts={}){
 function showAuth(id){
   // Ocultar app wrapper
   const ma=document.getElementById('mainApp');if(ma)ma.style.display='none';
+  document.body.classList.remove('app-ready');
   // Resetear sidebar (initDesktopSidebar pone display:flex inline, hay que limpiarlo)
   const sb=document.getElementById('desktopSidebar');if(sb)sb.style.display='none';
   // Ocultar todas las views
@@ -1194,6 +1195,7 @@ function doLogout(){
     el.style.display='';
   });
   document.body.classList.add('auth-active');
+  document.body.classList.remove('app-ready');
   const sb = document.getElementById('desktopSidebar');
   if (sb) sb.style.display = 'none';
   // Resetear display de auth-screens (pueden tener display:none de enterApp)
@@ -1212,6 +1214,7 @@ function enterApp(){
     s.style.display='none';
   });
   document.body.classList.remove('auth-active');
+  document.body.classList.add('app-ready');
   document.getElementById('mainApp').style.display='';
   // Ping al Worker para despertarlo antes de que el usuario lo necesite
   fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
