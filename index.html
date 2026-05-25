@@ -1187,6 +1187,8 @@ function doLogout(){
     el.style.display='';
   });
   document.body.classList.add('auth-active');
+  const sb = document.getElementById('desktopSidebar');
+  if (sb) sb.style.display = 'none';
   // Resetear display de auth-screens (pueden tener display:none de enterApp)
   document.querySelectorAll('.auth-screen').forEach(s=>s.style.display='');
   const login=document.getElementById('screenLogin');
@@ -7839,7 +7841,7 @@ function amManualCopiarDesayunoMerienda() {
 </style>
 
 <!-- ══ DESKTOP SIDEBAR ══ -->
-<div id="desktopSidebar">
+<div id="desktopSidebar" style="display:none;">
   <div class="dsb-logo">Macro<em>AI</em></div>
   <div class="dsb-sep"></div>
   <div class="dsb-item" data-tab="diario" onclick="dsbNav('diario')">
@@ -8079,6 +8081,8 @@ function initDesktopSidebar() {
   const isAdmin = CURRENT_USER?.email === ADMIN_EMAIL;
   const nombre = CURRENT_USER?.nombre || CURRENT_USER?.email || '';
   const iniciales = nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || 'U';
+  const sidebar = document.getElementById('desktopSidebar');
+  if (sidebar && window.innerWidth >= 900) sidebar.style.display = 'flex';
 
   const av = document.getElementById('dsbAvatar');
   const nm = document.getElementById('dsbNombre');
