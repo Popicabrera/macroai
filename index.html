@@ -5627,6 +5627,9 @@ function futurMfpMoverItem(fecha,mealId,idx,newMealId){
 let _buscadorFechaFutura = null;
 // ── BOOT ──
 window.addEventListener('load',()=>{
+  // Ocultar sidebar inmediatamente — se muestra sólo en enterApp() vía initDesktopSidebar()
+  const _sb=document.getElementById('desktopSidebar');
+  if(_sb) _sb.style.display='none';
   // Inicializar SDK Supabase
   let attempts=0;
   function tryInitDb(){
