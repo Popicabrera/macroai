@@ -1236,7 +1236,12 @@ function doLogout(){
   });
   document.body.classList.add('auth-active');
   document.body.classList.remove('app-ready');
-  // El CSS oculta el sidebar al quitar app-ready — no necesita inline style
+  // Ocultar y limpiar sidebar explícitamente
+  const sb = document.getElementById('desktopSidebar');
+  if(sb){ sb.style.display='none'; }
+  const av=document.getElementById('dsbAvatar'); if(av) av.textContent='—';
+  const nm=document.getElementById('dsbNombre'); if(nm) nm.textContent='';
+  const rl=document.getElementById('dsbRol');   if(rl) rl.textContent='';
   // Resetear display de auth-screens (pueden tener display:none de enterApp)
   document.querySelectorAll('.auth-screen').forEach(s=>s.style.display='');
   const login=document.getElementById('screenLogin');
@@ -8092,7 +8097,7 @@ function initDesktopSidebar() {
   const nombre = CURRENT_USER?.nombre || CURRENT_USER?.email || '';
   const iniciales = nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || 'U';
   const sidebar = document.getElementById('desktopSidebar');
-  // El CSS body.app-ready #desktopSidebar{display:flex!important} lo muestra — sin inline style
+  if(sidebar) sidebar.style.display = ''; // dejar que CSS body.app-ready lo muestre
 
   const av = document.getElementById('dsbAvatar');
   const nm = document.getElementById('dsbNombre');
