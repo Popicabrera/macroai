@@ -8090,6 +8090,16 @@ function initDesktopSidebar() {
   dsbUpdateActive();
 }
 
+// Re-init sidebar si la ventana se amplía tras cargar
+let _dsbResizeInit = false;
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 900 && !_dsbResizeInit && typeof CURRENT_USER !== 'undefined' && CURRENT_USER) {
+    _dsbResizeInit = true;
+    initDesktopSidebar();
+  }
+  if (window.innerWidth < 900) _dsbResizeInit = false;
+});
+
 function dsbNav(tab) {
   bnNav(tab);
   setTimeout(dsbUpdateActive, 150);
