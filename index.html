@@ -149,21 +149,31 @@ body{
   border-right:1px solid var(--border);
   overflow-y:auto;
 }
-.dsb-logo{padding:20px 16px 16px;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
-.dsb-logo em{color:var(--accent);font-style:normal;}
-.dsb-sep{height:1px;background:var(--border);margin:0 12px 10px;}
-.dsb-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:color .15s,background .15s;}
-.dsb-item:hover{color:var(--text);background:rgba(0,0,0,0.03);}
+/* ── Logo con icono ── */
+.dsb-logo-wrap{display:flex;align-items:center;gap:10px;padding:18px 14px 16px;}
+.dsb-logo-icon{width:32px;height:32px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:#f5f0e8;flex-shrink:0;}
+.dsb-logo-text{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
+.dsb-logo-text em{color:var(--accent);font-style:normal;}
+.dsb-logo-sub{font-size:9px;color:var(--muted2);letter-spacing:0.8px;text-transform:uppercase;margin-top:1px;}
+/* ── Separador y sección ── */
+.dsb-sep{height:1px;background:var(--border);margin:0 12px 8px;}
+.dsb-section-label{font-size:9px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;padding:8px 14px 4px;}
+/* ── Items nav ── */
+.dsb-item{display:flex;align-items:center;gap:9px;padding:9px 12px;margin:0 6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-left:2px solid transparent;border-radius:8px;transition:color .15s,background .15s;}
+.dsb-item:hover{color:var(--text);background:rgba(0,0,0,0.04);}
 .dsb-item.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-dim);}
-.dsb-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7;}
+.dsb-item svg{width:16px;height:16px;flex-shrink:0;opacity:.65;}
 .dsb-item.on svg{opacity:1;}
 .dsb-spacer{flex:1;}
-.dsb-user{padding:10px 12px 4px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.dsb-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#f5f0e8;flex-shrink:0;}
+/* ── Footer usuario ── */
+.dsb-footer{border-top:1px solid var(--border);padding:10px 8px 6px;}
+.dsb-user{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;background:var(--s2);}
+.dsb-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#f5f0e8;flex-shrink:0;}
 .dsb-user-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dsb-user-role{font-size:10px;color:var(--muted2);}
-.dsb-logout{padding:4px 14px 12px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:color .15s;}
+.dsb-logout{display:flex;align-items:center;gap:6px;padding:7px 10px;margin:2px 0 4px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;transition:color .15s;border-radius:8px;}
 .dsb-logout:hover{color:var(--accent);}
+.dsb-logout svg{width:14px;height:14px;flex-shrink:0;opacity:.6;}
 .bn-item{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:3px;padding:8px 4px 10px;cursor:pointer;
@@ -775,8 +785,18 @@ body{
 
 <!-- ══ DESKTOP SIDEBAR (movido fuera de mainApp para evitar herencia de display) ══ -->
 <div id="desktopSidebar">
-  <div class="dsb-logo">Macro<em>AI</em></div>
+  <!-- Logo -->
+  <div class="dsb-logo-wrap">
+    <div class="dsb-logo-icon">M</div>
+    <div>
+      <div class="dsb-logo-text">Macro<em>AI</em></div>
+      <div class="dsb-logo-sub">Nutrición</div>
+    </div>
+  </div>
   <div class="dsb-sep"></div>
+
+  <!-- Nav principal -->
+  <div class="dsb-section-label">Principal</div>
   <div class="dsb-item" data-tab="diario" onclick="dsbNav('diario')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
     <span>Diario</span>
@@ -793,6 +813,9 @@ body{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     <span>Favoritos</span>
   </div>
+
+  <!-- Nav cuenta -->
+  <div class="dsb-section-label" style="margin-top:8px;">Cuenta</div>
   <div class="dsb-item" data-tab="perfil" onclick="dsbNav('perfil')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span>Perfil</span>
@@ -801,16 +824,23 @@ body{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
     <span>Clientes</span>
   </div>
+
   <div class="dsb-spacer"></div>
-  <div class="dsb-sep"></div>
-  <div class="dsb-user">
-    <div class="dsb-avatar" id="dsbAvatar">—</div>
-    <div style="flex:1;min-width:0;">
-      <div class="dsb-user-name" id="dsbNombre"></div>
-      <div class="dsb-user-role" id="dsbRol"></div>
+
+  <!-- Footer usuario -->
+  <div class="dsb-footer">
+    <div class="dsb-user">
+      <div class="dsb-avatar" id="dsbAvatar">—</div>
+      <div style="flex:1;min-width:0;">
+        <div class="dsb-user-name" id="dsbNombre"></div>
+        <div class="dsb-user-role" id="dsbRol"></div>
+      </div>
+    </div>
+    <div class="dsb-logout" onclick="doLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar sesión
     </div>
   </div>
-  <div class="dsb-logout" onclick="doLogout()">Cerrar sesión</div>
 </div>
 
 
