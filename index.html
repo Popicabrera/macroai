@@ -134,6 +134,11 @@ body{
   .mp-macro-div{margin:0 14px;}
 }
 /* sidebar fuera de #mainApp — se controla exclusivamente por body.app-ready en CSS, sin inline styles */
+/* Ocultar sidebar en pantalla de login, independientemente de inline styles */
+body.auth-active #desktopSidebar,
+body:not(.app-ready) #desktopSidebar{
+  display:none!important;
+}
 #desktopSidebar{
   display:none;
   width:180px;
@@ -1236,9 +1241,9 @@ function doLogout(){
   });
   document.body.classList.add('auth-active');
   document.body.classList.remove('app-ready');
-  // Ocultar y limpiar sidebar explícitamente
+  // Sidebar se oculta automáticamente por CSS (body:not(.app-ready) #desktopSidebar)
   const sb = document.getElementById('desktopSidebar');
-  if(sb){ sb.style.display='none'; }
+  if(sb){ sb.style.display=''; } // limpiar cualquier inline style previo
   const av=document.getElementById('dsbAvatar'); if(av) av.textContent='—';
   const nm=document.getElementById('dsbNombre'); if(nm) nm.textContent='';
   const rl=document.getElementById('dsbRol');   if(rl) rl.textContent='';
