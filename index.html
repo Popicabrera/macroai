@@ -133,7 +133,7 @@ body{
   .mp-macro-rest{font-size:18px;}
   .mp-macro-div{margin:0 14px;}
 }
-body.auth-active #desktopSidebar{display:none!important;}
+/* body.auth-active #desktopSidebar — eliminado: el sidebar vive en #mainApp que empieza oculto */
 #desktopSidebar{
   display:none;
   width:180px;
@@ -673,7 +673,7 @@ body.auth-active #desktopSidebar{display:none!important;}
   font-size:14px;color:var(--muted);cursor:pointer;}
 </style>
 </head>
-<body class="auth-active">
+<body>
 <div class="ambient"></div>
 
 <!-- ══ LOGIN ══ -->
@@ -769,6 +769,9 @@ body.auth-active #desktopSidebar{display:none!important;}
     <button class="auth-btn secondary" onclick="showAuth('screenLogin')">‹ Volver al login</button>
   </div>
 </div>
+
+<!-- ══ APP WRAPPER (oculto hasta enterApp) ══ -->
+<div id="mainApp" style="display:none">
 
 <!-- ══ VISTA PRINCIPAL ══ -->
 <div class="view" id="viewMain">
@@ -1071,6 +1074,8 @@ async function supaAdmin(path,opts={}){
 
 // ── AUTH ──
 function showAuth(id){
+  // Ocultar app wrapper
+  const ma=document.getElementById('mainApp');if(ma)ma.style.display='none';
   // Ocultar todas las views
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   // Mostrar auth
@@ -1205,6 +1210,7 @@ function enterApp(){
     s.style.display='none';
   });
   document.body.classList.remove('auth-active');
+  document.getElementById('mainApp').style.display='';
   // Ping al Worker para despertarlo antes de que el usuario lo necesite
   fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
   // Sincronizar favoritos e historial desde Supabase (fix incógnito)
@@ -5627,9 +5633,6 @@ function futurMfpMoverItem(fecha,mealId,idx,newMealId){
 let _buscadorFechaFutura = null;
 // ── BOOT ──
 window.addEventListener('load',()=>{
-  // Ocultar sidebar inmediatamente — se muestra sólo en enterApp() vía initDesktopSidebar()
-  const _sb=document.getElementById('desktopSidebar');
-  if(_sb) _sb.style.display='none';
   // Inicializar SDK Supabase
   let attempts=0;
   function tryInitDb(){
@@ -8123,5 +8126,6 @@ function dsbUpdateActive() {
 }
 </script>
 
+</div><!-- /mainApp -->
 </body>
 </html>
