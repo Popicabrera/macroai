@@ -133,6 +133,8 @@ body{
   .mp-macro-rest{font-size:18px;}
   .mp-macro-div{margin:0 14px;}
 }
+/* FIX: cuando la app está activa, ocultar auth-screens aunque tengan clase active o display inline */
+body.app-ready .auth-screen{display:none!important;}
 /* body.auth-active #desktopSidebar — eliminado: el sidebar vive en #mainApp que empieza oculto */
 #desktopSidebar{
   display:none;
