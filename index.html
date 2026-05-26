@@ -1155,7 +1155,7 @@ body{
 .admin-filter.off{background:var(--s2);color:var(--muted);}
 
 /* ── Admin cards — desktop ── */
-.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;}
+.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;}
 .admin-card:hover{border-color:rgba(192,57,43,0.3);}
 .admin-card-avatar{width:42px;height:42px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.2);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;}
 .admin-card-info{flex:1;min-width:0;}
@@ -3556,30 +3556,127 @@ function renderAdminCards(){
 function buildAdminCard(u){
   const card=document.createElement('div');
   card.className='admin-card';
+  card.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:11px 12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;user-select:none;';
   const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short'});
   const initials=(u.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
   const tieneMacros=window._adminPerfilesEmails?.has(u.email);
   const tieneMenu=window._adminMenusEmails?.has(u.email);
   const modoApp=window._adminModoApp?.[u.email]||null;
   card.innerHTML=`
-    <div class="admin-card-avatar">${initials}</div>
+    <div class="admin-card-avatar" style="flex-shrink:0;">${initials}</div>
     <div class="admin-card-info" style="flex:1;min-width:0;overflow:hidden;">
       <div class="admin-card-nombre" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nombre||'Sin nombre'}</div>
-      <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:7px;">${u.email}</div>
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;">
+      <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;margin-bottom:7px;">${u.email}</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;">
         <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}" style="flex-shrink:0;">${u.activo?'Activo':'Inactivo'}</span>
-        ${modoApp ? `<button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp}" style="flex-shrink:0;padding:5px 11px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;${modoApp==='menu'?'background:#c0392b;border:2px solid #9b2335;color:#fff;':'background:#e8f4fd;border:2px solid #2980b9;color:#1a5276;'}">
-          ${modoApp==='menu'?'🍽️ Menú':'📊 Macros'}
-        </button>` : ''}
-        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;">Macros</button>
-        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;">Menú</button>
-        <div style="flex:1;"></div>
-        <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo});event.stopPropagation();" style="flex-shrink:0;">
-          <div class="admin-toggle-dot"></div>
-        </div>
+        ${modoApp ? `<button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp}" onclick="event.stopPropagation();" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${modoApp==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${modoApp==='menu'?'🍽️ Menú':'📊 Macros'}</button>` : ''}
+        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();">Macros</button>
+        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;" onclick="event.stopPropagation();">Menú</button>
       </div>
     </div>`;
+
+  // Long press móvil / clic derecho desktop → menú contextual
+  let _pressTimer = null;
+  let _pressStartY = 0;
+  card.addEventListener('touchstart', e => {
+    _pressStartY = e.touches[0].clientY;
+    _pressTimer = setTimeout(() => { if(navigator.vibrate)navigator.vibrate(40); adminCardMenu(u); }, 600);
+  }, {passive:true});
+  card.addEventListener('touchend', () => clearTimeout(_pressTimer));
+  card.addEventListener('touchmove', e => { if(Math.abs(e.touches[0].clientY-_pressStartY)>8) clearTimeout(_pressTimer); }, {passive:true});
+  card.addEventListener('contextmenu', e => { e.preventDefault(); adminCardMenu(u, e); });
+
   return card;
+}
+
+function adminCardMenu(u, evt) {
+  const isDesktop = evt && evt.clientX;
+
+  if(isDesktop) {
+    let cm = document.getElementById('_adminCtx');
+    if(cm) cm.remove();
+    cm = document.createElement('div');
+    cm.id = '_adminCtx';
+    cm.style.cssText = `position:fixed;left:${Math.min(evt.clientX, window.innerWidth-180)}px;top:${evt.clientY}px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:9999;min-width:170px;box-shadow:0 4px 20px rgba(0,0,0,0.15);`;
+    cm.innerHTML = `
+      <div onclick="abrirEditarCliente('${u.id}','${(u.nombre||'').replace(/'/g,"\'")}','${u.email}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">✏️ Editar datos</div>
+      <div onclick="toggleUsuario('${u.id}',${u.activo});this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">${u.activo?'🔴 Desactivar':'🟢 Activar'}</div>
+      <div onclick="confirmarEliminarCliente('${u.id}','${(u.nombre||u.email).replace(/'/g,"\'")}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--red);" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">🗑️ Eliminar cliente</div>`;
+    document.body.appendChild(cm);
+    setTimeout(() => document.addEventListener('click', () => cm?.remove(), {once:true}), 10);
+    return;
+  }
+
+  // Bottom sheet móvil
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">${escapeHtml(u.nombre||'Cliente')}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${escapeHtml(u.email)}</div>
+      <button id="_acEdit" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;margin-bottom:8px;text-align:left;">✏️ Editar datos</button>
+      <button id="_acToggle" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:${u.activo?'var(--accent)':'var(--muted)'};cursor:pointer;margin-bottom:8px;text-align:left;">${u.activo?'🔴 Desactivar cliente':'🟢 Activar cliente'}</button>
+      <button id="_acDel" style="width:100%;padding:13px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:12px;text-align:left;">🗑️ Eliminar cliente</button>
+      <button id="_acCan" style="width:100%;padding:13px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_acEdit').onclick = () => { ov.remove(); abrirEditarCliente(u.id, u.nombre||'', u.email); };
+  ov.querySelector('#_acToggle').onclick = () => { ov.remove(); toggleUsuario(u.id, u.activo); };
+  ov.querySelector('#_acDel').onclick = () => { ov.remove(); confirmarEliminarCliente(u.id, u.nombre||u.email); };
+  ov.querySelector('#_acCan').onclick = () => ov.remove();
+}
+
+function abrirEditarCliente(id, nombre, email) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML = `
+    <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">✏️ Editar cliente</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
+        <input id="_ecNombre" type="text" value="${escapeHtml(nombre)}" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
+        <input id="_ecEmail" type="email" value="${escapeHtml(email)}" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+      </div>
+      <div id="_ecMsg" style="display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="_ecSave" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Guardar</button>
+        <button onclick="this.closest('[style*=inset]').remove()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_ecSave').onclick = async () => {
+    const nuevoNombre = ov.querySelector('#_ecNombre').value.trim();
+    const nuevoEmail = ov.querySelector('#_ecEmail').value.trim();
+    const btn = ov.querySelector('#_ecSave');
+    const msg = ov.querySelector('#_ecMsg');
+    if(!nuevoNombre||!nuevoEmail){msg.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);color:var(--red);font-size:12px;';msg.textContent='Rellena todos los campos.';return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+    try{
+      await supaAdmin('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal','Content-Type':'application/json'},body:JSON.stringify({nombre:nuevoNombre,email:nuevoEmail})});
+      ov.remove();showToast('✅ Cliente actualizado');loadAdminUsers();
+    }catch(e){msg.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);color:var(--red);font-size:12px;';msg.textContent='Error guardando.';btn.disabled=false;btn.textContent='Guardar';}
+  };
+}
+
+function confirmarEliminarCliente(id, nombre) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">¿Eliminar a "${escapeHtml(nombre)}"?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Esta acción no se puede deshacer. Se eliminará el cliente y todos sus datos.</div>
+      <button id="_delOk" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">🗑️ Sí, eliminar</button>
+      <button id="_delCan" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_delCan').onclick = () => ov.remove();
+  ov.querySelector('#_delOk').onclick = async () => { await eliminarCliente(id, nombre); ov.remove(); };
 }
 
 async function loadAdminUsers(){
@@ -3591,17 +3688,12 @@ async function loadAdminUsers(){
     const users=await res.json();
     window._adminPerfilesEmails=new Set();
     window._adminMenusEmails=new Set();
-    window._adminModoApp={};
     try{
       const [pRes,mRes]=await Promise.all([
-        supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,modo_app'),
+        supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email'),
         supaAdmin('/rest/v1/menus_macroai?select=cliente_email')
       ]);
-      const pRows=await pRes.json();
-      if(Array.isArray(pRows)) pRows.forEach(r=>{
-        window._adminPerfilesEmails.add(r.cliente_email);
-        window._adminModoApp[r.cliente_email]=r.modo_app||'macros';
-      });
+      const pRows=await pRes.json(); if(Array.isArray(pRows)) pRows.forEach(r=>window._adminPerfilesEmails.add(r.cliente_email));
       const mRows=await mRes.json(); if(Array.isArray(mRows)) mRows.forEach(r=>window._adminMenusEmails.add(r.cliente_email));
     }catch(e){}
     _adminUsersData=Array.isArray(users)?users:[];
@@ -3629,42 +3721,6 @@ document.addEventListener('click', function(e) {
     abrirPerfilAdmin(id, nombre, email);
   }
 });
-
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.admin-modo-btn');
-  if (btn) {
-    const email = btn.dataset.email;
-    const modoActual = btn.dataset.modo;
-    const nuevoModo = modoActual === 'menu' ? 'macros' : 'menu';
-    cambiarModoApp(email, nuevoModo, btn);
-  }
-});
-
-async function cambiarModoApp(email, nuevoModo, btn) {
-  btn.disabled = true;
-  btn.style.opacity = '0.6';
-  try {
-    await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(email)}`, {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
-      body: JSON.stringify({modo_app: nuevoModo})
-    });
-    window._adminModoApp[email] = nuevoModo;
-    btn.dataset.modo = nuevoModo;
-    if(nuevoModo === 'menu') {
-      btn.style.cssText = btn.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, 'background:#c0392b;border:2px solid #9b2335;color:#fff;');
-      btn.innerHTML = '🍽️ Menú';
-    } else {
-      btn.style.cssText = btn.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, 'background:#e8f4fd;border:2px solid #2980b9;color:#1a5276;');
-      btn.innerHTML = '📊 Macros';
-    }
-    showToast(`✅ Modo cambiado a ${nuevoModo}`);
-  } catch(e) {
-    showToast('❌ Error cambiando modo');
-  }
-  btn.disabled = false;
-  btn.style.opacity = '1';
-}
 
 function showCrearCliente(){
   const ov=document.getElementById("crearClienteOverlay");
