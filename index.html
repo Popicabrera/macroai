@@ -7394,6 +7394,7 @@ async function renderAdminMacros() {
     if(Array.isArray(rows)&&rows.length) perfil=rows[0];
   } catch(e){}
   _drumVals = { kcalE:perfil?.kcal_objetivo||2200, kcalD:perfil?.kcal_descanso||1900, pE:perfil?.p_objetivo||160, hcE:perfil?.hc_objetivo||220, gE:perfil?.g_objetivo||65, pD:perfil?.p_descanso||150, hcD:perfil?.hc_descanso||170, gD:perfil?.g_descanso||60 };
+  _amModoDesktop = perfil?.modo_macros||'ed';
   _drumModo='g'; _drumContainer='adminMacrosBody';
   renderAdminMacrosUI();
 }
@@ -7531,7 +7532,8 @@ async function guardarMacros(silent=false, modoApp=null) {
     p_descanso:    _drumVals.pD,
     hc_descanso:   _drumVals.hcD,
     g_descanso:    _drumVals.gD,
-    modo_app:      modoApp
+    modo_app:      modoApp,
+    modo_macros:   _amModoDesktop
   };
   try {
     const res = await supaAdmin('/rest/v1/perfiles_macroai', {
