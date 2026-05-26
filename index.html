@@ -3560,6 +3560,7 @@ function buildAdminCard(u){
   const initials=(u.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
   const tieneMacros=window._adminPerfilesEmails?.has(u.email);
   const tieneMenu=window._adminMenusEmails?.has(u.email);
+  const modoApp=window._adminModoApp?.[u.email]||null;
   card.innerHTML=`
     <div class="admin-card-avatar">${initials}</div>
     <div class="admin-card-info" style="flex:1;min-width:0;overflow:hidden;">
@@ -3567,8 +3568,11 @@ function buildAdminCard(u){
       <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:7px;">${u.email}</div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;">
         <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}" style="flex-shrink:0;">${u.activo?'Activo':'Inactivo'}</span>
-        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:5px 11px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;${tieneMacros?'background:#c0392b;border:2px solid #9b2335;color:#fff;':'background:var(--s2);border:1px dashed rgba(0,0,0,0.2);color:var(--muted2);'}">${tieneMacros?'✓ Macros':'Macros'}</button>
-        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:5px 11px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;${tieneMenu?'background:#c0392b;border:2px solid #9b2335;color:#fff;':'background:var(--s2);border:1px dashed rgba(0,0,0,0.2);color:var(--muted2);'}">${tieneMenu?'✓ Menú':'Menú'}</button>
+        ${modoApp ? `<button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp}" style="flex-shrink:0;padding:5px 11px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;${modoApp==='menu'?'background:#c0392b;border:2px solid #9b2335;color:#fff;':'background:#e8f4fd;border:2px solid #2980b9;color:#1a5276;'}">
+          ${modoApp==='menu'?'🍽️ Menú':'📊 Macros'}
+        </button>` : ''}
+        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;">Macros</button>
+        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;">Menú</button>
         <div style="flex:1;"></div>
         <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo});event.stopPropagation();" style="flex-shrink:0;">
           <div class="admin-toggle-dot"></div>
@@ -3587,12 +3591,17 @@ async function loadAdminUsers(){
     const users=await res.json();
     window._adminPerfilesEmails=new Set();
     window._adminMenusEmails=new Set();
+    window._adminModoApp={};
     try{
       const [pRes,mRes]=await Promise.all([
-        supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email'),
+        supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,modo_app'),
         supaAdmin('/rest/v1/menus_macroai?select=cliente_email')
       ]);
-      const pRows=await pRes.json(); if(Array.isArray(pRows)) pRows.forEach(r=>window._adminPerfilesEmails.add(r.cliente_email));
+      const pRows=await pRes.json();
+      if(Array.isArray(pRows)) pRows.forEach(r=>{
+        window._adminPerfilesEmails.add(r.cliente_email);
+        window._adminModoApp[r.cliente_email]=r.modo_app||'macros';
+      });
       const mRows=await mRes.json(); if(Array.isArray(mRows)) mRows.forEach(r=>window._adminMenusEmails.add(r.cliente_email));
     }catch(e){}
     _adminUsersData=Array.isArray(users)?users:[];
@@ -3620,6 +3629,42 @@ document.addEventListener('click', function(e) {
     abrirPerfilAdmin(id, nombre, email);
   }
 });
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.admin-modo-btn');
+  if (btn) {
+    const email = btn.dataset.email;
+    const modoActual = btn.dataset.modo;
+    const nuevoModo = modoActual === 'menu' ? 'macros' : 'menu';
+    cambiarModoApp(email, nuevoModo, btn);
+  }
+});
+
+async function cambiarModoApp(email, nuevoModo, btn) {
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  try {
+    await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(email)}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({modo_app: nuevoModo})
+    });
+    window._adminModoApp[email] = nuevoModo;
+    btn.dataset.modo = nuevoModo;
+    if(nuevoModo === 'menu') {
+      btn.style.cssText = btn.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, 'background:#c0392b;border:2px solid #9b2335;color:#fff;');
+      btn.innerHTML = '🍽️ Menú';
+    } else {
+      btn.style.cssText = btn.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, 'background:#e8f4fd;border:2px solid #2980b9;color:#1a5276;');
+      btn.innerHTML = '📊 Macros';
+    }
+    showToast(`✅ Modo cambiado a ${nuevoModo}`);
+  } catch(e) {
+    showToast('❌ Error cambiando modo');
+  }
+  btn.disabled = false;
+  btn.style.opacity = '1';
+}
 
 function showCrearCliente(){
   const ov=document.getElementById("crearClienteOverlay");
