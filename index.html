@@ -2327,7 +2327,7 @@ function showView(id){
   document.getElementById(id).classList.add('active');
   closeContextMenu();
   // Sincronizar bottom nav
-  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes'};
+  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes',viewMenuSemanal:'clientes'};
   const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
   if(bnMap[id]){const b=document.getElementById('bn-'+bnMap[id]);if(b)b.classList.add('active');}
@@ -6689,6 +6689,52 @@ async function handleFotoProducto(e) {
 }
 </style>
 
+<!-- ══ VIEW: MENÚ SEMANAL ══ -->
+<div class="view" id="viewMenuSemanal">
+<div class="aw" style="max-width:none!important;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+  <!-- TOPBAR -->
+  <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;background:rgba(245,240,232,0.97);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="back-btn" onclick="showView('viewAdminMenu')" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--muted);flex-shrink:0;">‹</div>
+    <div style="flex:1;">
+      <div id="menuSemTitle" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);"></div>
+      <div id="menuSemSemana" style="font-size:11px;color:var(--muted);margin-top:1px;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div onclick="_menuSemOffset--;renderMenuSemanal()" style="width:30px;height:30px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);">‹</div>
+      <div onclick="_menuSemOffset++;renderMenuSemanal()" style="width:30px;height:30px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);">›</div>
+      <button onclick="abrirNuevoBibItem()" style="padding:6px 14px;background:#c0392b;border:none;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;">+ Biblioteca</button>
+    </div>
+  </div>
+  <!-- DÍAS -->
+  <div id="menuSemDias" style="display:flex;gap:6px;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;"></div>
+  <!-- BODY DOS COLUMNAS -->
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;">
+    <!-- Col izquierda: comidas del día -->
+    <div style="border-right:1px solid var(--border);overflow-y:auto;" id="menuSemComidas"></div>
+    <!-- Col derecha: biblioteca -->
+    <div style="display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Header biblioteca -->
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);margin-bottom:8px;">Biblioteca de menús</div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;margin-bottom:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted2);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="menuSemBibSearch" type="text" placeholder="Buscar por nombre..." oninput="_bibQuery=this.value;cargarBiblioteca()"
+            style="border:none;background:transparent;outline:none;font-size:12px;color:var(--text);width:100%;">
+        </div>
+        <div id="menuSemBibFiltros" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- Lista biblioteca -->
+      <div id="menuSemBibLista" style="flex:1;overflow-y:auto;padding:10px 14px;"></div>
+    </div>
+  </div>
+</div>
+</div>
+<style>
+@media(min-width:900px){
+  #viewMenuSemanal .aw{max-width:none!important;padding:0!important;}
+}
+</style>
+
 <!-- ══ BARCODE SCANNER OVERLAY ══ -->
 <div id="scannerOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column;align-items:center;justify-content:center;">
   <div style="position:relative;width:100%;max-width:430px;height:100%;display:flex;flex-direction:column;">
@@ -7380,151 +7426,418 @@ async function renderAdminMenuPerfil(seccion) {
     if (Array.isArray(rows) && rows.length) perfil = rows[0];
   } catch (e) {}
 
-  const semana = getLunesSemana(_adminMenuSemanaOffset);
+  // Valores actuales
+  const kcalE = perfil?.kcal_objetivo||2200, kcalD = perfil?.kcal_descanso||1900;
+  const pE = perfil?.p_objetivo||160, hcE = perfil?.hc_objetivo||220, gE = perfil?.g_objetivo||65;
+  const pD = perfil?.p_descanso||150, hcD = perfil?.hc_descanso||170, gD = perfil?.g_descanso||60;
+  const comidas = perfil?.comidas_dia||4;
+  const prefs = perfil?.preferencias||'';
+  const modoMacros = perfil?.modo_macros||'ed'; // ed = entreno/descanso, igual = todos igual
 
-  _drumVals = { kcalE: perfil?.kcal_objetivo||2200, kcalD: perfil?.kcal_descanso||1900, pE: perfil?.p_objetivo||160, hcE: perfil?.hc_objetivo||220, gE: perfil?.g_objetivo||65, pD: perfil?.p_descanso||150, hcD: perfil?.hc_descanso||170, gD: perfil?.g_descanso||60 };
-  _drumModo = 'g';
-  _drumContainer = 'adminMenuBody';
+  body.innerHTML = `
+  <div style="max-width:900px;margin:0 auto;">
 
-  const isDesktop = window.innerWidth >= 900;
+    <!-- TOGGLE TIPO MACROS -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="btnModoED" onclick="amSetModoMacros('ed')"
+        style="flex:1;padding:14px 10px;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:2px solid ${modoMacros==='ed'?'#c0392b':'var(--border)'};background:${modoMacros==='ed'?'#c0392b':'var(--s2)'};color:${modoMacros==='ed'?'#fff':'var(--muted)'};">
+        Entreno / Descanso<br><span style="font-size:10px;font-weight:400;opacity:0.8;">Macros diferentes según el día</span>
+      </button>
+      <button id="btnModoIgual" onclick="amSetModoMacros('igual')"
+        style="flex:1;padding:14px 10px;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:2px solid ${modoMacros==='igual'?'#c0392b':'var(--border)'};background:${modoMacros==='igual'?'#c0392b':'var(--s2)'};color:${modoMacros==='igual'?'#fff':'var(--muted)'};">
+        Todos los días igual<br><span style="font-size:10px;font-weight:400;opacity:0.8;">Un solo objetivo para la semana</span>
+      </button>
+    </div>
 
-  const colIzq = `
-    ${drumHTML('adminMenuBody')}
-    <button class="am-btn-secondary" onclick="guardarMacros(false,'menu')" style="margin-bottom:12px;">💾 Guardar macros</button>
-    <div id="amSeccionMacros"></div>
-    <div class="am-section">
-      <div class="am-section-hdr">Configuración</div>
-      <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
-      <div class="am-field">
-        <span class="am-field-label">Comidas al día</span>
-        <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
+    <!-- MACROS GRID -->
+    <div id="amMacrosGrid" style="display:grid;grid-template-columns:${modoMacros==='ed'?'1fr 1fr':'1fr'};gap:12px;margin-bottom:16px;">
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c0392b;margin-bottom:12px;">${modoMacros==='ed'?'Día de entreno':'Macros diarios'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Hidratos (g)</span>
+          <input type="number" id="amHcE" value="${hcE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Proteína (g)</span>
+          <input type="number" id="amPE" value="${pE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
+          <input type="number" id="amGE" value="${gE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amKcalE" style="font-size:22px;font-weight:800;color:#c0392b;text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalE} kcal</div>
       </div>
-      <div class="am-field" style="flex-direction:column;align-items:flex-start;gap:6px;">
-        <span class="am-field-label">Restricciones</span>
-        <input class="am-field-input wide" id="amPrefs" type="text" placeholder="Ej: sin gluten, sin lactosa..." value="${perfil?.preferencias || ''}">
+      ${modoMacros==='ed'?`
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);margin-bottom:12px;">Día de descanso</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Hidratos (g)</span>
+          <input type="number" id="amHcD" value="${hcD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Proteína (g)</span>
+          <input type="number" id="amPD" value="${pD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
+          <input type="number" id="amGD" value="${gD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amKcalD" style="font-size:22px;font-weight:800;color:var(--muted);text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalD} kcal</div>
+      </div>`:''}
+    </div>
+
+    <!-- CONFIG -->
+    <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+        <span style="font-size:13px;color:var(--text);font-weight:500;">Comidas al día</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="amComidasStep(-1)" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">−</button>
+          <span id="amComidasNum" style="font-size:15px;font-weight:700;min-width:20px;text-align:center;">${comidas}</span>
+          <input type="hidden" id="amComidas" value="${comidas}">
+          <button onclick="amComidasStep(1)" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">+</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Restricciones alimentarias</div>
+        <input type="text" id="amPrefs" value="${prefs}" placeholder="Ej: sin gluten, sin lactosa, alérgico a frutos secos..."
+          style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;">
       </div>
     </div>
-    <div class="am-section">
-      <div class="am-section-hdr">Semana del menú</div>
-      <div class="am-field" style="justify-content:center;">
-        <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset--;renderAdminMenuPerfil()">‹</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;padding:0 12px;">${formatSemanaLabel(semana)}</div>
-        <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset++;renderAdminMenuPerfil()">›</div>
-      </div>
-    </div>
-    <button class="am-btn-secondary" onclick="guardarPerfil()" style="margin-bottom:16px;">💾 Guardar perfil</button>
-  `;
 
-  if (isDesktop) {
-    body.innerHTML = `<div class="amenu-desktop-grid"><div class="amenu-col-left">${colIzq}</div><div class="amenu-col-right" id="amSeccionMenu"></div></div>`;
-  } else {
-    body.innerHTML = colIzq + `<div id="amSeccionMenu"></div>`;
+    <!-- BOTONES -->
+    <div style="display:flex;gap:10px;">
+      <button onclick="amGuardarPerfilNuevo()" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">
+        💾 Guardar perfil
+      </button>
+      <button onclick="abrirMenuSemanal()" style="flex:2;padding:12px;background:#c0392b;border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+        📅 Generar menú semanal →
+      </button>
+    </div>
+
+    <input type="hidden" id="amModoMacrosVal" value="${modoMacros}">
+    <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
+  </div>`;
+}
+
+function amSetModoMacros(modo) {
+  renderAdminMenuPerfil();
+  setTimeout(() => {
+    document.getElementById('amModoMacrosVal').value = modo;
+    const isED = modo === 'ed';
+    const btnED = document.getElementById('btnModoED');
+    const btnIgual = document.getElementById('btnModoIgual');
+    if(btnED){ btnED.style.background = isED?'#c0392b':'var(--s2)'; btnED.style.color = isED?'#fff':'var(--muted)'; btnED.style.borderColor = isED?'#c0392b':'var(--border)'; }
+    if(btnIgual){ btnIgual.style.background = !isED?'#c0392b':'var(--s2)'; btnIgual.style.color = !isED?'#fff':'var(--muted)'; btnIgual.style.borderColor = !isED?'#c0392b':'var(--border)'; }
+    const grid = document.getElementById('amMacrosGrid');
+    if(grid) grid.style.gridTemplateColumns = isED?'1fr 1fr':'1fr';
+    // Mostrar/ocultar columna descanso — re-render es más limpio
+  }, 0);
+}
+
+function amRecalcKcal() {
+  const g = id => parseInt(document.getElementById(id)?.value)||0;
+  const calcKcal = (hc,p,gr) => hc*4 + p*4 + gr*9;
+  const elE = document.getElementById('amKcalE');
+  if(elE) elE.textContent = calcKcal(g('amHcE'),g('amPE'),g('amGE')) + ' kcal';
+  const elD = document.getElementById('amKcalD');
+  if(elD) elD.textContent = calcKcal(g('amHcD'),g('amPD'),g('amGD')) + ' kcal';
+}
+
+function amComidasStep(delta) {
+  const input = document.getElementById('amComidas');
+  const num = document.getElementById('amComidasNum');
+  if(!input||!num) return;
+  let val = parseInt(input.value)||4;
+  val = Math.max(2, Math.min(6, val+delta));
+  input.value = val;
+  num.textContent = val;
+}
+
+async function amGuardarPerfilNuevo() {
+  const g = id => parseInt(document.getElementById(id)?.value)||0;
+  const modo = document.getElementById('amModoMacrosVal')?.value||'ed';
+  const payload = {
+    cliente_email: _adminMenuEmail,
+    kcal_objetivo: g('amHcE')*4 + g('amPE')*4 + g('amGE')*9,
+    hc_objetivo: g('amHcE'), p_objetivo: g('amPE'), g_objetivo: g('amGE'),
+    kcal_descanso: modo==='ed' ? g('amHcD')*4+g('amPD')*4+g('amGD')*9 : g('amHcE')*4+g('amPE')*4+g('amGE')*9,
+    hc_descanso: modo==='ed'?g('amHcD'):g('amHcE'),
+    p_descanso: modo==='ed'?g('amPD'):g('amPE'),
+    g_descanso: modo==='ed'?g('amGD'):g('amGE'),
+    comidas_dia: parseInt(document.getElementById('amComidas')?.value)||4,
+    preferencias: document.getElementById('amPrefs')?.value||'',
+    modo_macros: modo,
+    modo_app: 'menu'
+  };
+  try {
+    await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    showToast('✅ Perfil guardado');
+  } catch(e){ showToast('❌ Error guardando perfil'); }
+}
+
+// ══ PANTALLA 2: MENÚ SEMANAL ══
+let _menuSemEmail = '';
+let _menuSemNombre = '';
+let _menuSemOffset = 0;
+let _menuSemDia = 'lunes';
+let _menuSemPerfil = null;
+let _menuSemData = {};
+let _bibFiltro = 'desayuno';
+let _bibQuery = '';
+let _bibItems = [];
+
+function abrirMenuSemanal() {
+  _menuSemEmail = _adminMenuEmail;
+  _menuSemNombre = _adminMenuNombre;
+  _menuSemOffset = _adminMenuSemanaOffset;
+  _menuSemDia = 'lunes';
+  showView('viewMenuSemanal');
+  renderMenuSemanal();
+}
+
+async function renderMenuSemanal() {
+  document.getElementById('menuSemTitle').textContent = _menuSemNombre;
+  const lunes = getLunesSemana(_menuSemOffset);
+  document.getElementById('menuSemSemana').textContent = formatSemanaLabel(lunes);
+
+  // Cargar perfil
+  try {
+    const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&limit=1`);
+    const rows = await res.json();
+    _menuSemPerfil = Array.isArray(rows)&&rows.length?rows[0]:null;
+  } catch(e){}
+
+  // Cargar menús asignados esta semana
+  const lunesStr = lunes.toISOString().split('T')[0];
+  try {
+    const res = await supaAdmin(`/rest/v1/menus_semana?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&fecha_lunes=eq.${lunesStr}&select=*,biblioteca_menus(*)`);
+    const rows = await res.json();
+    _menuSemData = {};
+    if(Array.isArray(rows)) rows.forEach(r => {
+      if(!_menuSemData[r.dia]) _menuSemData[r.dia] = {};
+      _menuSemData[r.dia][r.momento] = r;
+    });
+  } catch(e){}
+
+  renderDiasSem();
+  renderComidasDia();
+  cargarBiblioteca();
+}
+
+function renderDiasSem() {
+  const dias = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+  const letras = ['L','M','X','J','V','S','D'];
+  const lunes = getLunesSemana(_menuSemOffset);
+  const perfil = _menuSemPerfil;
+  const diasEntreno = perfil?.dias_entreno||['lunes','martes','jueves','viernes'];
+
+  const cont = document.getElementById('menuSemDias');
+  if(!cont) return;
+  cont.innerHTML = dias.map((d,i) => {
+    const fecha = new Date(lunes); fecha.setDate(fecha.getDate()+i);
+    const tipo = diasEntreno.includes(d)?'Entreno':'Descanso';
+    const on = d === _menuSemDia;
+    return `<div onclick="menuSemSelDia('${d}')" style="min-width:50px;padding:8px 6px;border-radius:10px;border:1px solid ${on?'#c0392b':'var(--border)'};background:${on?'#c0392b':'var(--s1)'};text-align:center;cursor:pointer;flex-shrink:0;">
+      <div style="font-size:14px;font-weight:700;color:${on?'#fff':'var(--text)'};">${letras[i]}</div>
+      <div style="font-size:9px;color:${on?'rgba(255,255,255,0.75)':'var(--muted)'};margin-top:2px;">${tipo}</div>
+    </div>`;
+  }).join('');
+}
+
+function menuSemSelDia(dia) {
+  _menuSemDia = dia;
+  renderDiasSem();
+  renderComidasDia();
+}
+
+function renderComidasDia() {
+  const momentos = [
+    {id:'desayuno',nombre:'Desayuno',emoji:'🌅'},
+    {id:'almuerzo',nombre:'Almuerzo',emoji:'☕'},
+    {id:'comida',nombre:'Comida',emoji:'☀️'},
+    {id:'merienda',nombre:'Merienda',emoji:'🍎'},
+    {id:'cena',nombre:'Cena',emoji:'🌙'}
+  ];
+  const comidas = _menuSemPerfil?.comidas_dia||4;
+  const activos = momentos.slice(0, comidas);
+  const diaData = _menuSemData[_menuSemDia]||{};
+
+  const cont = document.getElementById('menuSemComidas');
+  if(!cont) return;
+  cont.innerHTML = activos.map(m => {
+    const asig = diaData[m.id];
+    const bm = asig?.biblioteca_menus;
+    return `<div style="padding:12px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:700;color:var(--text);">${m.emoji} ${m.nombre}</span>
+        <span style="font-size:11px;color:var(--muted);">${bm?bm.kcal+' kcal':'— kcal'}</span>
+      </div>
+      ${bm?`
+        <div style="background:var(--s2);border-radius:10px;padding:10px 12px;position:relative;">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;">${bm.nombre}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${bm.ingredientes||''}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fdecea;color:#9b2335;font-weight:600;">${bm.kcal} kcal</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#eef6ee;color:#2d6a2d;font-weight:600;">P ${bm.proteina}g</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fff8e1;color:#8a6000;font-weight:600;">HC ${bm.hidratos}g</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#f0f0f0;color:#555;font-weight:600;">G ${bm.grasa}g</span>
+          </div>
+          <button onclick="menuSemQuitarMomento('${m.id}')" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(192,57,43,0.1);border:none;color:#c0392b;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+        </div>
+      `:`
+        <div onclick="menuSemAbrirBib('${m.id}')" style="padding:10px;border:1px dashed var(--border);border-radius:10px;font-size:12px;color:var(--muted);text-align:center;cursor:pointer;">
+          + Busca en la biblioteca y asigna un ${m.nombre.toLowerCase()}
+        </div>
+      `}
+    </div>`;
+  }).join('');
+}
+
+function menuSemAbrirBib(momento) {
+  _bibFiltro = momento;
+  renderBibFiltros();
+  cargarBiblioteca();
+}
+
+async function cargarBiblioteca() {
+  const cont = document.getElementById('menuSemBibLista');
+  if(!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Cargando...</div>';
+  try {
+    let url = `/rest/v1/biblioteca_menus?momento=eq.${_bibFiltro}&order=nombre`;
+    if(_bibQuery) url += `&nombre=ilike.*${encodeURIComponent(_bibQuery)}*`;
+    const res = await supaAdmin(url+'&select=*');
+    _bibItems = await res.json();
+    renderBibLista();
+  } catch(e){
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Error cargando biblioteca</div>';
   }
+}
 
-  // Columna derecha / sección menú
-  document.getElementById('amSeccionMenu').innerHTML = `
+function renderBibFiltros() {
+  const momentos = ['desayuno','almuerzo','comida','merienda','cena'];
+  const cont = document.getElementById('menuSemBibFiltros');
+  if(!cont) return;
+  cont.innerHTML = momentos.map(m =>
+    `<div onclick="menuSemSetFiltro('${m}')" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${m===_bibFiltro?'#c0392b':'var(--border)'};background:${m===_bibFiltro?'#c0392b':'var(--s2)'};color:${m===_bibFiltro?'#fff':'var(--muted)'};">${m.charAt(0).toUpperCase()+m.slice(1)}</div>`
+  ).join('');
+}
 
-    <!-- ── TABS IA / MANUAL ── -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;">
-      <button id="amTabIA" onclick="amSwitchTab('ia')"
-        style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid rgba(192,57,43,0.4);background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-        ✨ Generar con IA
-      </button>
-      <button id="amTabManual" onclick="amSwitchTab('manual')"
-        style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-        ✏️ Manual
-      </button>
+function menuSemSetFiltro(f) {
+  _bibFiltro = f;
+  renderBibFiltros();
+  cargarBiblioteca();
+}
+
+function renderBibLista() {
+  const cont = document.getElementById('menuSemBibLista');
+  if(!cont) return;
+  if(!_bibItems.length){
+    cont.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;">No hay ${_bibFiltro}s en la biblioteca.<br><button onclick="abrirNuevoBibItem()" style="margin-top:10px;padding:8px 16px;background:#c0392b;border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">+ Añadir primero</button></div>`;
+    return;
+  }
+  cont.innerHTML = _bibItems.map(item => `
+    <div style="background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">${item.nombre}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.ingredientes||''}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fdecea;color:#9b2335;font-weight:600;">${item.kcal} kcal</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#eef6ee;color:#2d6a2d;font-weight:600;">P ${item.proteina}g</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fff8e1;color:#8a6000;font-weight:600;">HC ${item.hidratos}g</span>
+        </div>
+      </div>
+      <button onclick="menuSemAsignar('${item.id}')" style="width:32px;height:32px;border-radius:50%;background:#c0392b;border:none;color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;margin-left:10px;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
     </div>
+  `).join('');
+}
 
-    <!-- ════ PANEL IA ════ -->
-    <div id="amPanelIA">
+async function menuSemAsignar(menuId) {
+  const lunes = getLunesSemana(_menuSemOffset);
+  const lunesStr = lunes.toISOString().split('T')[0];
+  const payload = {
+    cliente_email: _menuSemEmail,
+    fecha_lunes: lunesStr,
+    dia: _menuSemDia,
+    momento: _bibFiltro,
+    menu_id: menuId
+  };
+  try {
+    await supaAdmin('/rest/v1/menus_semana', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    showToast('✅ Menú asignado');
+    await renderMenuSemanal();
+  } catch(e){ showToast('❌ Error asignando menú'); }
+}
 
-    <!-- Tipo de día -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Tipo de día</div>
-      <div style="padding:10px 14px 14px;display:flex;gap:8px;">
-        <button id="amTipoDiaEntreno" onclick="amSetTipoDia('entreno')"
-          style="flex:1;padding:10px 8px;border-radius:10px;border:1px solid rgba(192,57,43,0.4);background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-          Entreno
-        </button>
-        <button id="amTipoDiaDescanso" onclick="amSetTipoDia('descanso')"
-          style="flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-          Descanso
-        </button>
+async function menuSemQuitarMomento(momento) {
+  const lunes = getLunesSemana(_menuSemOffset);
+  const lunesStr = lunes.toISOString().split('T')[0];
+  try {
+    await supaAdmin(`/rest/v1/menus_semana?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&fecha_lunes=eq.${lunesStr}&dia=eq.${_menuSemDia}&momento=eq.${momento}`, {
+      method:'DELETE', headers:{'Prefer':'return=minimal'}
+    });
+    showToast('🗑️ Eliminado');
+    await renderMenuSemanal();
+  } catch(e){ showToast('❌ Error eliminando'); }
+}
+
+// Biblioteca: añadir nuevo ítem
+function abrirNuevoBibItem() {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML = `
+    <div style="background:var(--bg);border-radius:16px;padding:20px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">Nuevo ítem biblioteca</div>
+      <input id="bibNombre" type="text" placeholder="Nombre del plato" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
+      <select id="bibMomento" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
+        <option value="desayuno">Desayuno</option><option value="almuerzo">Almuerzo</option>
+        <option value="comida">Comida</option><option value="merienda">Merienda</option><option value="cena">Cena</option>
+      </select>
+      <input id="bibIngr" type="text" placeholder="Ingredientes (separados por ·)" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input id="bibKcal" type="number" placeholder="kcal" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
+        <input id="bibP" type="number" placeholder="Proteína (g)" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
+        <input id="bibHc" type="number" placeholder="Hidratos (g)" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
+        <input id="bibG" type="number" placeholder="Grasa (g)" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;color:var(--text);outline:none;">
       </div>
-      <input type="hidden" id="amTipoDia" value="entreno">
-    </div>
-
-    <!-- Instrucciones de reparto -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Instrucciones de reparto (opcional)</div>
-      <div style="padding:6px 14px 4px;font-size:11px;color:var(--muted);line-height:1.5;">
-        Dile a la IA cómo repartir los macros entre comidas. En lenguaje natural.
+      <div style="display:flex;gap:8px;">
+        <button onclick="guardarNuevoBibItem(this)" style="flex:1;padding:12px;background:#c0392b;border:none;border-radius:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Guardar</button>
+        <button onclick="this.closest('[style*=position]').remove()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
       </div>
-      <div style="padding:6px 14px 14px;">
-        <textarea id="amInstrucciones" style="width:100%;min-height:72px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
-          placeholder="Ej: la comida que sea la más alta en HC, desayuno dulce con avena, cena ligera sin muchos HC, merienda pequeña..."></textarea>
-      </div>
-    </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+}
 
-    <!-- Nombre del menú -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Nombre del menú</div>
-      <div style="padding:8px 14px 14px;">
-        <input id="amNombreMenu" type="text" style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;"
-          placeholder="Ej: Semana 20 mayo — Volumen">
-      </div>
-    </div>
-
-    <!-- Opción A: IA sugiere -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Opción A — La IA elige los alimentos</div>
-      <div style="padding:8px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
-        La IA selecciona ingredientes de tu BD y calcula los gramos para cuadrar los macros.
-      </div>
-      <div style="padding:0 14px 14px;">
-        <button class="am-btn-primary" id="amGenBtnA" onclick="generarMenu('sugerir')">
-          ✨ Generar menú automático
-        </button>
-      </div>
-    </div>
-
-    <!-- Opción B: tú mandas ingredientes -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Opción B — Tú eliges los alimentos</div>
-      <div style="padding:8px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
-        Escribe los ingredientes por comida. La IA calcula los gramos exactos.
-      </div>
-      <div style="padding:0 14px;">
-        <textarea id="amTextoMenu" style="width:100%;min-height:120px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
-          placeholder="Desayuno: avena, leche semidesnatada, plátano
-Comida: pollo, arroz, brócoli, aceite de oliva
-Merienda: yogur natural, nueces
-Cena: salmón, patata, espinacas"></textarea>
-      </div>
-      <div style="padding:10px 14px 14px;">
-        <button class="am-btn-primary" id="amGenBtnB" onclick="generarMenu('confirmar')">
-          🥗 Calcular con mis ingredientes
-        </button>
-      </div>
-    </div>
-
-    </div><!-- /amPanelIA -->
-
-    <!-- ════ PANEL MANUAL ════ -->
-    <div id="amPanelManual" style="display:none;">
-      <div id="amManualBody"></div>
-    </div>
-
-    <!-- Preview resultado -->
-    </div><div id="amMenuPreview" style="margin-top:4px;"></div>
-
-    <!-- Menús guardados de este cliente -->
-    <div id="amMenusGuardados" style="margin-top:8px;"></div>
-  `;
-  drumInit('adminMenuBody');
-  if(seccion==='menu'){setTimeout(()=>{const el=document.getElementById('amSeccionMenu');if(el)el.scrollIntoView({behavior:'smooth'});},150);}
-  setTimeout(()=>cargarMenusGuardados(),200);
+async function guardarNuevoBibItem(btn) {
+  const nombre = document.getElementById('bibNombre')?.value?.trim();
+  if(!nombre){ showToast('⚠️ Escribe un nombre'); return; }
+  const payload = {
+    nombre,
+    momento: document.getElementById('bibMomento')?.value||'desayuno',
+    ingredientes: document.getElementById('bibIngr')?.value||'',
+    kcal: parseInt(document.getElementById('bibKcal')?.value)||0,
+    proteina: parseInt(document.getElementById('bibP')?.value)||0,
+    hidratos: parseInt(document.getElementById('bibHc')?.value)||0,
+    grasa: parseInt(document.getElementById('bibG')?.value)||0,
+  };
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    await supaAdmin('/rest/v1/biblioteca_menus', {
+      method:'POST', headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    btn.closest('[style*=position]').remove();
+    showToast('✅ Añadido a la biblioteca');
+    cargarBiblioteca();
+  } catch(e){ showToast('❌ Error guardando'); btn.disabled=false; btn.textContent='Guardar'; }
 }
 
 function amSetModo(modo) {
@@ -8431,7 +8744,7 @@ function dsbUpdateActive() {
   const viewMap = {
     viewMain: 'diario', viewMiMenu: 'menu', viewChat: 'chat',
     viewFavoritos: 'favoritos', viewConfig: 'perfil',
-    viewAdmin: 'clientes', viewAdminMenu: 'clientes', viewAdminMacros: 'clientes',
+    viewAdmin: 'clientes', viewAdminMenu: 'clientes', viewAdminMacros: 'clientes', viewMenuSemanal: 'clientes',
     viewBuscador: 'diario'
   };
   const activeView = document.querySelector('.view.active');
