@@ -7380,8 +7380,7 @@ function drumUpdateTotals(cid) {}
 function drumScheduleAutoSave() {
   clearTimeout(_drumAutoSaveTimer);
   _drumAutoSaveTimer = setTimeout(()=>{
-    if(_drumContainer==='adminMacrosBody') guardarMacros(true);
-    else guardarMacros(true,'menu');
+    guardarMacros(true);
   }, 1500);
 }
 
@@ -7514,8 +7513,9 @@ function drumGetMacrosEmail() {
 
 function amMSetModo(modo) {}
 
-async function guardarMacros(silent=false, modoApp='macros') {
+async function guardarMacros(silent=false, modoApp=null) {
   const email = drumGetMacrosEmail();
+  if(modoApp===null) modoApp = (window._adminModoApp&&window._adminModoApp[email]) || 'macros';
   // Leer valores actuales de los campos
   const g = (id) => parseInt(document.getElementById(id+'-'+_drumContainer)?.value)||0;
   if(document.getElementById('dKcalE-'+_drumContainer)) {
