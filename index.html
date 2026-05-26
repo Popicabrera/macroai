@@ -7532,7 +7532,8 @@ async function guardarMacros(silent=false, modoApp=null) {
     p_descanso:    _drumVals.pD,
     hc_descanso:   _drumVals.hcD,
     g_descanso:    _drumVals.gD,
-    modo_app:      modoApp
+    modo_app:      modoApp,
+    modo_macros:   _amModoDesktop
   };
   try {
     const res = await supaAdmin('/rest/v1/perfiles_macroai', {
