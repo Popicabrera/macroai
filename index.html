@@ -3566,9 +3566,9 @@ function buildAdminCard(u){
       <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;margin-bottom:7px;">${u.email}</div>
       <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;">
         <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}" style="flex-shrink:0;">${u.activo?'Activo':'Inactivo'}</span>
-        ${modoApp ? `<button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp}" onclick="event.stopPropagation();" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${modoApp==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${modoApp==='menu'?'Menú':'Macros'}</button>` : ''}
-        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();">Macros</button>
-        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;" onclick="event.stopPropagation();">Menú</button>
+        <button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp||'macros'}" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${(modoApp||'macros')==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${(modoApp||'macros')==='menu'?'Menú':'Macros'}</button>
+        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;">Macros</button>
+        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;">Menú</button>
       </div>
     </div>`;
 
@@ -3577,6 +3577,8 @@ function buildAdminCard(u){
   let _pressStartY = 0;
   let _longPressFired = false;
   card.addEventListener('touchstart', e => {
+    // Cancelar si el toque es en un botón hijo
+    if(e.target.closest('button')) return;
     _longPressFired = false;
     _pressStartY = e.touches[0].clientY;
     _pressTimer = setTimeout(() => {
@@ -3589,10 +3591,10 @@ function buildAdminCard(u){
   card.addEventListener('touchmove', e => {
     if(Math.abs(e.touches[0].clientY - _pressStartY) > 8) clearTimeout(_pressTimer);
   }, {passive:true});
-  // Clic derecho solo en desktop (no móvil)
+  // Clic derecho solo en desktop — ignorar si viene de un botón hijo
   card.addEventListener('contextmenu', e => {
     e.preventDefault();
-    // En móvil el contextmenu lo dispara el long-press del SO — ignorar si ya lo manejamos nosotros
+    if(e.target.closest('button')) return;
     if(_longPressFired) return;
     adminCardMenu(u, e);
   });
