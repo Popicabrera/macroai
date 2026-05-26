@@ -1155,7 +1155,7 @@ body{
 .admin-filter.off{background:var(--s2);color:var(--muted);}
 
 /* ── Admin cards — desktop ── */
-.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;}
+.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;}
 .admin-card:hover{border-color:rgba(192,57,43,0.3);}
 .admin-card-avatar{width:42px;height:42px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.2);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;}
 .admin-card-info{flex:1;min-width:0;}
@@ -3562,21 +3562,29 @@ function buildAdminCard(u){
   const tieneMenu=window._adminMenusEmails?.has(u.email);
   card.innerHTML=`
     <div class="admin-card-avatar">${initials}</div>
-    <div class="admin-card-info">
-      <div class="admin-card-nombre">${u.nombre||'Sin nombre'}</div>
-      <div class="admin-card-email">${u.email}</div>
-      <div class="admin-card-badges">
-        <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}">${u.activo?'Activo':'Inactivo'}</span>
-        ${tieneMacros?'<span class="admin-badge admin-badge-macros">Macros</span>':'<span class="admin-badge admin-badge-sin">Sin macros</span>'}
-        ${tieneMenu?'<span class="admin-badge admin-badge-macros">Menú</span>':'<span class="admin-badge admin-badge-sin">Sin menú</span>'}
+    <div class="admin-card-info" style="flex:1;min-width:0;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="min-width:0;">
+          <div class="admin-card-nombre" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nombre||'Sin nombre'}</div>
+          <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.email}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span class="admin-card-date">Alta ${fecha}</span>
+          <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo});event.stopPropagation();">
+            <div class="admin-toggle-dot"></div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="admin-card-actions">
-      <span class="admin-card-date">Alta ${fecha}</span>
-      <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="padding:6px 12px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;">Macros</button>
-      <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="padding:6px 12px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;">Menú</button>
-      <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo});event.stopPropagation();">
-        <div class="admin-toggle-dot"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:8px;">
+        <div class="admin-card-badges" style="margin-top:0;flex-wrap:nowrap;">
+          <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}">${u.activo?'Activo':'Inactivo'}</span>
+          ${tieneMacros?'<span class="admin-badge admin-badge-macros">Macros</span>':'<span class="admin-badge admin-badge-sin">Sin macros</span>'}
+          ${tieneMenu?'<span class="admin-badge admin-badge-macros">Menú</span>':'<span class="admin-badge admin-badge-sin">Sin menú</span>'}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="padding:5px 10px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;">Macros</button>
+          <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="padding:5px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;">Menú</button>
+        </div>
       </div>
     </div>`;
   return card;
