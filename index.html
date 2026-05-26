@@ -6670,14 +6670,24 @@ async function handleFotoProducto(e) {
 
 <!-- ══ VIEW: ADMIN MENÚS ══ -->
 <div class="view" id="viewAdminMenu">
-<div class="aw">
-  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
-    <div class="back-btn" onclick="showView('viewAdmin')">‹</div>
-    <h2 id="adminMenuTitle" style="color:var(--accent)">⚡ Perfil nutricional</h2>
+<div class="aw" style="max-width:none!important;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:rgba(245,240,232,0.97);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="back-btn" onclick="showView('viewAdmin')" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--muted);flex-shrink:0;">‹</div>
+    <div>
+      <div id="adminMenuTitle" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Menú nutricional</div>
+    </div>
   </div>
-  <div class="scrollable" id="adminMenuBody"></div>
+  <div id="adminMenuBody" style="flex:1;overflow-y:auto;padding:20px;"></div>
 </div>
 </div>
+<style>
+@media(min-width:900px){
+  #viewAdminMenu .aw{max-width:none!important;padding:0!important;}
+  #adminMenuBody{padding:20px!important;}
+  .amenu-desktop-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+}
+</style>
 
 <!-- ══ BARCODE SCANNER OVERLAY ══ -->
 <div id="scannerOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column;align-items:center;justify-content:center;">
@@ -7376,12 +7386,12 @@ async function renderAdminMenuPerfil(seccion) {
   _drumModo = 'g';
   _drumContainer = 'adminMenuBody';
 
-  body.innerHTML = drumHTML('adminMenuBody') + `
+  const isDesktop = window.innerWidth >= 900;
+
+  const colIzq = `
+    ${drumHTML('adminMenuBody')}
     <button class="am-btn-secondary" onclick="guardarMacros(false,'menu')" style="margin-bottom:12px;">💾 Guardar macros</button>
-
     <div id="amSeccionMacros"></div>
-
-    <!-- Configuración -->
     <div class="am-section">
       <div class="am-section-hdr">Configuración</div>
       <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
@@ -7394,8 +7404,6 @@ async function renderAdminMenuPerfil(seccion) {
         <input class="am-field-input wide" id="amPrefs" type="text" placeholder="Ej: sin gluten, sin lactosa..." value="${perfil?.preferencias || ''}">
       </div>
     </div>
-
-    <!-- Semana -->
     <div class="am-section">
       <div class="am-section-hdr">Semana del menú</div>
       <div class="am-field" style="justify-content:center;">
@@ -7404,13 +7412,17 @@ async function renderAdminMenuPerfil(seccion) {
         <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset++;renderAdminMenuPerfil()">›</div>
       </div>
     </div>
+    <button class="am-btn-secondary" onclick="guardarPerfil()" style="margin-bottom:16px;">💾 Guardar perfil</button>
+  `;
 
-    <!-- Guardar perfil -->
-    <button class="am-btn-secondary" onclick="guardarPerfil()" style="margin-bottom:16px;">
-      💾 Guardar perfil
-    </button>
+  if (isDesktop) {
+    body.innerHTML = `<div class="amenu-desktop-grid"><div class="amenu-col-left">${colIzq}</div><div class="amenu-col-right" id="amSeccionMenu"></div></div>`;
+  } else {
+    body.innerHTML = colIzq + `<div id="amSeccionMenu"></div>`;
+  }
 
-    </div><div id="amSeccionMenu">
+  // Columna derecha / sección menú
+  document.getElementById('amSeccionMenu').innerHTML = `
 
     <!-- ── TABS IA / MANUAL ── -->
     <div style="display:flex;gap:6px;margin-bottom:14px;">
