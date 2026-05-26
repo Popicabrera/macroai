@@ -3572,7 +3572,7 @@ function buildAdminCard(u){
     </div>
     <div class="admin-card-actions">
       <span class="admin-card-date">Alta ${fecha}</span>
-      <button onclick="abrirPerfilAdmin('${u.id}','${u.nombre||'Sin nombre'}','${u.email}');event.stopPropagation();" style="padding:6px 12px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;">Macros</button>
+      <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" onclick="event.stopPropagation();" style="padding:6px 12px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;">Macros</button>
       <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" onclick="event.stopPropagation();" style="padding:6px 12px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;">Menú</button>
       <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo});event.stopPropagation();">
         <div class="admin-toggle-dot"></div>
@@ -3611,6 +3611,16 @@ document.addEventListener('click', function(e) {
     const email = btn.dataset.email;
     const nombre = btn.dataset.nombre;
     abrirAdminMenu(email, nombre);
+  }
+});
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.admin-macros-btn');
+  if (btn) {
+    const id = btn.dataset.id;
+    const nombre = btn.dataset.nombre;
+    const email = btn.dataset.email;
+    abrirPerfilAdmin(id, nombre, email);
   }
 });
 
