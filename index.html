@@ -3566,9 +3566,7 @@ function buildAdminCard(u){
       <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;margin-bottom:7px;">${u.email}</div>
       <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;">
         <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}" style="flex-shrink:0;">${u.activo?'Activo':'Inactivo'}</span>
-        <button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp||'macros'}" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${(modoApp||'macros')==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${(modoApp||'macros')==='menu'?'Menú':'Macros'}</button>
-        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;">Macros</button>
-        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;">Menú</button>
+        <button class="admin-modo-btn" data-email="${u.email}" data-uid="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-modo="${modoApp||'macros'}" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${modoApp==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':modoApp===null?'background:rgba(186,117,23,0.1);border:1.5px solid rgba(186,117,23,0.3);color:#854F0B;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${modoApp==='menu'?'Menú':'Macros'}</button>
       </div>
     </div>`;
 
@@ -3703,10 +3701,11 @@ async function loadAdminUsers(){
     window._adminMenusEmails=new Set();
     try{
       const [pRes,mRes]=await Promise.all([
-        supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email'),
+        supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,modo_app'),
         supaAdmin('/rest/v1/menus_macroai?select=cliente_email')
       ]);
-      const pRows=await pRes.json(); if(Array.isArray(pRows)) pRows.forEach(r=>window._adminPerfilesEmails.add(r.cliente_email));
+      window._adminModoApp={};
+      const pRows=await pRes.json(); if(Array.isArray(pRows)) pRows.forEach(r=>{window._adminPerfilesEmails.add(r.cliente_email);if(r.modo_app)window._adminModoApp[r.cliente_email]=r.modo_app;});
       const mRows=await mRes.json(); if(Array.isArray(mRows)) mRows.forEach(r=>window._adminMenusEmails.add(r.cliente_email));
     }catch(e){}
     _adminUsersData=Array.isArray(users)?users:[];
@@ -3716,22 +3715,48 @@ async function loadAdminUsers(){
   }
 }
 
+// Toggle modo_app desde el badge
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.menu-nutricional-btn');
-  if (btn) {
-    const email = btn.dataset.email;
-    const nombre = btn.dataset.nombre;
-    abrirAdminMenu(email, nombre);
+  const btn = e.target.closest('.admin-modo-btn');
+  if (!btn) return;
+  e.stopPropagation();
+  const email = btn.dataset.email;
+  const uid = btn.dataset.uid;
+  const nombre = btn.dataset.nombre;
+  const modoActual = btn.dataset.modo;
+  const nuevoModo = modoActual === 'menu' ? 'macros' : 'menu';
+  btn.dataset.modo = nuevoModo;
+  if (nuevoModo === 'menu') {
+    btn.style.cssText = 'flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;';
+    btn.textContent = 'Menú';
+  } else {
+    btn.style.cssText = 'flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;';
+    btn.textContent = 'Macros';
   }
+  if (!window._adminModoApp) window._adminModoApp = {};
+  window._adminModoApp[email] = nuevoModo;
+  supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(email), {
+    method: 'PATCH',
+    headers: {'Prefer': 'return=minimal', 'Content-Type': 'application/json'},
+    body: JSON.stringify({modo_app: nuevoModo})
+  }).catch(() => {});
 });
 
+// Clic en tarjeta → abre macros o menú según modo_app
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.admin-macros-btn');
-  if (btn) {
-    const id = btn.dataset.id;
-    const nombre = btn.dataset.nombre;
-    const email = btn.dataset.email;
-    abrirPerfilAdmin(id, nombre, email);
+  const card = e.target.closest('.admin-card');
+  if (!card) return;
+  if (e.target.closest('button')) return;
+  const btn = card.querySelector('.admin-modo-btn');
+  if (!btn) return;
+  const email = btn.dataset.email;
+  const uid = btn.dataset.uid;
+  const nombre = btn.dataset.nombre;
+  const modo = btn.dataset.modo || 'macros';
+  if (modo === 'menu') {
+    abrirAdminMenu(email, nombre);
+  } else {
+    abrirPerfilAdmin(uid, nombre, email);
   }
 });
 
@@ -7355,8 +7380,7 @@ function drumUpdateTotals(cid) {}
 function drumScheduleAutoSave() {
   clearTimeout(_drumAutoSaveTimer);
   _drumAutoSaveTimer = setTimeout(()=>{
-    if(_drumContainer==='adminMacrosBody') guardarMacros(true);
-    else guardarMacros(true,'menu');
+    guardarMacros(true);
   }, 1500);
 }
 
@@ -7489,8 +7513,9 @@ function drumGetMacrosEmail() {
 
 function amMSetModo(modo) {}
 
-async function guardarMacros(silent=false, modoApp='macros') {
+async function guardarMacros(silent=false, modoApp=null) {
   const email = drumGetMacrosEmail();
+  if(modoApp===null) modoApp = (window._adminModoApp&&window._adminModoApp[email]) || 'macros';
   // Leer valores actuales de los campos
   const g = (id) => parseInt(document.getElementById(id+'-'+_drumContainer)?.value)||0;
   if(document.getElementById('dKcalE-'+_drumContainer)) {
