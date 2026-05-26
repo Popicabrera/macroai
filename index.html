@@ -8411,6 +8411,18 @@ function dsbNav(tab) {
   setTimeout(dsbUpdateActive, 150);
 }
 
+// ── DIAGNÓSTICO TEMPORAL ──
+(function() {
+  document.addEventListener('click', function(e) {
+    const el = e.target;
+    const info = `CLICK → TAG:${el.tagName} ID:${el.id||'—'} CLASS:${(el.className+'').substring(0,40)||'—'} | z-index:${getComputedStyle(el).zIndex} | pointer-events:${getComputedStyle(el).pointerEvents}`;
+    let dbg = document.getElementById('_dbg');
+    if (!dbg) { dbg = document.createElement('div'); dbg.id='_dbg'; dbg.style.cssText='position:fixed;bottom:10px;left:190px;right:10px;background:rgba(0,0,0,0.88);color:#0f0;font-size:11px;font-family:monospace;padding:8px 12px;border-radius:8px;z-index:99999;word-break:break-all;'; document.body.appendChild(dbg); }
+    dbg.textContent = info;
+    setTimeout(() => { const d=document.getElementById('_dbg'); if(d)d.remove(); }, 5000);
+  }, true);
+})();
+
 function dsbUpdateActive() {
   const sidebar = document.getElementById('desktopSidebar');
   if (!sidebar) return;
