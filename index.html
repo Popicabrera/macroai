@@ -3556,11 +3556,8 @@ function renderAdminCards(){
 function buildAdminCard(u){
   const card=document.createElement('div');
   card.className='admin-card';
-  card.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:11px 12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;user-select:none;';
-  const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+  card.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:11px 12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;user-select:none;-webkit-user-select:none;';
   const initials=(u.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  const tieneMacros=window._adminPerfilesEmails?.has(u.email);
-  const tieneMenu=window._adminMenusEmails?.has(u.email);
   const modoApp=window._adminModoApp?.[u.email]||null;
   card.innerHTML=`
     <div class="admin-card-avatar" style="flex-shrink:0;">${initials}</div>
@@ -3569,22 +3566,38 @@ function buildAdminCard(u){
       <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;margin-bottom:7px;">${u.email}</div>
       <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;">
         <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}" style="flex-shrink:0;">${u.activo?'Activo':'Inactivo'}</span>
-        ${modoApp ? `<button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp}" onclick="event.stopPropagation();" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${modoApp==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${modoApp==='menu'?'🍽️ Menú':'📊 Macros'}</button>` : ''}
-        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();">Macros</button>
-        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;" onclick="event.stopPropagation();">Menú</button>
+        <button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp||'macros'}" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${(modoApp||'macros')==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${(modoApp||'macros')==='menu'?'Menú':'Macros'}</button>
+        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;">Macros</button>
+        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;">Menú</button>
       </div>
     </div>`;
 
-  // Long press móvil / clic derecho desktop → menú contextual
+  // Long press móvil — solo touch, sin contextmenu en móvil
   let _pressTimer = null;
   let _pressStartY = 0;
+  let _longPressFired = false;
   card.addEventListener('touchstart', e => {
+    // Cancelar si el toque es en un botón hijo
+    if(e.target.closest('button')) return;
+    _longPressFired = false;
     _pressStartY = e.touches[0].clientY;
-    _pressTimer = setTimeout(() => { if(navigator.vibrate)navigator.vibrate(40); adminCardMenu(u); }, 600);
+    _pressTimer = setTimeout(() => {
+      _longPressFired = true;
+      if(navigator.vibrate) navigator.vibrate(40);
+      adminCardMenu(u);
+    }, 600);
   }, {passive:true});
   card.addEventListener('touchend', () => clearTimeout(_pressTimer));
-  card.addEventListener('touchmove', e => { if(Math.abs(e.touches[0].clientY-_pressStartY)>8) clearTimeout(_pressTimer); }, {passive:true});
-  card.addEventListener('contextmenu', e => { e.preventDefault(); adminCardMenu(u, e); });
+  card.addEventListener('touchmove', e => {
+    if(Math.abs(e.touches[0].clientY - _pressStartY) > 8) clearTimeout(_pressTimer);
+  }, {passive:true});
+  // Clic derecho solo en desktop — ignorar si viene de un botón hijo
+  card.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if(e.target.closest('button')) return;
+    if(_longPressFired) return;
+    adminCardMenu(u, e);
+  });
 
   return card;
 }
@@ -3599,9 +3612,9 @@ function adminCardMenu(u, evt) {
     cm.id = '_adminCtx';
     cm.style.cssText = `position:fixed;left:${Math.min(evt.clientX, window.innerWidth-180)}px;top:${evt.clientY}px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:9999;min-width:170px;box-shadow:0 4px 20px rgba(0,0,0,0.15);`;
     cm.innerHTML = `
-      <div onclick="abrirEditarCliente('${u.id}','${(u.nombre||'').replace(/'/g,"\'")}','${u.email}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">✏️ Editar datos</div>
-      <div onclick="toggleUsuario('${u.id}',${u.activo});this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">${u.activo?'🔴 Desactivar':'🟢 Activar'}</div>
-      <div onclick="confirmarEliminarCliente('${u.id}','${(u.nombre||u.email).replace(/'/g,"\'")}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--red);" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">🗑️ Eliminar cliente</div>`;
+      <div onclick="abrirEditarCliente('${u.id}','${(u.nombre||'').replace(/'/g,"\'")}','${u.email}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">Editar datos</div>
+      <div onclick="toggleUsuario('${u.id}',${u.activo});this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">${u.activo?'Desactivar':'Activar'}</div>
+      <div onclick="confirmarEliminarCliente('${u.id}','${(u.nombre||u.email).replace(/'/g,"\'")}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--red);" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">Eliminar cliente</div>`;
     document.body.appendChild(cm);
     setTimeout(() => document.addEventListener('click', () => cm?.remove(), {once:true}), 10);
     return;
@@ -3614,9 +3627,9 @@ function adminCardMenu(u, evt) {
     <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">${escapeHtml(u.nombre||'Cliente')}</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${escapeHtml(u.email)}</div>
-      <button id="_acEdit" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;margin-bottom:8px;text-align:left;">✏️ Editar datos</button>
-      <button id="_acToggle" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:${u.activo?'var(--accent)':'var(--muted)'};cursor:pointer;margin-bottom:8px;text-align:left;">${u.activo?'🔴 Desactivar cliente':'🟢 Activar cliente'}</button>
-      <button id="_acDel" style="width:100%;padding:13px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:12px;text-align:left;">🗑️ Eliminar cliente</button>
+      <button id="_acEdit" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;margin-bottom:8px;text-align:left;">Editar datos</button>
+      <button id="_acToggle" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:${u.activo?'var(--accent)':'var(--muted)'};cursor:pointer;margin-bottom:8px;text-align:left;">${u.activo?'Desactivar cliente':'Activar cliente'}</button>
+      <button id="_acDel" style="width:100%;padding:13px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:12px;text-align:left;">Eliminar cliente</button>
       <button id="_acCan" style="width:100%;padding:13px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
     </div>`;
   ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
@@ -3632,7 +3645,7 @@ function abrirEditarCliente(id, nombre, email) {
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   ov.innerHTML = `
     <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">✏️ Editar cliente</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">Editar cliente</div>
       <div style="display:flex;flex-direction:column;gap:5px;">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
         <input id="_ecNombre" type="text" value="${escapeHtml(nombre)}" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
@@ -3670,7 +3683,7 @@ function confirmarEliminarCliente(id, nombre) {
     <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">¿Eliminar a "${escapeHtml(nombre)}"?</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Esta acción no se puede deshacer. Se eliminará el cliente y todos sus datos.</div>
-      <button id="_delOk" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">🗑️ Sí, eliminar</button>
+      <button id="_delOk" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Sí, eliminar</button>
       <button id="_delCan" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
     </div>`;
   ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
