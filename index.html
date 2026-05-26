@@ -99,8 +99,9 @@ body{
 /* FIX: views usan position:fixed + altura real del viewport */
 .view{display:none;flex-direction:column;
   position:fixed;inset:0;z-index:1;
-  height:100%;height:-webkit-fill-available;}
-.view.active{display:flex;}
+  height:100%;height:-webkit-fill-available;
+  pointer-events:none;}
+.view.active{display:flex;z-index:10;pointer-events:auto;}
 /* Chat: dejar espacio al bottom nav para que el input no quede tapado */
 #viewChat{bottom:56px;}
 #viewBuscador{bottom:56px;}
