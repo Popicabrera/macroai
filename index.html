@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE  html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -43,10 +43,10 @@ body{
     radial-gradient(ellipse 50% 50% at 95% 95%,rgba(0,120,100,0.04) 0%,transparent 60%);}
 
 /* ══════════════ AUTH SCREENS ══════════════ */
-.auth-screen{display:none;flex-direction:column;height:100%;position:fixed;inset:0;z-index:50;
+.auth-screen{display:none;flex-direction:column;height:100%;position:fixed;inset:0;z-index:50;pointer-events:none;
   align-items:center;justify-content:center;padding:24px;overflow-y:auto;
   background:var(--bg);}
-.auth-screen.active{display:flex;}
+.auth-screen.active{display:flex;pointer-events:auto;}
 .auth-box{width:100%;max-width:400px;display:flex;flex-direction:column;gap:20px;}
 .auth-logo{text-align:center;margin-bottom:8px;}
 .auth-logo-icon{width:72px;height:72px;border-radius:20px;background:var(--accent);
@@ -99,8 +99,9 @@ body{
 /* FIX: views usan position:fixed + altura real del viewport */
 .view{display:none;flex-direction:column;
   position:fixed;inset:0;z-index:1;
-  height:100%;height:-webkit-fill-available;}
-.view.active{display:flex;}
+  height:100%;height:-webkit-fill-available;
+  pointer-events:none;}
+.view.active{display:flex;z-index:10;pointer-events:auto;}
 /* Chat: dejar espacio al bottom nav para que el input no quede tapado */
 #viewChat{bottom:56px;}
 #viewBuscador{bottom:56px;}
@@ -120,20 +121,28 @@ body{
 
 /* ══════════════ DESKTOP SIDEBAR LAYOUT ══════════════ */
 @media(min-width:900px){
-  #desktopSidebar{display:flex!important;}
+  body.app-ready #desktopSidebar{display:flex!important;}
+  body:not(.app-ready) #desktopSidebar{display:none!important;}
   #bottomNav{display:none!important;}
-  .view,.view.active{left:210px!important;right:0!important;width:auto!important;}
+  body.app-ready .view,body.app-ready .view.active{left:180px!important;right:0!important;width:auto!important;}
   .has-bottom-nav .scrollable,
   .has-bottom-nav [style*="overflow-y:auto"],
   .has-bottom-nav [style*="overflow-y: auto"]{padding-bottom:24px!important;}
-  .aw{max-width:none!important;}
-  #viewChat,#viewBuscador{bottom:0!important;left:210px!important;}
+  .aw{max-width:900px!important;padding:0!important;margin:0 auto!important;}
+  .scrollable{align-items:center;}
+  .scrollable>*{width:100%;max-width:720px;}
+  body.app-ready #viewChat,body.app-ready #viewBuscador{bottom:0!important;left:180px!important;}
+  .macro-panel{padding:12px 20px 14px;}
+  .mp-kcal-big{font-size:26px;}
+  .mp-macro-rest{font-size:18px;}
+  .mp-macro-div{margin:0 14px;}
 }
+/* sidebar fuera de #mainApp — se controla exclusivamente por body.app-ready en CSS, sin inline styles */
 #desktopSidebar{
   display:none;
-  width:210px;
+  width:180px;
   flex-direction:column;
-  padding:28px 0 20px;
+  padding:0;
   position:fixed;
   top:0;left:0;bottom:0;
   z-index:300;
@@ -141,21 +150,31 @@ body{
   border-right:1px solid var(--border);
   overflow-y:auto;
 }
-.dsb-logo{padding:0 18px 22px;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
-.dsb-logo em{color:var(--accent);font-style:normal;}
-.dsb-sep{height:1px;background:var(--border);margin:0 18px 10px;}
-.dsb-item{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .15s;}
-.dsb-item:hover{color:var(--text);background:rgba(0,0,0,0.03);}
+/* ── Logo con icono ── */
+.dsb-logo-wrap{display:flex;align-items:center;gap:10px;padding:18px 14px 16px;}
+.dsb-logo-icon{width:32px;height:32px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:#f5f0e8;flex-shrink:0;}
+.dsb-logo-text{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
+.dsb-logo-text em{color:var(--accent);font-style:normal;}
+.dsb-logo-sub{font-size:9px;color:var(--muted2);letter-spacing:0.8px;text-transform:uppercase;margin-top:1px;}
+/* ── Separador y sección ── */
+.dsb-sep{height:1px;background:var(--border);margin:0 12px 8px;}
+.dsb-section-label{font-size:9px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;padding:8px 14px 4px;}
+/* ── Items nav ── */
+.dsb-item{display:flex;align-items:center;gap:9px;padding:9px 12px;margin:0 6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-left:2px solid transparent;border-radius:8px;transition:color .15s,background .15s;}
+.dsb-item:hover{color:var(--text);background:rgba(0,0,0,0.04);}
 .dsb-item.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-dim);}
-.dsb-item svg{width:17px;height:17px;flex-shrink:0;opacity:.75;}
+.dsb-item svg{width:16px;height:16px;flex-shrink:0;opacity:.65;}
 .dsb-item.on svg{opacity:1;}
 .dsb-spacer{flex:1;}
-.dsb-user{padding:12px 18px 0;border-top:1px solid var(--border);display:flex;align-items:center;gap:9px;}
-.dsb-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#f5f0e8;flex-shrink:0;}
-.dsb-user-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* ── Footer usuario ── */
+.dsb-footer{border-top:1px solid var(--border);padding:10px 8px 6px;}
+.dsb-user{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;background:var(--s2);}
+.dsb-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#f5f0e8;flex-shrink:0;}
+.dsb-user-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dsb-user-role{font-size:10px;color:var(--muted2);}
-.dsb-logout{padding:8px 18px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:color .15s;}
+.dsb-logout{display:flex;align-items:center;gap:6px;padding:7px 10px;margin:2px 0 4px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;transition:color .15s;border-radius:8px;}
 .dsb-logout:hover{color:var(--accent);}
+.dsb-logout svg{width:14px;height:14px;flex-shrink:0;opacity:.6;}
 .bn-item{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:3px;padding:8px 4px 10px;cursor:pointer;
@@ -765,6 +784,70 @@ body{
   </div>
 </div>
 
+<!-- ══ DESKTOP SIDEBAR (movido fuera de mainApp para evitar herencia de display) ══ -->
+<div id="desktopSidebar">
+  <!-- Logo -->
+  <div class="dsb-logo-wrap">
+    <div class="dsb-logo-icon">M</div>
+    <div>
+      <div class="dsb-logo-text">Macro<em>AI</em></div>
+      <div class="dsb-logo-sub">Nutrición</div>
+    </div>
+  </div>
+  <div class="dsb-sep"></div>
+
+  <!-- Nav principal -->
+  <div class="dsb-section-label">Principal</div>
+  <div class="dsb-item" data-tab="diario" onclick="dsbNav('diario')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+    <span>Diario</span>
+  </div>
+  <div class="dsb-item" data-tab="menu" onclick="dsbNav('menu')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+    <span>Menú</span>
+  </div>
+  <div class="dsb-item" data-tab="chat" onclick="dsbNav('chat')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    <span>Asistente</span>
+  </div>
+  <div class="dsb-item" data-tab="favoritos" onclick="dsbNav('favoritos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>Favoritos</span>
+  </div>
+
+  <!-- Nav cuenta -->
+  <div class="dsb-section-label" style="margin-top:8px;">Cuenta</div>
+  <div class="dsb-item" data-tab="perfil" onclick="dsbNav('perfil')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Perfil</span>
+  </div>
+  <div class="dsb-item" id="dsb-clientes" data-tab="clientes" onclick="dsbNav('clientes')" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    <span>Clientes</span>
+  </div>
+
+  <div class="dsb-spacer"></div>
+
+  <!-- Footer usuario -->
+  <div class="dsb-footer">
+    <div class="dsb-user">
+      <div class="dsb-avatar" id="dsbAvatar">—</div>
+      <div style="flex:1;min-width:0;">
+        <div class="dsb-user-name" id="dsbNombre"></div>
+        <div class="dsb-user-role" id="dsbRol"></div>
+      </div>
+    </div>
+    <div class="dsb-logout" onclick="doLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar sesión
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ APP WRAPPER (oculto hasta enterApp) ══ -->
+<div id="mainApp" style="display:none">
+
 <!-- ══ VISTA PRINCIPAL ══ -->
 <div class="view" id="viewMain">
 <div class="aw">
@@ -1009,31 +1092,96 @@ body{
 
 <!-- ══ VISTA ADMIN ══ -->
 <div class="view" id="viewAdmin">
-<div class="aw">
-  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
-    <div class="back-btn" onclick="showView('viewMain')">‹</div>
-    <h2 style="color:var(--accent)">Clientes</h2>
+<div class="aw" style="max-width:none!important;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+  <!-- TOPBAR -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:rgba(245,240,232,0.97);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Clientes</div>
+      <div id="adminSubtitle" style="font-size:11px;color:var(--muted);margin-top:1px;"></div>
+    </div>
+    <button onclick="showCrearCliente()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--accent);border:none;border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;">
+      <span style="font-size:16px;line-height:1;">＋</span> Nuevo cliente
+    </button>
   </div>
-  <div class="scrollable" id="adminBody"></div>
+
+  <!-- SEARCH + FILTERS -->
+  <div style="padding:10px 20px 8px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:10px;">
+    <div style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--s1);border:1px solid var(--border);border-radius:10px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted2);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="adminSearch" type="text" placeholder="Buscar cliente por nombre o email..." oninput="filtrarClientes()" style="border:none;background:none;outline:none;font-size:12px;color:var(--text);width:100%;font-family:'Inter',sans-serif;">
+    </div>
+    <div style="display:flex;gap:5px;">
+      <div class="admin-filter on" id="af-todos" onclick="setAdminFilter('todos')">Todos</div>
+      <div class="admin-filter off" id="af-activos" onclick="setAdminFilter('activos')">Activos</div>
+      <div class="admin-filter off" id="af-inactivos" onclick="setAdminFilter('inactivos')">Inactivos</div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div style="flex:1;overflow-y:auto;padding:14px 20px;" id="adminBody"></div>
+
+  <!-- FORM NUEVO CLIENTE (overlay) -->
+  <div id="crearClienteOverlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center;">
+    <div style="background:var(--bg);border-radius:16px;padding:24px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">Nuevo cliente</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
+        <input id="newClientNombre" type="text" placeholder="Nombre del cliente" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
+        <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+      </div>
+      <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;"></div>
+      <div id="whatsappBox" style="display:none;background:var(--s2);border:1px solid rgba(192,57,43,0.2);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;"></div>
+      <div id="copiarBtnWrap" style="display:none;">
+        <button onclick="copiarWhatsapp()" style="width:100%;padding:12px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#25d366;cursor:pointer;">📋 Copiar mensaje WhatsApp</button>
+      </div>
+      <div style="display:flex;gap:8px;" id="crearBtnRow">
+        <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Crear cliente</button>
+        <button onclick="cerrarFormCliente()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 </div>
 
 <style>
-.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
-.admin-card-top{display:flex;justify-content:space-between;align-items:center;}
-.admin-card-info{display:flex;flex-direction:column;gap:3px;}
-.admin-card-nombre{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;}
-.admin-card-email{font-size:12px;color:var(--muted);}
-.admin-card-fecha{font-size:11px;color:var(--muted2);}
-.admin-card-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;}
-.admin-card-status.active{background:rgba(192,57,43,0.08);color:var(--accent);}
-.admin-card-status.inactive{background:rgba(255,107,107,0.08);color:var(--red);}
-.admin-toggle{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
+/* ── Admin filters ── */
+.admin-filter{padding:5px 12px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);white-space:nowrap;}
+.admin-filter.on{background:var(--accent);color:#f5f0e8;border-color:transparent;}
+.admin-filter.off{background:var(--s2);color:var(--muted);}
+
+/* ── Admin cards — desktop ── */
+.admin-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;}
+.admin-card:hover{border-color:rgba(192,57,43,0.3);}
+.admin-card-avatar{width:42px;height:42px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.2);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.admin-card-info{flex:1;min-width:0;}
+.admin-card-nombre{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+.admin-card-email{font-size:11px;color:var(--muted);margin-top:2px;}
+.admin-card-badges{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.admin-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;}
+.admin-badge-activo{background:rgba(42,157,92,0.12);color:#1a6b3c;}
+.admin-badge-inactivo{background:var(--s3);color:var(--muted);}
+.admin-badge-macros{background:var(--accent-dim);color:var(--accent);}
+.admin-badge-sin{background:rgba(186,117,23,0.1);color:#854F0B;}
+.admin-card-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.admin-card-date{font-size:10px;color:var(--muted2);white-space:nowrap;}
+.admin-toggle{width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
 .admin-toggle.on{background:var(--accent);}
 .admin-toggle.off{background:var(--muted2);}
-.admin-toggle-dot{width:20px;height:20px;border-radius:50%;background:#080810;position:absolute;top:3px;transition:left 0.3s;}
-.admin-toggle.on .admin-toggle-dot{left:25px;}
+.admin-toggle-dot{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;transition:left 0.3s;}
+.admin-toggle.on .admin-toggle-dot{left:23px;}
 .admin-toggle.off .admin-toggle-dot{left:3px;}
+.admin-section-label{font-size:10px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;padding:4px 0 8px;}
+
+/* ── Desktop: quitar max-width en viewAdmin ── */
+@media(min-width:900px){
+  #viewAdmin .aw{max-width:none!important;padding:0!important;}
+  #viewAdmin .aw>div:last-child{padding:14px 20px;}
+}
 </style>
 
 <script>
@@ -1066,6 +1214,10 @@ async function supaAdmin(path,opts={}){
 
 // ── AUTH ──
 function showAuth(id){
+  // Ocultar app wrapper
+  const ma=document.getElementById('mainApp');if(ma)ma.style.display='none';
+  document.body.classList.remove('app-ready');
+  // El CSS oculta el sidebar cuando body NO tiene app-ready — no necesita inline style
   // Ocultar todas las views
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   // Mostrar auth
@@ -1181,6 +1333,14 @@ function doLogout(){
     el.classList.remove('active');
     el.style.display='';
   });
+  document.body.classList.add('auth-active');
+  document.body.classList.remove('app-ready');
+  // Sidebar oculto por CSS body:not(.app-ready) — no necesita inline style
+  const sb = document.getElementById('desktopSidebar');
+  if(sb){ sb.style.display=''; }
+  const av=document.getElementById('dsbAvatar'); if(av) av.textContent='—';
+  const nm=document.getElementById('dsbNombre'); if(nm) nm.textContent='';
+  const rl=document.getElementById('dsbRol');   if(rl) rl.textContent='';
   // Resetear display de auth-screens (pueden tener display:none de enterApp)
   document.querySelectorAll('.auth-screen').forEach(s=>s.style.display='');
   const login=document.getElementById('screenLogin');
@@ -1196,6 +1356,9 @@ function enterApp(){
     s.classList.remove('active');
     s.style.display='none';
   });
+  document.body.classList.remove('auth-active');
+  document.body.classList.add('app-ready');
+  document.getElementById('mainApp').style.display='';
   // Ping al Worker para despertarlo antes de que el usuario lo necesite
   fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
   // Sincronizar favoritos e historial desde Supabase (fix incógnito)
@@ -2164,7 +2327,7 @@ function showView(id){
   document.getElementById(id).classList.add('active');
   closeContextMenu();
   // Sincronizar bottom nav
-  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes'};
+  const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes',viewMenuSemanal:'clientes'};
   const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
   if(bnMap[id]){const b=document.getElementById('bn-'+bnMap[id]);if(b)b.classList.add('active');}
@@ -3337,86 +3500,220 @@ function logoTap(){
   if(adminTaps>=5){adminTaps=0;if(CURRENT_USER?.email===ADMIN_EMAIL){showView('viewAdmin');loadAdminUsers();}}
 }
 
+let _adminUsersData = [];
+let _adminFilter = 'todos';
+
+function setAdminFilter(f){
+  _adminFilter = f;
+  ['todos','activos','inactivos'].forEach(x=>{
+    const el=document.getElementById('af-'+x);
+    if(el){el.className='admin-filter '+(x===f?'on':'off');}
+  });
+  renderAdminCards();
+}
+
+function filtrarClientes(){
+  renderAdminCards();
+}
+
+function renderAdminCards(){
+  const body=document.getElementById('adminBody');
+  if(!body)return;
+  const q=(document.getElementById('adminSearch')?.value||'').toLowerCase().trim();
+  let users=_adminUsersData;
+  if(_adminFilter==='activos') users=users.filter(u=>u.activo);
+  if(_adminFilter==='inactivos') users=users.filter(u=>!u.activo);
+  if(q) users=users.filter(u=>(u.nombre||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q));
+
+  // Actualizar subtítulo
+  const sub=document.getElementById('adminSubtitle');
+  if(sub) sub.textContent=`${_adminUsersData.length} clientes · ${_adminUsersData.filter(u=>u.activo).length} activos`;
+
+  if(!users.length){body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px;">No hay clientes que coincidan.</div>';return;}
+
+  // Separar activos e inactivos
+  const activos=users.filter(u=>u.activo);
+  const inactivos=users.filter(u=>!u.activo);
+
+  body.innerHTML='';
+
+  if(activos.length){
+    if(_adminFilter==='todos'){
+      const lbl=document.createElement('div');lbl.className='admin-section-label';lbl.textContent='Activos';body.appendChild(lbl);
+    }
+    activos.forEach(u=>body.appendChild(buildAdminCard(u)));
+  }
+  if(inactivos.length){
+    if(_adminFilter==='todos'){
+      const lbl=document.createElement('div');lbl.className='admin-section-label';lbl.style.marginTop='8px';lbl.textContent='Inactivos';body.appendChild(lbl);
+    }
+    inactivos.forEach(u=>{
+      const card=buildAdminCard(u);card.style.opacity='0.6';body.appendChild(card);
+    });
+  }
+}
+
+function buildAdminCard(u){
+  const card=document.createElement('div');
+  card.className='admin-card';
+  card.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:11px 12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:border-color 0.15s;margin-bottom:8px;user-select:none;-webkit-user-select:none;';
+  const initials=(u.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const modoApp=window._adminModoApp?.[u.email]||null;
+  card.innerHTML=`
+    <div class="admin-card-avatar" style="flex-shrink:0;">${initials}</div>
+    <div class="admin-card-info" style="flex:1;min-width:0;overflow:hidden;">
+      <div class="admin-card-nombre" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nombre||'Sin nombre'}</div>
+      <div class="admin-card-email" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;margin-bottom:7px;">${u.email}</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;">
+        <span class="admin-badge ${u.activo?'admin-badge-activo':'admin-badge-inactivo'}" id="status-${u.id}" style="flex-shrink:0;">${u.activo?'Activo':'Inactivo'}</span>
+        <button class="admin-modo-btn" data-email="${u.email}" data-modo="${modoApp||'macros'}" style="flex-shrink:0;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;${(modoApp||'macros')==='menu'?'background:#fdecea;border:1.5px solid #c0392b;color:#7b241c;':'background:#e8f4fd;border:1.5px solid #2980b9;color:#1a5276;'}">${(modoApp||'macros')==='menu'?'Menú':'Macros'}</button>
+        <button class="admin-macros-btn" data-id="${u.id}" data-nombre="${(u.nombre||'Sin nombre').replace(/"/g,'&quot;')}" data-email="${u.email}" style="flex-shrink:0;padding:4px 9px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:8px;font-size:11px;font-weight:500;color:var(--accent);cursor:pointer;">Macros</button>
+        <button class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="flex-shrink:0;padding:4px 9px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;">Menú</button>
+      </div>
+    </div>`;
+
+  // Long press móvil — solo touch, sin contextmenu en móvil
+  let _pressTimer = null;
+  let _pressStartY = 0;
+  let _longPressFired = false;
+  card.addEventListener('touchstart', e => {
+    // Cancelar si el toque es en un botón hijo
+    if(e.target.closest('button')) return;
+    _longPressFired = false;
+    _pressStartY = e.touches[0].clientY;
+    _pressTimer = setTimeout(() => {
+      _longPressFired = true;
+      if(navigator.vibrate) navigator.vibrate(40);
+      adminCardMenu(u);
+    }, 600);
+  }, {passive:true});
+  card.addEventListener('touchend', () => clearTimeout(_pressTimer));
+  card.addEventListener('touchmove', e => {
+    if(Math.abs(e.touches[0].clientY - _pressStartY) > 8) clearTimeout(_pressTimer);
+  }, {passive:true});
+  // Clic derecho solo en desktop — ignorar si viene de un botón hijo
+  card.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if(e.target.closest('button')) return;
+    if(_longPressFired) return;
+    adminCardMenu(u, e);
+  });
+
+  return card;
+}
+
+function adminCardMenu(u, evt) {
+  const isDesktop = evt && evt.clientX;
+
+  if(isDesktop) {
+    let cm = document.getElementById('_adminCtx');
+    if(cm) cm.remove();
+    cm = document.createElement('div');
+    cm.id = '_adminCtx';
+    cm.style.cssText = `position:fixed;left:${Math.min(evt.clientX, window.innerWidth-180)}px;top:${evt.clientY}px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:9999;min-width:170px;box-shadow:0 4px 20px rgba(0,0,0,0.15);`;
+    cm.innerHTML = `
+      <div onclick="abrirEditarCliente('${u.id}','${(u.nombre||'').replace(/'/g,"\'")}','${u.email}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">Editar datos</div>
+      <div onclick="toggleUsuario('${u.id}',${u.activo});this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">${u.activo?'Desactivar':'Activar'}</div>
+      <div onclick="confirmarEliminarCliente('${u.id}','${(u.nombre||u.email).replace(/'/g,"\'")}');this.closest('#_adminCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--red);" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">Eliminar cliente</div>`;
+    document.body.appendChild(cm);
+    setTimeout(() => document.addEventListener('click', () => cm?.remove(), {once:true}), 10);
+    return;
+  }
+
+  // Bottom sheet móvil
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">${escapeHtml(u.nombre||'Cliente')}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${escapeHtml(u.email)}</div>
+      <button id="_acEdit" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;margin-bottom:8px;text-align:left;">Editar datos</button>
+      <button id="_acToggle" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:${u.activo?'var(--accent)':'var(--muted)'};cursor:pointer;margin-bottom:8px;text-align:left;">${u.activo?'Desactivar cliente':'Activar cliente'}</button>
+      <button id="_acDel" style="width:100%;padding:13px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:12px;text-align:left;">Eliminar cliente</button>
+      <button id="_acCan" style="width:100%;padding:13px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_acEdit').onclick = () => { ov.remove(); abrirEditarCliente(u.id, u.nombre||'', u.email); };
+  ov.querySelector('#_acToggle').onclick = () => { ov.remove(); toggleUsuario(u.id, u.activo); };
+  ov.querySelector('#_acDel').onclick = () => { ov.remove(); confirmarEliminarCliente(u.id, u.nombre||u.email); };
+  ov.querySelector('#_acCan').onclick = () => ov.remove();
+}
+
+function abrirEditarCliente(id, nombre, email) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML = `
+    <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">Editar cliente</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
+        <input id="_ecNombre" type="text" value="${escapeHtml(nombre)}" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
+        <input id="_ecEmail" type="email" value="${escapeHtml(email)}" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
+      </div>
+      <div id="_ecMsg" style="display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="_ecSave" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Guardar</button>
+        <button onclick="this.closest('[style*=inset]').remove()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_ecSave').onclick = async () => {
+    const nuevoNombre = ov.querySelector('#_ecNombre').value.trim();
+    const nuevoEmail = ov.querySelector('#_ecEmail').value.trim();
+    const btn = ov.querySelector('#_ecSave');
+    const msg = ov.querySelector('#_ecMsg');
+    if(!nuevoNombre||!nuevoEmail){msg.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);color:var(--red);font-size:12px;';msg.textContent='Rellena todos los campos.';return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+    try{
+      await supaAdmin('/rest/v1/usuarios_macroai?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal','Content-Type':'application/json'},body:JSON.stringify({nombre:nuevoNombre,email:nuevoEmail})});
+      ov.remove();showToast('✅ Cliente actualizado');loadAdminUsers();
+    }catch(e){msg.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);color:var(--red);font-size:12px;';msg.textContent='Error guardando.';btn.disabled=false;btn.textContent='Guardar';}
+  };
+}
+
+function confirmarEliminarCliente(id, nombre) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">¿Eliminar a "${escapeHtml(nombre)}"?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Esta acción no se puede deshacer. Se eliminará el cliente y todos sus datos.</div>
+      <button id="_delOk" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Sí, eliminar</button>
+      <button id="_delCan" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_delCan').onclick = () => ov.remove();
+  ov.querySelector('#_delOk').onclick = async () => { await eliminarCliente(id, nombre); ov.remove(); };
+}
+
 async function loadAdminUsers(){
   const body=document.getElementById('adminBody');
-  body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;">Cargando...</div>';
+  if(!body)return;
+  body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px;">Cargando...</div>';
   try{
     const res=await supaAdmin('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
     const users=await res.json();
-    let perfilesEmails=new Set(), menusEmails=new Set();
+    window._adminPerfilesEmails=new Set();
+    window._adminMenusEmails=new Set();
     try{
       const [pRes,mRes]=await Promise.all([
         supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email'),
         supaAdmin('/rest/v1/menus_macroai?select=cliente_email')
       ]);
-      const pRows=await pRes.json(); if(Array.isArray(pRows)) pRows.forEach(r=>perfilesEmails.add(r.cliente_email));
-      const mRows=await mRes.json(); if(Array.isArray(mRows)) mRows.forEach(r=>menusEmails.add(r.cliente_email));
+      const pRows=await pRes.json(); if(Array.isArray(pRows)) pRows.forEach(r=>window._adminPerfilesEmails.add(r.cliente_email));
+      const mRows=await mRes.json(); if(Array.isArray(mRows)) mRows.forEach(r=>window._adminMenusEmails.add(r.cliente_email));
     }catch(e){}
-
-    body.innerHTML=`
-      <div style="padding:0 0 12px;">
-        <button onclick="showCrearCliente()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;">＋ Crear nuevo cliente</button>
-      </div>
-      <div id="crearClienteForm" style="display:none;background:var(--s1);border:1px solid rgba(192,57,43,0.25);border-radius:14px;padding:16px;margin-bottom:12px;flex-direction:column;gap:12px;">
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);">Nuevo cliente</div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Nombre</div>
-          <input id="newClientNombre" type="text" placeholder="Nombre del cliente" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;">Email</div>
-          <input id="newClientEmail" type="email" placeholder="email@ejemplo.com" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;width:100%;">
-        </div>
-        <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;"></div>
-        <div id="whatsappBox" style="display:none;background:var(--s2);border:1px solid rgba(192,57,43,0.2);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;"></div>
-        <div id="copiarBtnWrap" style="display:none;">
-          <button onclick="copiarWhatsapp()" style="width:100%;padding:12px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#25d366;cursor:pointer;">📋 Copiar mensaje WhatsApp</button>
-        </div>
-        <div style="display:flex;gap:8px;" id="crearBtnRow">
-          <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Crear cliente</button>
-          <button onclick="cerrarFormCliente()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
-        </div>
-      </div>`;
-
-    if(!Array.isArray(users)||!users.length){body.innerHTML+='<div style="text-align:center;color:var(--muted);padding:40px 0;">No hay usuarios registrados.</div>';return;}
-    users.forEach(u=>{
-      const card=document.createElement('div');card.className='admin-card';
-      const fecha=new Date(u.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
-      const tieneMacros=perfilesEmails.has(u.email);
-      const tieneMenu=menusEmails.has(u.email);
-      const btnMacrosStyle=tieneMacros
-        ? 'flex:1;background:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;text-align:center;'
-        : 'flex:1;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;';
-      const btnMenuStyle=tieneMenu
-        ? 'flex:1;background:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;text-align:center;'
-        : 'flex:1;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;text-align:center;';
-      card.innerHTML=`
-        <div class="admin-card-top">
-          <div class="admin-card-info">
-            <div class="admin-card-nombre">${u.nombre||'Sin nombre'}</div>
-            <div class="admin-card-email">${u.email}</div>
-            <div class="admin-card-fecha">Alta: ${fecha}</div>
-          </div>
-          <div class="admin-toggle ${u.activo?'on':'off'}" id="toggle-${u.id}" onclick="toggleUsuario('${u.id}',${u.activo})">
-            <div class="admin-toggle-dot"></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div class="admin-card-status ${u.activo?'active':'inactive'}" id="status-${u.id}" style="flex:1;">
-            ${u.activo?'✅ Activo':'❌ Desactivado'}
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:4px;">
-          <div onclick="abrirPerfilAdmin('${u.id}','${u.nombre||'Sin nombre'}','${u.email}')" style="${btnMacrosStyle}">
-            📊 Macros
-          </div>
-          <div class="menu-nutricional-btn" data-email="${u.email}" data-nombre="${u.nombre||'Sin nombre'}" style="${btnMenuStyle}">
-            🥗 Menú
-          </div>
-        </div>`;
-      body.appendChild(card);
-    });
-  }catch(e){body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';}
+    _adminUsersData=Array.isArray(users)?users:[];
+    renderAdminCards();
+  }catch(e){
+    if(body)body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';
+  }
 }
 
 document.addEventListener('click', function(e) {
@@ -3428,16 +3725,43 @@ document.addEventListener('click', function(e) {
   }
 });
 
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.admin-macros-btn');
+  if (btn) {
+    const id = btn.dataset.id;
+    const nombre = btn.dataset.nombre;
+    const email = btn.dataset.email;
+    abrirPerfilAdmin(id, nombre, email);
+  }
+});
+
 function showCrearCliente(){
-  const f=document.getElementById('crearClienteForm');
-  const visible=f.style.display==='flex';
-  f.style.display=visible?'none':'flex';
+  const ov=document.getElementById("crearClienteOverlay");
+  if(ov){
+    ov.style.display="flex";
+    const n=document.getElementById("newClientNombre");const e=document.getElementById("newClientEmail");
+    if(n)n.value="";if(e)e.value="";
+    const msg=document.getElementById("crearClienteMsg");if(msg)msg.style.display="none";
+    const wb=document.getElementById("whatsappBox");if(wb)wb.style.display="none";
+    const cb=document.getElementById("copiarBtnWrap");if(cb)cb.style.display="none";
+    const br=document.getElementById("crearBtnRow");if(br)br.style.display="flex";
+    const btn=document.getElementById("crearClienteBtn");if(btn){btn.disabled=false;btn.textContent="Crear cliente";}
+  }
 }
+
+
+
+
+
 
 let _ultimoWhatsapp='';
 function cerrarFormCliente(){
-  document.getElementById('crearClienteForm').style.display='none';
+  const ov=document.getElementById('crearClienteOverlay');
+  if(ov)ov.style.display='none';
 }
+
+
+
 function copiarWhatsapp(){
   navigator.clipboard.writeText(_ultimoWhatsapp).catch(()=>{
     const ta=document.createElement('textarea');ta.value=_ultimoWhatsapp;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
@@ -4405,6 +4729,18 @@ function fsmRegistrar() {
     : p.nombre;
   const nombre = `${_nombreBase} (${g}g)`;
   const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
+
+  // ── MODO BIBLIOTECA: añadir ingrediente al editor de biblioteca ──
+  if (_buscadorMealId === '__bib__') {
+    fsmCerrar();
+    showView('viewMenuSemanal');
+    if(_buscadorBibCallback) {
+      _buscadorBibCallback(p, g);
+      _buscadorBibCallback = null;
+    }
+    _buscadorMealId = '';
+    return;
+  }
 
   // ── MODO EDICIÓN: reemplazar item existente ──
   if (_mfpEditandoIdx >= 0 && S.comidas[_mfpEditandoIdx]) {
@@ -6456,14 +6792,73 @@ async function handleFotoProducto(e) {
 
 <!-- ══ VIEW: ADMIN MENÚS ══ -->
 <div class="view" id="viewAdminMenu">
-<div class="aw">
-  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
-    <div class="back-btn" onclick="showView('viewAdmin')">‹</div>
-    <h2 id="adminMenuTitle" style="color:var(--accent)">⚡ Perfil nutricional</h2>
+<div class="aw" style="max-width:none!important;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:rgba(245,240,232,0.97);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="back-btn" onclick="showView('viewAdmin')" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--muted);flex-shrink:0;">‹</div>
+    <div>
+      <div id="adminMenuTitle" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Menú nutricional</div>
+    </div>
   </div>
-  <div class="scrollable" id="adminMenuBody"></div>
+  <div id="adminMenuBody" style="flex:1;overflow-y:auto;padding:20px;"></div>
 </div>
 </div>
+<style>
+@media(min-width:900px){
+  #viewAdminMenu .aw{max-width:none!important;padding:0!important;}
+  #adminMenuBody{padding:20px!important;}
+  .amenu-desktop-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+}
+</style>
+
+<!-- ══ VIEW: MENÚ SEMANAL ══ -->
+<div class="view" id="viewMenuSemanal">
+<div class="aw" style="max-width:none!important;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+  <!-- TOPBAR -->
+  <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;background:rgba(245,240,232,0.97);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="back-btn" onclick="showView('viewAdminMenu')" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--muted);flex-shrink:0;">‹</div>
+    <div style="flex:1;">
+      <div id="menuSemTitle" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);"></div>
+      <div id="menuSemSemana" style="font-size:11px;color:var(--muted);margin-top:1px;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div onclick="_menuSemOffset--;renderMenuSemanal()" style="width:30px;height:30px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);">‹</div>
+      <div onclick="_menuSemOffset++;renderMenuSemanal()" style="width:30px;height:30px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);">›</div>
+      <button onclick="abrirNuevoBibItem()" style="padding:6px 14px;background:#c0392b;border:none;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;">+ Biblioteca</button>
+    </div>
+  </div>
+  <!-- DÍAS -->
+  <div id="menuSemDias" style="display:flex;gap:6px;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;"></div>
+  <!-- BODY DOS COLUMNAS -->
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;">
+    <!-- Col izquierda: comidas del día -->
+    <div style="border-right:1px solid var(--border);overflow-y:auto;min-height:0;" id="menuSemComidas"></div>
+    <!-- Col derecha: biblioteca -->
+    <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+      <!-- Header biblioteca -->
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);margin-bottom:8px;">Biblioteca de menús</div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;margin-bottom:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted2);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="menuSemBibSearch" type="text" placeholder="Buscar por nombre..." oninput="_bibQuery=this.value;cargarBiblioteca()"
+            style="border:none;background:transparent;outline:none;font-size:12px;color:var(--text);width:100%;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div id="menuSemBibFiltros" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;"></div>
+          <button onclick="abrirBibEditor(null)" style="padding:4px 10px;background:#c0392b;border:none;border-radius:8px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;margin-left:8px;">+ Nuevo</button>
+        </div>
+      </div>
+      <!-- Lista biblioteca -->
+      <div id="menuSemBibLista" style="flex:1;overflow-y:auto;padding:10px 14px;"></div>
+    </div>
+  </div>
+</div>
+</div>
+<style>
+@media(min-width:900px){
+  #viewMenuSemanal .aw{max-width:none!important;padding:0!important;}
+}
+</style>
 
 <!-- ══ BARCODE SCANNER OVERLAY ══ -->
 <div id="scannerOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column;align-items:center;justify-content:center;">
@@ -6979,13 +7374,113 @@ async function renderAdminMacros() {
   renderAdminMacrosUI();
 }
 
+let _amModoDesktop = 'ed'; // 'ed' = entreno/descanso, 'igual' = todos igual
+
+function amSetModoDesktop(modo) {
+  _amModoDesktop = modo;
+  document.querySelectorAll('.am-modo-btn').forEach(b => b.classList.remove('on','off'));
+  const btnEd = document.getElementById('amModoBtn-ed');
+  const btnIgual = document.getElementById('amModoBtn-igual');
+  if(btnEd) btnEd.className = 'am-modo-btn ' + (modo==='ed'?'on':'off');
+  if(btnIgual) btnIgual.className = 'am-modo-btn ' + (modo==='igual'?'on':'off');
+  renderAdminMacrosUI();
+}
+
 function renderAdminMacrosUI() {
   const body = document.getElementById('adminMacrosBody');
-  body.innerHTML = drumHTML('adminMacrosBody')+`
-    <input type="hidden" id="amMModoApp" value="macros">
-    <button class="am-btn-secondary" onclick="guardarMacros()" style="margin-bottom:24px;">💾 Guardar macros</button>
-  `;
-  drumInit('adminMacrosBody');
+  const v = _drumVals;
+  const cid = 'adminMacrosBody';
+
+  const calcE = v.hcE*4 + v.pE*4 + v.gE*9;
+  const calcD = v.hcD*4 + v.pD*4 + v.gD*9;
+
+  const chkStyle = (calc, obj) => {
+    const diff = calc - obj; const ok = Math.abs(diff)<=10; const over = diff>10;
+    return {
+      bg: ok?'rgba(46,125,50,0.08)':over?'rgba(192,57,43,0.08)':'rgba(230,130,0,0.08)',
+      bc: ok?'rgba(46,125,50,0.3)':over?'rgba(192,57,43,0.3)':'rgba(230,130,0,0.3)',
+      color: ok?'#2e7d32':over?'#c0341d':'#e65100',
+      txt: ok?'✓ Cuadra':over?'↑ Se pasa':'↓ Falta',
+      kcal: `${calc} / ${obj} kcal`
+    };
+  };
+
+  const macroRow = (label, id, val) => `
+    <div class="am-macro-row">
+      <span class="am-macro-lbl">${label}</span>
+      <input class="am-macro-inp" id="${id}-${cid}" type="number" inputmode="numeric" value="${val}" oninput="drumFieldChange('${cid}')">
+    </div>`;
+
+  if(_amModoDesktop === 'ed') {
+    const cE = chkStyle(calcE, v.kcalE);
+    const cD = chkStyle(calcD, v.kcalD);
+    body.innerHTML = `
+      <div class="am-macros-grid">
+        <div class="am-macro-block">
+          <div class="am-macro-block-hdr">
+            <div class="am-macro-block-dot" style="background:var(--accent);"></div>
+            <span class="am-macro-block-title" style="color:var(--accent);">Día de entreno</span>
+            <span class="am-macro-block-kcal" style="color:var(--accent);" id="kcalE-display">${v.kcalE} kcal</span>
+          </div>
+          <div class="am-macro-fields">
+            ${macroRow('Hidratos (g)', 'dHcE', v.hcE)}
+            ${macroRow('Proteína (g)', 'dPE', v.pE)}
+            ${macroRow('Grasas (g)', 'dGE', v.gE)}
+            ${macroRow('Calorías objetivo', 'dKcalE', v.kcalE)}
+          </div>
+          <div style="padding:0 16px 12px;">
+            <div class="am-chk" id="chkE-${cid}" style="background:${cE.bg};border:1px solid ${cE.bc};color:${cE.color};">
+              <span>${cE.txt}</span><span>${cE.kcal}</span>
+            </div>
+          </div>
+        </div>
+        <div class="am-macro-block">
+          <div class="am-macro-block-hdr">
+            <div class="am-macro-block-dot" style="background:var(--muted);"></div>
+            <span class="am-macro-block-title" style="color:var(--muted);">Día de descanso</span>
+            <span class="am-macro-block-kcal" style="color:var(--muted);" id="kcalD-display">${v.kcalD} kcal</span>
+          </div>
+          <div class="am-macro-fields">
+            ${macroRow('Hidratos (g)', 'dHcD', v.hcD)}
+            ${macroRow('Proteína (g)', 'dPD', v.pD)}
+            ${macroRow('Grasas (g)', 'dGD', v.gD)}
+            ${macroRow('Calorías objetivo', 'dKcalD', v.kcalD)}
+          </div>
+          <div style="padding:0 16px 12px;">
+            <div class="am-chk" id="chkD-${cid}" style="background:${cD.bg};border:1px solid ${cD.bc};color:${cD.color};">
+              <span>${cD.txt}</span><span>${cD.kcal}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="am-save-btn" onclick="guardarMacros()">💾 Guardar macros</button>`;
+  } else {
+    // Modo todos los días igual — usa valores de entreno
+    const cE = chkStyle(calcE, v.kcalE);
+    body.innerHTML = `
+      <div class="am-macros-grid-single">
+        <div class="am-macro-block">
+          <div class="am-macro-block-hdr">
+            <div class="am-macro-block-dot" style="background:var(--accent);"></div>
+            <span class="am-macro-block-title" style="color:var(--accent);">Macros diarios</span>
+            <span class="am-macro-block-kcal" style="color:var(--accent);">${v.kcalE} kcal</span>
+          </div>
+          <div class="am-macro-fields">
+            ${macroRow('Hidratos (g)', 'dHcE', v.hcE)}
+            ${macroRow('Proteína (g)', 'dPE', v.pE)}
+            ${macroRow('Grasas (g)', 'dGE', v.gE)}
+            ${macroRow('Calorías objetivo', 'dKcalE', v.kcalE)}
+          </div>
+          <div style="padding:0 16px 12px;">
+            <div class="am-chk" id="chkE-${cid}" style="background:${cE.bg};border:1px solid ${cE.bc};color:${cE.color};">
+              <span>${cE.txt}</span><span>${cE.kcal}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="am-save-btn" onclick="guardarMacros()">💾 Guardar macros</button>`;
+  }
+  drumInit(cid);
 }
 
 function drumGetMacrosEmail() {
@@ -7056,149 +7551,658 @@ async function renderAdminMenuPerfil(seccion) {
     if (Array.isArray(rows) && rows.length) perfil = rows[0];
   } catch (e) {}
 
-  const semana = getLunesSemana(_adminMenuSemanaOffset);
+  // Valores actuales
+  const kcalE = perfil?.kcal_objetivo||2200, kcalD = perfil?.kcal_descanso||1900;
+  const pE = perfil?.p_objetivo||160, hcE = perfil?.hc_objetivo||220, gE = perfil?.g_objetivo||65;
+  const pD = perfil?.p_descanso||150, hcD = perfil?.hc_descanso||170, gD = perfil?.g_descanso||60;
+  const comidas = perfil?.comidas_dia||4;
+  const prefs = perfil?.preferencias||'';
+  const modoMacros = perfil?.modo_macros||'ed'; // ed = entreno/descanso, igual = todos igual
 
-  _drumVals = { kcalE: perfil?.kcal_objetivo||2200, kcalD: perfil?.kcal_descanso||1900, pE: perfil?.p_objetivo||160, hcE: perfil?.hc_objetivo||220, gE: perfil?.g_objetivo||65, pD: perfil?.p_descanso||150, hcD: perfil?.hc_descanso||170, gD: perfil?.g_descanso||60 };
-  _drumModo = 'g';
-  _drumContainer = 'adminMenuBody';
+  body.innerHTML = `
+  <div style="max-width:900px;margin:0 auto;">
 
-  body.innerHTML = drumHTML('adminMenuBody') + `
-    <button class="am-btn-secondary" onclick="guardarMacros(false,'menu')" style="margin-bottom:12px;">💾 Guardar macros</button>
-
-    <div id="amSeccionMacros"></div>
-
-    <!-- Configuración -->
-    <div class="am-section">
-      <div class="am-section-hdr">Configuración</div>
-      <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
-      <div class="am-field">
-        <span class="am-field-label">Comidas al día</span>
-        <input class="am-field-input" id="amComidas" type="number" inputmode="numeric" min="2" max="6" value="${perfil?.comidas_dia || 4}">
-      </div>
-      <div class="am-field" style="flex-direction:column;align-items:flex-start;gap:6px;">
-        <span class="am-field-label">Restricciones</span>
-        <input class="am-field-input wide" id="amPrefs" type="text" placeholder="Ej: sin gluten, sin lactosa..." value="${perfil?.preferencias || ''}">
-      </div>
-    </div>
-
-    <!-- Semana -->
-    <div class="am-section">
-      <div class="am-section-hdr">Semana del menú</div>
-      <div class="am-field" style="justify-content:center;">
-        <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset--;renderAdminMenuPerfil()">‹</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;padding:0 12px;">${formatSemanaLabel(semana)}</div>
-        <div class="menu-nav-btn" onclick="_adminMenuSemanaOffset++;renderAdminMenuPerfil()">›</div>
-      </div>
-    </div>
-
-    <!-- Guardar perfil -->
-    <button class="am-btn-secondary" onclick="guardarPerfil()" style="margin-bottom:16px;">
-      💾 Guardar perfil
-    </button>
-
-    </div><div id="amSeccionMenu">
-
-    <!-- ── TABS IA / MANUAL ── -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;">
-      <button id="amTabIA" onclick="amSwitchTab('ia')"
-        style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid rgba(192,57,43,0.4);background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-        ✨ Generar con IA
+    <!-- TOGGLE TIPO MACROS -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="btnModoED" onclick="amSetModoMacros('ed')"
+        style="flex:1;padding:14px 10px;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:2px solid ${modoMacros==='ed'?'#c0392b':'var(--border)'};background:${modoMacros==='ed'?'#c0392b':'var(--s2)'};color:${modoMacros==='ed'?'#fff':'var(--muted)'};">
+        Entreno / Descanso<br><span style="font-size:10px;font-weight:400;opacity:0.8;">Macros diferentes según el día</span>
       </button>
-      <button id="amTabManual" onclick="amSwitchTab('manual')"
-        style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-        ✏️ Manual
+      <button id="btnModoIgual" onclick="amSetModoMacros('igual')"
+        style="flex:1;padding:14px 10px;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:2px solid ${modoMacros==='igual'?'#c0392b':'var(--border)'};background:${modoMacros==='igual'?'#c0392b':'var(--s2)'};color:${modoMacros==='igual'?'#fff':'var(--muted)'};">
+        Todos los días igual<br><span style="font-size:10px;font-weight:400;opacity:0.8;">Un solo objetivo para la semana</span>
       </button>
     </div>
 
-    <!-- ════ PANEL IA ════ -->
-    <div id="amPanelIA">
-
-    <!-- Tipo de día -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Tipo de día</div>
-      <div style="padding:10px 14px 14px;display:flex;gap:8px;">
-        <button id="amTipoDiaEntreno" onclick="amSetTipoDia('entreno')"
-          style="flex:1;padding:10px 8px;border-radius:10px;border:1px solid rgba(192,57,43,0.4);background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-          Entreno
-        </button>
-        <button id="amTipoDiaDescanso" onclick="amSetTipoDia('descanso')"
-          style="flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-          Descanso
-        </button>
+    <!-- MACROS GRID -->
+    <div id="amMacrosGrid" style="display:grid;grid-template-columns:${modoMacros==='ed'?'1fr 1fr':'1fr'};gap:12px;margin-bottom:16px;">
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        <div id="amHdrEntreno" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c0392b;margin-bottom:12px;">${modoMacros==='ed'?'Día de entreno':'Macros diarios'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Hidratos (g)</span>
+          <input type="number" id="amHcE" value="${hcE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Proteína (g)</span>
+          <input type="number" id="amPE" value="${pE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
+          <input type="number" id="amGE" value="${gE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amKcalE" style="font-size:22px;font-weight:800;color:#c0392b;text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalE} kcal</div>
       </div>
-      <input type="hidden" id="amTipoDia" value="entreno">
+      ${modoMacros==='ed'?`
+      <div id="amColDescanso" style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);margin-bottom:12px;">Día de descanso</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Hidratos (g)</span>
+          <input type="number" id="amHcD" value="${hcD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Proteína (g)</span>
+          <input type="number" id="amPD" value="${pD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
+          <input type="number" id="amGD" value="${gD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amKcalD" style="font-size:22px;font-weight:800;color:var(--muted);text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalD} kcal</div>
+      </div>`:''}
     </div>
 
-    <!-- Instrucciones de reparto -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Instrucciones de reparto (opcional)</div>
-      <div style="padding:6px 14px 4px;font-size:11px;color:var(--muted);line-height:1.5;">
-        Dile a la IA cómo repartir los macros entre comidas. En lenguaje natural.
+    <!-- CONFIG -->
+    <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+        <span style="font-size:13px;color:var(--text);font-weight:500;">Comidas al día</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="amComidasStep(-1)" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">−</button>
+          <span id="amComidasNum" style="font-size:15px;font-weight:700;min-width:20px;text-align:center;">${comidas}</span>
+          <input type="hidden" id="amComidas" value="${comidas}">
+          <button onclick="amComidasStep(1)" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">+</button>
+        </div>
       </div>
-      <div style="padding:6px 14px 14px;">
-        <textarea id="amInstrucciones" style="width:100%;min-height:72px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
-          placeholder="Ej: la comida que sea la más alta en HC, desayuno dulce con avena, cena ligera sin muchos HC, merienda pequeña..."></textarea>
-      </div>
-    </div>
-
-    <!-- Nombre del menú -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Nombre del menú</div>
-      <div style="padding:8px 14px 14px;">
-        <input id="amNombreMenu" type="text" style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;"
-          placeholder="Ej: Semana 20 mayo — Volumen">
-      </div>
-    </div>
-
-    <!-- Opción A: IA sugiere -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Opción A — La IA elige los alimentos</div>
-      <div style="padding:8px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
-        La IA selecciona ingredientes de tu BD y calcula los gramos para cuadrar los macros.
-      </div>
-      <div style="padding:0 14px 14px;">
-        <button class="am-btn-primary" id="amGenBtnA" onclick="generarMenu('sugerir')">
-          ✨ Generar menú automático
-        </button>
-      </div>
-    </div>
-
-    <!-- Opción B: tú mandas ingredientes -->
-    <div class="am-section" style="margin-bottom:10px;">
-      <div class="am-section-hdr">Opción B — Tú eliges los alimentos</div>
-      <div style="padding:8px 14px;font-size:12px;color:var(--muted);line-height:1.6;">
-        Escribe los ingredientes por comida. La IA calcula los gramos exactos.
-      </div>
-      <div style="padding:0 14px;">
-        <textarea id="amTextoMenu" style="width:100%;min-height:120px;background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;"
-          placeholder="Desayuno: avena, leche semidesnatada, plátano
-Comida: pollo, arroz, brócoli, aceite de oliva
-Merienda: yogur natural, nueces
-Cena: salmón, patata, espinacas"></textarea>
-      </div>
-      <div style="padding:10px 14px 14px;">
-        <button class="am-btn-primary" id="amGenBtnB" onclick="generarMenu('confirmar')">
-          🥗 Calcular con mis ingredientes
-        </button>
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Restricciones alimentarias</div>
+        <input type="text" id="amPrefs" value="${prefs}" placeholder="Ej: sin gluten, sin lactosa, alérgico a frutos secos..."
+          style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;">
       </div>
     </div>
 
-    </div><!-- /amPanelIA -->
-
-    <!-- ════ PANEL MANUAL ════ -->
-    <div id="amPanelManual" style="display:none;">
-      <div id="amManualBody"></div>
+    <!-- BOTONES -->
+    <div style="display:flex;gap:10px;">
+      <button onclick="amGuardarPerfilNuevo()" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">
+        💾 Guardar perfil
+      </button>
+      <button onclick="abrirMenuSemanal()" style="flex:2;padding:12px;background:#c0392b;border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+        📅 Generar menú semanal →
+      </button>
     </div>
 
-    <!-- Preview resultado -->
-    </div><div id="amMenuPreview" style="margin-top:4px;"></div>
+    <input type="hidden" id="amModoMacrosVal" value="${modoMacros}">
+    <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
+  </div>`;
+}
 
-    <!-- Menús guardados de este cliente -->
-    <div id="amMenusGuardados" style="margin-top:8px;"></div>
-  `;
-  drumInit('adminMenuBody');
-  if(seccion==='menu'){setTimeout(()=>{const el=document.getElementById('amSeccionMenu');if(el)el.scrollIntoView({behavior:'smooth'});},150);}
-  setTimeout(()=>cargarMenusGuardados(),200);
+function amSetModoMacros(modo) {
+  const isED = modo === 'ed';
+
+  // Actualizar valor oculto
+  const valInput = document.getElementById('amModoMacrosVal');
+  if(valInput) valInput.value = modo;
+
+  // Toggle botones
+  const btnED = document.getElementById('btnModoED');
+  const btnIgual = document.getElementById('btnModoIgual');
+  if(btnED){
+    btnED.style.background = isED?'#c0392b':'var(--s2)';
+    btnED.style.color = isED?'#fff':'var(--muted)';
+    btnED.style.borderColor = isED?'#c0392b':'var(--border)';
+  }
+  if(btnIgual){
+    btnIgual.style.background = !isED?'#c0392b':'var(--s2)';
+    btnIgual.style.color = !isED?'#fff':'var(--muted)';
+    btnIgual.style.borderColor = !isED?'#c0392b':'var(--border)';
+  }
+
+  // Cambiar grid de macros
+  const grid = document.getElementById('amMacrosGrid');
+  if(!grid) return;
+
+  if(isED) {
+    // Actualizar título columna entreno
+    const hdrE2 = document.getElementById('amHdrEntreno');
+    if(hdrE2) hdrE2.textContent = 'Día de entreno';
+    // Mostrar dos columnas — añadir columna descanso si no existe
+    grid.style.gridTemplateColumns = '1fr 1fr';
+    if(!document.getElementById('amColDescanso')) {
+      const hcD = document.getElementById('amHcD_hidden')?.value||170;
+      const pD = document.getElementById('amPD_hidden')?.value||150;
+      const gD = document.getElementById('amGD_hidden')?.value||60;
+      const kcalD = hcD*4 + pD*4 + gD*9;
+      const col = document.createElement('div');
+      col.id = 'amColDescanso';
+      col.style.cssText = 'background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;';
+      col.innerHTML = `
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);margin-bottom:12px;">Día de descanso</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Hidratos (g)</span>
+          <input type="number" id="amHcD" value="${hcD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">Proteína (g)</span>
+          <input type="number" id="amPD" value="${pD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
+          <input type="number" id="amGD" value="${gD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amKcalD" style="font-size:22px;font-weight:800;color:var(--muted);text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalD} kcal</div>
+      `;
+      grid.appendChild(col);
+    }
+  } else {
+    // Ocultar columna descanso — guardar valores en inputs hidden
+    grid.style.gridTemplateColumns = '1fr';
+    const colD = document.getElementById('amColDescanso');
+    if(colD) {
+      // Guardar valores antes de eliminar
+      ['amHcD','amPD','amGD'].forEach(id => {
+        const src = document.getElementById(id);
+        let hidden = document.getElementById(id+'_hidden');
+        if(!hidden){ hidden=document.createElement('input'); hidden.type='hidden'; hidden.id=id+'_hidden'; document.body.appendChild(hidden); }
+        if(src) hidden.value = src.value;
+      });
+      colD.remove();
+    }
+    // Actualizar título columna entreno
+    const hdrE = document.getElementById('amHdrEntreno');
+    if(hdrE) hdrE.textContent = 'Macros diarios';
+  }
+}
+
+function amRecalcKcal() {
+  const g = id => parseInt(document.getElementById(id)?.value)||0;
+  const calcKcal = (hc,p,gr) => hc*4 + p*4 + gr*9;
+  const elE = document.getElementById('amKcalE');
+  if(elE) elE.textContent = calcKcal(g('amHcE'),g('amPE'),g('amGE')) + ' kcal';
+  const elD = document.getElementById('amKcalD');
+  if(elD) elD.textContent = calcKcal(g('amHcD'),g('amPD'),g('amGD')) + ' kcal';
+}
+
+function amComidasStep(delta) {
+  const input = document.getElementById('amComidas');
+  const num = document.getElementById('amComidasNum');
+  if(!input||!num) return;
+  let val = parseInt(input.value)||4;
+  val = Math.max(2, Math.min(6, val+delta));
+  input.value = val;
+  num.textContent = val;
+}
+
+async function amGuardarPerfilNuevo() {
+  const g = id => parseInt(document.getElementById(id)?.value)||0;
+  const modo = document.getElementById('amModoMacrosVal')?.value||'ed';
+  const payload = {
+    cliente_email: _adminMenuEmail,
+    kcal_objetivo: g('amHcE')*4 + g('amPE')*4 + g('amGE')*9,
+    hc_objetivo: g('amHcE'), p_objetivo: g('amPE'), g_objetivo: g('amGE'),
+    kcal_descanso: modo==='ed' ? g('amHcD')*4+g('amPD')*4+g('amGD')*9 : g('amHcE')*4+g('amPE')*4+g('amGE')*9,
+    hc_descanso: modo==='ed'?g('amHcD'):g('amHcE'),
+    p_descanso: modo==='ed'?g('amPD'):g('amPE'),
+    g_descanso: modo==='ed'?g('amGD'):g('amGE'),
+    comidas_dia: parseInt(document.getElementById('amComidas')?.value)||4,
+    preferencias: document.getElementById('amPrefs')?.value||'',
+    modo_macros: modo,
+    modo_app: 'menu'
+  };
+  try {
+    await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    showToast('✅ Perfil guardado');
+  } catch(e){ showToast('❌ Error guardando perfil'); }
+}
+
+// ══ PANTALLA 2: MENÚ SEMANAL ══
+let _menuSemEmail = '';
+let _menuSemNombre = '';
+let _menuSemOffset = 0;
+let _menuSemDia = 'lunes';
+let _menuSemPerfil = null;
+let _menuSemData = {};
+let _bibFiltro = 'desayuno';
+let _bibQuery = '';
+let _bibItems = [];
+
+function abrirMenuSemanal() {
+  _menuSemEmail = _adminMenuEmail;
+  _menuSemNombre = _adminMenuNombre;
+  _menuSemOffset = _adminMenuSemanaOffset;
+  _menuSemDia = 'lunes';
+  showView('viewMenuSemanal');
+  renderMenuSemanal();
+}
+
+async function renderMenuSemanal() {
+  document.getElementById('menuSemTitle').textContent = _menuSemNombre;
+  const lunes = getLunesSemana(_menuSemOffset);
+  document.getElementById('menuSemSemana').textContent = formatSemanaLabel(lunes);
+
+  // Cargar perfil
+  try {
+    const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&limit=1`);
+    const rows = await res.json();
+    _menuSemPerfil = Array.isArray(rows)&&rows.length?rows[0]:null;
+  } catch(e){}
+
+  // Render inmediato — no esperar a Supabase
+  renderDiasSem();
+  renderComidasDia();
+  renderBibFiltros();
+  cargarBiblioteca();
+
+  // Cargar menús asignados esta semana (en background)
+  const lunesStr = lunes.toISOString().split('T')[0];
+  try {
+    const res = await supaAdmin(`/rest/v1/menus_semana?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&fecha_lunes=eq.${lunesStr}&select=id,dia,momento,menu_id,biblioteca_menus(id,nombre,ingredientes,kcal,proteina,hidratos,grasa)`);
+    const rows = await res.json();
+    if(Array.isArray(rows)) {
+      _menuSemData = {};
+      rows.forEach(r => {
+        if(!_menuSemData[r.dia]) _menuSemData[r.dia] = {};
+        _menuSemData[r.dia][r.momento] = r;
+      });
+      renderComidasDia();
+    }
+  } catch(e){ console.warn('menus_semana load error:', e); }
+}
+
+function renderDiasSem() {
+  const dias = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+  const letras = ['L','M','X','J','V','S','D'];
+  const lunes = getLunesSemana(_menuSemOffset);
+  const perfil = _menuSemPerfil;
+  const diasEntreno = perfil?.dias_entreno||['lunes','martes','jueves','viernes'];
+
+  const cont = document.getElementById('menuSemDias');
+  if(!cont) return;
+  cont.innerHTML = dias.map((d,i) => {
+    const fecha = new Date(lunes); fecha.setDate(fecha.getDate()+i);
+    const tipo = diasEntreno.includes(d)?'Entreno':'Descanso';
+    const on = d === _menuSemDia;
+    return `<div onclick="menuSemSelDia('${d}')" style="min-width:50px;padding:8px 6px;border-radius:10px;border:1px solid ${on?'#c0392b':'var(--border)'};background:${on?'#c0392b':'var(--s1)'};text-align:center;cursor:pointer;flex-shrink:0;">
+      <div style="font-size:14px;font-weight:700;color:${on?'#fff':'var(--text)'};">${letras[i]}</div>
+      <div style="font-size:9px;color:${on?'rgba(255,255,255,0.75)':'var(--muted)'};margin-top:2px;">${tipo}</div>
+    </div>`;
+  }).join('');
+}
+
+function menuSemSelDia(dia) {
+  _menuSemDia = dia;
+  renderDiasSem();
+  renderComidasDia();
+}
+
+function renderComidasDia() {
+  const momentos = [
+    {id:'desayuno',nombre:'Desayuno',emoji:'🌅'},
+    {id:'almuerzo',nombre:'Almuerzo',emoji:'☕'},
+    {id:'comida',nombre:'Comida',emoji:'☀️'},
+    {id:'merienda',nombre:'Merienda',emoji:'🍎'},
+    {id:'cena',nombre:'Cena',emoji:'🌙'}
+  ];
+  const comidas = _menuSemPerfil?.comidas_dia||4;
+  const activos = momentos.slice(0, comidas);
+  const diaData = _menuSemData[_menuSemDia]||{};
+
+  const cont = document.getElementById('menuSemComidas');
+  if(!cont) return;
+  cont.innerHTML = activos.map(m => {
+    const asig = diaData[m.id];
+    const bm = asig?.biblioteca_menus;
+    return `<div style="padding:12px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:700;color:var(--text);">${m.emoji} ${m.nombre}</span>
+        <span style="font-size:11px;color:var(--muted);">${bm?bm.kcal+' kcal':'— kcal'}</span>
+      </div>
+      ${bm?`
+        <div style="background:var(--s2);border-radius:10px;padding:10px 12px;position:relative;">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;">${bm.nombre}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${bm.ingredientes||''}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fdecea;color:#9b2335;font-weight:600;">${bm.kcal} kcal</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#eef6ee;color:#2d6a2d;font-weight:600;">P ${bm.proteina}g</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fff8e1;color:#8a6000;font-weight:600;">HC ${bm.hidratos}g</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#f0f0f0;color:#555;font-weight:600;">G ${bm.grasa}g</span>
+          </div>
+          <button onclick="menuSemQuitarMomento('${m.id}')" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(192,57,43,0.1);border:none;color:#c0392b;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+        </div>
+      `:`
+        <div onclick="menuSemAbrirBib('${m.id}')" style="padding:10px;border:1px dashed var(--border);border-radius:10px;font-size:12px;color:var(--muted);text-align:center;cursor:pointer;">
+          + Busca en la biblioteca y asigna un ${m.nombre.toLowerCase()}
+        </div>
+      `}
+    </div>`;
+  }).join('');
+}
+
+function menuSemAbrirBib(momento) {
+  _bibFiltro = momento;
+  renderBibFiltros();
+  cargarBiblioteca();
+}
+
+async function cargarBiblioteca() {
+  const cont = document.getElementById('menuSemBibLista');
+  if(!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Cargando...</div>';
+  try {
+    let url = `/rest/v1/biblioteca_menus?momento=eq.${_bibFiltro}&order=nombre`;
+    if(_bibQuery) url += `&nombre=ilike.*${encodeURIComponent(_bibQuery)}*`;
+    const res = await supaAdmin(url+'&select=*');
+    _bibItems = await res.json();
+    renderBibLista();
+  } catch(e){
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Error cargando biblioteca</div>';
+  }
+}
+
+function renderBibFiltros() {
+  const momentos = ['desayuno','almuerzo','comida','merienda','cena'];
+  const cont = document.getElementById('menuSemBibFiltros');
+  if(!cont) return;
+  cont.innerHTML = momentos.map(m =>
+    `<div onclick="menuSemSetFiltro('${m}')" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${m===_bibFiltro?'#c0392b':'var(--border)'};background:${m===_bibFiltro?'#c0392b':'var(--s2)'};color:${m===_bibFiltro?'#fff':'var(--muted)'};">${m.charAt(0).toUpperCase()+m.slice(1)}</div>`
+  ).join('');
+}
+
+function menuSemSetFiltro(f) {
+  _bibFiltro = f;
+  renderBibFiltros();
+  cargarBiblioteca();
+}
+
+function renderBibLista() {
+  const cont = document.getElementById('menuSemBibLista');
+  if(!cont) return;
+  if(!_bibItems.length){
+    cont.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;">No hay ${_bibFiltro}s en la biblioteca.<br><button onclick="abrirBibEditor(null)" style="margin-top:10px;padding:8px 16px;background:#c0392b;border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">+ Crear primero</button></div>`;
+    return;
+  }
+  cont.innerHTML = _bibItems.map(item => `
+    <div data-bib-id="${item.id}" style="background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;user-select:none;"
+      oncontextmenu="event.preventDefault();bibMenu('${item.id}','${escapeHtml(item.nombre)}',event)">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">${item.nombre}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.ingredientes_texto||item.ingredientes||''}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fdecea;color:#9b2335;font-weight:600;">${item.kcal} kcal</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#eef6ee;color:#2d6a2d;font-weight:600;">P ${item.proteina}g</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:12px;background:#fff8e1;color:#8a6000;font-weight:600;">HC ${item.hidratos}g</span>
+        </div>
+      </div>
+      <button onclick="event.stopPropagation();menuSemAsignar('${item.id}')" style="width:32px;height:32px;border-radius:50%;background:#c0392b;border:none;color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;margin-left:10px;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
+    </div>
+  `).join('');
+
+  // Long press para móvil
+  cont.querySelectorAll('[data-bib-id]').forEach(card => {
+    let pt = null;
+    card.addEventListener('touchstart', () => { pt = setTimeout(() => { if(navigator.vibrate)navigator.vibrate(40); bibMenu(card.dataset.bibId, card.querySelector('[style*="font-weight:600"]').textContent); }, 600); }, {passive:true});
+    card.addEventListener('touchend', () => clearTimeout(pt));
+    card.addEventListener('touchmove', () => clearTimeout(pt), {passive:true});
+  });
+}
+
+// Bottom sheet / context menu para ítems de biblioteca
+function bibMenu(id, nombre, evt) {
+  const isDesktop = evt && evt.clientX;
+  const item = _bibItems.find(x => x.id === id);
+  if(!item) return;
+
+  if(isDesktop) {
+    // Context menu desktop
+    let cm = document.getElementById('_bibCtx');
+    if(cm) cm.remove();
+    cm = document.createElement('div');
+    cm.id = '_bibCtx';
+    cm.style.cssText = `position:fixed;left:${Math.min(evt.clientX, window.innerWidth-170)}px;top:${evt.clientY}px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:9999;min-width:160px;box-shadow:0 4px 20px rgba(0,0,0,0.15);`;
+    cm.innerHTML = `
+      <div onclick="menuSemAsignar('${id}');this.closest('#_bibCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:#c0392b;font-weight:600;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">+ Asignar al día</div>
+      <div onclick="abrirBibEditor('${id}');this.closest('#_bibCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">✏️ Editar</div>
+      <div onclick="eliminarBibItem('${id}','${escapeHtml(nombre).replace(/'/g,"\'")}');this.closest('#_bibCtx').remove()" style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--red);" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">🗑️ Eliminar</div>`;
+    document.body.appendChild(cm);
+    setTimeout(() => document.addEventListener('click', () => cm?.remove(), {once:true}), 10);
+    return;
+  }
+
+  // Bottom sheet móvil
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">🍽️ ${escapeHtml(nombre)}</div>
+      <button id="_bmAsig" style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:8px;">+ Asignar al día</button>
+      <button id="_bmEdit" style="width:100%;padding:14px;background:rgba(255,211,61,0.08);border:1px solid rgba(255,211,61,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#a07800;cursor:pointer;margin-bottom:8px;">✏️ Editar</button>
+      <button id="_bmDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">🗑️ Eliminar</button>
+      <button id="_bmCan" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_bmAsig').onclick = () => { ov.remove(); menuSemAsignar(id); };
+  ov.querySelector('#_bmEdit').onclick = () => { ov.remove(); abrirBibEditor(id); };
+  ov.querySelector('#_bmDel').onclick = () => { ov.remove(); eliminarBibItem(id, nombre); };
+  ov.querySelector('#_bmCan').onclick = () => ov.remove();
+}
+
+// ── EDITOR DE BIBLIOTECA (crear/editar con ingredientes reales) ──
+let _bibEditorIngs = []; // [{nombre, kcal_100, p_100, hc_100, g_100, gramos, kcal, proteina, hidratos, grasa}]
+let _bibEditorId = null;
+
+async function abrirBibEditor(id) {
+  _bibEditorId = id;
+  _bibEditorIngs = [];
+  let item = null;
+
+  if(id) {
+    item = _bibItems.find(x => x.id === id);
+    if(item && item.ingredientes_json) {
+      try { _bibEditorIngs = JSON.parse(item.ingredientes_json); } catch(e) {}
+    }
+  }
+
+  const ov = document.createElement('div');
+  ov.id = '_bibEditor';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;';
+
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px;">${id ? '✏️ Editar menú' : '✨ Nuevo menú'}</div>
+      <div id="_bibTotales" style="display:flex;gap:5px;flex-wrap:wrap;padding:9px 10px;background:var(--s2);border-radius:12px;margin-bottom:14px;min-height:36px;"></div>
+      <div id="_bibIngList"></div>
+      <button id="_bibAddIng" style="width:100%;padding:10px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:14px;cursor:pointer;">🔍 Buscar y añadir ingrediente</button>
+      <input id="_bibNombre" type="text" placeholder="Nombre del menú" value="${item?.nombre||''}"
+        style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;margin-bottom:8px;">
+      <select id="_bibMomento" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;margin-bottom:14px;">
+        <option value="desayuno" ${(item?.momento||_bibFiltro)==='desayuno'?'selected':''}>Desayuno</option>
+        <option value="almuerzo" ${(item?.momento||_bibFiltro)==='almuerzo'?'selected':''}>Almuerzo</option>
+        <option value="comida" ${(item?.momento||_bibFiltro)==='comida'?'selected':''}>Comida</option>
+        <option value="merienda" ${(item?.momento||_bibFiltro)==='merienda'?'selected':''}>Merienda</option>
+        <option value="cena" ${(item?.momento||_bibFiltro)==='cena'?'selected':''}>Cena</option>
+      </select>
+      <div style="display:flex;gap:8px;">
+        ${id ? `<button id="_bibDel" style="padding:12px 14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:10px;color:var(--red);font-size:14px;cursor:pointer;">🗑️</button>` : ''}
+        <button id="_bibCancel" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+        <button id="_bibSave" style="flex:2;padding:12px;background:#c0392b;border:none;border-radius:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Guardar</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+
+  bibEditorRenderIngs(ov);
+  bibEditorActualizarTotales(ov);
+
+  ov.querySelector('#_bibAddIng').addEventListener('click', () => {
+    // Usar el buscador existente con callback
+    _buscadorBibCallback = (producto, gramos) => {
+      _bibEditorIngs.push({
+        nombre: producto.nombre,
+        kcal_100: producto.kcal_100, p_100: producto.p_100, hc_100: producto.hc_100, g_100: producto.g_100,
+        gramos: gramos,
+        kcal: Math.round(producto.kcal_100*gramos/100),
+        proteina: Math.round(producto.p_100*gramos/100*10)/10,
+        hidratos: Math.round(producto.hc_100*gramos/100*10)/10,
+        grasa: Math.round(producto.g_100*gramos/100*10)/10,
+      });
+      const ed = document.getElementById('_bibEditor');
+      if(ed){ bibEditorRenderIngs(ed); bibEditorActualizarTotales(ed); }
+    };
+    abrirBuscadorParaBib();
+  });
+
+  ov.querySelector('#_bibCancel').addEventListener('click', () => ov.remove());
+  if(id) ov.querySelector('#_bibDel').addEventListener('click', () => { ov.remove(); eliminarBibItem(id, item?.nombre||''); });
+  ov.querySelector('#_bibSave').addEventListener('click', () => guardarBibItem(ov));
+}
+
+let _buscadorBibCallback = null;
+
+function abrirBuscadorParaBib() {
+  // Reutilizar el buscador existente con un flag especial
+  _buscadorMealId = '__bib__';
+  document.getElementById('buscadorTitle').textContent = 'Añadir ingrediente';
+  document.getElementById('buscadorInput').value = '';
+  const clearBtn = document.getElementById('buscadorClearBtn');
+  if(clearBtn) clearBtn.style.display = 'none';
+  setTabBuscador('todos');
+  renderBuscadorInicio();
+  showView('viewBuscador');
+  setTimeout(() => document.getElementById('buscadorInput').focus(), 300);
+}
+
+function bibEditorRenderIngs(ov) {
+  const list = ov.querySelector('#_bibIngList');
+  if(!list) return;
+  list.innerHTML = _bibEditorIngs.map((ing, i) => `
+    <div style="background:var(--s2);border-radius:12px;padding:10px 11px;margin-bottom:7px;border:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:12px;font-weight:600;">${escapeHtml(ing.nombre)}</div>
+        <button onclick="bibEditorQuitarIng(${i})" style="width:22px;height:22px;border-radius:50%;background:rgba(192,57,43,0.1);border:none;color:#c0392b;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+          <input data-bib-ing="${i}" type="number" value="${ing.gramos||''}" placeholder="g"
+            style="width:58px;padding:6px;background:var(--s1);border:1.5px solid rgba(192,57,43,0.45);border-radius:8px;font-size:15px;font-weight:700;color:var(--text);text-align:center;outline:none;">
+          <span style="font-size:11px;color:var(--muted);">g</span>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;">
+          <span data-bib-kcal="${i}" style="font-size:10px;background:var(--s1);border:1px solid rgba(0,0,0,0.08);border-radius:7px;padding:3px 6px;color:var(--muted);">⚡ <strong style="color:var(--text);">${ing.kcal||0}</strong> kcal</span>
+          <span data-bib-hc="${i}" style="font-size:10px;background:var(--s1);border:1px solid rgba(0,0,0,0.08);border-radius:7px;padding:3px 6px;color:var(--muted);">HC <strong style="color:var(--text);">${ing.hidratos||0}g</strong></span>
+          <span data-bib-p="${i}" style="font-size:10px;background:var(--s1);border:1px solid rgba(0,0,0,0.08);border-radius:7px;padding:3px 6px;color:var(--muted);">P <strong style="color:var(--text);">${ing.proteina||0}g</strong></span>
+          <span data-bib-g="${i}" style="font-size:10px;background:var(--s1);border:1px solid rgba(0,0,0,0.08);border-radius:7px;padding:3px 6px;color:var(--muted);">G <strong style="color:var(--text);">${ing.grasa||0}g</strong></span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  ov.querySelectorAll('[data-bib-ing]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const i = parseInt(inp.dataset.bibIng);
+      const g = parseFloat(inp.value) || 0;
+      const ing = _bibEditorIngs[i];
+      ing.gramos = g;
+      ing.kcal = Math.round(ing.kcal_100 * g / 100);
+      ing.proteina = Math.round(ing.p_100 * g / 100 * 10) / 10;
+      ing.hidratos = Math.round(ing.hc_100 * g / 100 * 10) / 10;
+      ing.grasa = Math.round(ing.g_100 * g / 100 * 10) / 10;
+      const k = ov.querySelector(`[data-bib-kcal="${i}"]`); if(k) k.innerHTML = `⚡ <strong style="color:var(--text);">${ing.kcal}</strong> kcal`;
+      const h = ov.querySelector(`[data-bib-hc="${i}"]`); if(h) h.innerHTML = `HC <strong style="color:var(--text);">${ing.hidratos}g</strong>`;
+      const p = ov.querySelector(`[data-bib-p="${i}"]`); if(p) p.innerHTML = `P <strong style="color:var(--text);">${ing.proteina}g</strong>`;
+      const gEl = ov.querySelector(`[data-bib-g="${i}"]`); if(gEl) gEl.innerHTML = `G <strong style="color:var(--text);">${ing.grasa}g</strong>`;
+      bibEditorActualizarTotales(ov);
+    });
+  });
+}
+
+function bibEditorQuitarIng(i) {
+  _bibEditorIngs.splice(i, 1);
+  const ov = document.getElementById('_bibEditor');
+  if(ov) { bibEditorRenderIngs(ov); bibEditorActualizarTotales(ov); }
+}
+
+function bibEditorActualizarTotales(ov) {
+  const t = _bibEditorIngs.reduce((a, ing) => ({
+    kcal: a.kcal + (ing.kcal||0),
+    p: a.p + (ing.proteina||0),
+    hc: a.hc + (ing.hidratos||0),
+    g: a.g + (ing.grasa||0)
+  }), {kcal:0, p:0, hc:0, g:0});
+  const el = ov.querySelector('#_bibTotales');
+  if(!el) return;
+  el.innerHTML = `
+    <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(192,57,43,0.1);color:var(--accent);border:1px solid rgba(192,57,43,0.2);">${Math.round(t.kcal)} kcal</span>
+    <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(52,152,219,0.07);color:#2980b9;border:1px solid rgba(52,152,219,0.18);">G ${Math.round(t.g*10)/10}g</span>
+    <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(230,160,0,0.1);color:#b8860b;border:1px solid rgba(230,160,0,0.2);">HC ${Math.round(t.hc*10)/10}g</span>
+    <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(192,57,43,0.07);color:var(--red);border:1px solid rgba(192,57,43,0.12);">P ${Math.round(t.p*10)/10}g</span>`;
+}
+
+async function guardarBibItem(ov) {
+  const nombre = ov.querySelector('#_bibNombre')?.value?.trim();
+  if(!nombre){ showToast('⚠️ Escribe un nombre'); return; }
+  const t = _bibEditorIngs.reduce((a, ing) => ({
+    kcal: a.kcal+(ing.kcal||0), p: a.p+(ing.proteina||0), hc: a.hc+(ing.hidratos||0), g: a.g+(ing.grasa||0)
+  }), {kcal:0,p:0,hc:0,g:0});
+  const ingTexto = _bibEditorIngs.map(i => `${i.nombre} ${i.gramos}g`).join(' · ');
+  const payload = {
+    nombre,
+    momento: ov.querySelector('#_bibMomento')?.value||'desayuno',
+    ingredientes: ingTexto,
+    ingredientes_json: JSON.stringify(_bibEditorIngs),
+    kcal: Math.round(t.kcal),
+    proteina: Math.round(t.p*10)/10,
+    hidratos: Math.round(t.hc*10)/10,
+    grasa: Math.round(t.g*10)/10,
+  };
+  const btn = ov.querySelector('#_bibSave');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if(_bibEditorId) {
+      await supaAdmin(`/rest/v1/biblioteca_menus?id=eq.${_bibEditorId}`, {
+        method:'PATCH', headers:{'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(payload)
+      });
+    } else {
+      await supaAdmin('/rest/v1/biblioteca_menus', {
+        method:'POST', headers:{'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(payload)
+      });
+    }
+    ov.remove();
+    showToast(_bibEditorId ? '✅ Menú actualizado' : '✅ Menú creado');
+    _bibEditorId = null; _bibEditorIngs = [];
+    cargarBiblioteca();
+  } catch(e){ showToast('❌ Error guardando'); btn.disabled=false; btn.textContent='Guardar'; }
+}
+
+async function eliminarBibItem(id, nombre) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">¿Eliminar "${escapeHtml(nombre)}"?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Se eliminará de la biblioteca. Los menús ya asignados no se verán afectados.</div>
+      <button id="_bdDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">🗑️ Eliminar</button>
+      <button id="_bdCan" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  ov.querySelector('#_bdCan').onclick = () => ov.remove();
+  ov.querySelector('#_bdDel').onclick = async () => {
+    try {
+      await supaAdmin(`/rest/v1/biblioteca_menus?id=eq.${id}`, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+      ov.remove(); showToast('🗑️ Eliminado'); cargarBiblioteca();
+    } catch(e){ showToast('❌ Error eliminando'); }
+  };
 }
 
 function amSetModo(modo) {
@@ -7831,46 +8835,6 @@ function amManualCopiarDesayunoMerienda() {
 }
 </style>
 
-<!-- ══ DESKTOP SIDEBAR ══ -->
-<div id="desktopSidebar">
-  <div class="dsb-logo">Macro<em>AI</em></div>
-  <div class="dsb-sep"></div>
-  <div class="dsb-item" data-tab="diario" onclick="dsbNav('diario')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-    <span>Diario</span>
-  </div>
-  <div class="dsb-item" data-tab="menu" onclick="dsbNav('menu')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-    <span>Menú</span>
-  </div>
-  <div class="dsb-item" data-tab="chat" onclick="dsbNav('chat')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-    <span>Asistente</span>
-  </div>
-  <div class="dsb-item" data-tab="favoritos" onclick="dsbNav('favoritos')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    <span>Favoritos</span>
-  </div>
-  <div class="dsb-item" data-tab="perfil" onclick="dsbNav('perfil')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span>Perfil</span>
-  </div>
-  <div class="dsb-item" id="dsb-clientes" data-tab="clientes" onclick="dsbNav('clientes')" style="display:none;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-    <span>Clientes</span>
-  </div>
-  <div class="dsb-spacer"></div>
-  <div class="dsb-sep"></div>
-  <div class="dsb-user">
-    <div class="dsb-avatar" id="dsbAvatar">—</div>
-    <div style="flex:1;min-width:0;">
-      <div class="dsb-user-name" id="dsbNombre"></div>
-      <div class="dsb-user-role" id="dsbRol"></div>
-    </div>
-  </div>
-  <div class="dsb-logout" onclick="doLogout()">Cerrar sesión</div>
-</div>
-
 <!-- ══ BOTTOM NAV ══ -->
 <nav id="bottomNav" class="hidden">
   <button class="bn-item active" id="bn-diario" onclick="bnNav('diario')">
@@ -8054,14 +9018,58 @@ const _origGuardarPerfil = typeof guardarPerfil === 'function' ? guardarPerfil :
 </script>
 
 <div class="view" id="viewAdminMacros">
-<div class="aw">
-  <div class="sub-hdr" style="background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.2);">
-    <div class="back-btn" onclick="showView('viewAdmin')">‹</div>
-    <h2 id="adminMacrosTitle" style="color:var(--accent)">Macros</h2>
+<div class="aw" style="max-width:none!important;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+  <!-- TOPBAR -->
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:rgba(245,240,232,0.97);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="back-btn" onclick="showView('viewAdmin')" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--muted);flex-shrink:0;">‹</div>
+    <div>
+      <div id="adminMacrosTitle" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Macros nutricionales</div>
+    </div>
+    <!-- Toggle modo -->
+    <div style="margin-left:auto;display:flex;gap:6px;">
+      <div id="amModoBtn-ed" class="am-modo-btn on" onclick="amSetModoDesktop('ed')">Entreno / Descanso</div>
+      <div id="amModoBtn-igual" class="am-modo-btn off" onclick="amSetModoDesktop('igual')">Todos los días igual</div>
+    </div>
   </div>
-  <div class="scrollable" id="adminMacrosBody"></div>
+
+  <!-- CONTENT -->
+  <div style="flex:1;overflow-y:auto;padding:20px;" id="adminMacrosBody"></div>
+
 </div>
 </div>
+
+<style>
+.am-modo-btn{padding:6px 14px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all 0.15s;}
+.am-modo-btn.on{background:var(--accent);color:#f5f0e8;border-color:transparent;}
+.am-modo-btn.off{background:var(--s2);color:var(--muted);}
+
+/* Desktop macros — dos columnas */
+@media(min-width:900px){
+  #viewAdminMacros .aw{max-width:none!important;padding:0!important;}
+  .am-macros-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .am-macros-grid-single{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px;max-width:500px;}
+}
+@media(max-width:899px){
+  .am-macros-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:10px;}
+  .am-macros-grid-single{display:flex;flex-direction:column;gap:10px;margin-bottom:10px;}
+}
+
+.am-macro-block{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.am-macro-block-hdr{display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);}
+.am-macro-block-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.am-macro-block-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;}
+.am-macro-block-kcal{margin-left:auto;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;}
+.am-macro-fields{padding:12px 16px;display:flex;flex-direction:column;gap:2px;}
+.am-macro-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+.am-macro-row:last-child{border-bottom:none;}
+.am-macro-lbl{font-size:12px;color:var(--muted);}
+.am-macro-inp{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;font-weight:700;color:var(--text);width:90px;text-align:center;outline:none;}
+.am-macro-inp:focus{border-color:var(--accent);}
+.am-chk{display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:9px 14px;margin-bottom:0;font-size:12px;font-weight:700;}
+.am-save-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#f5f0e8;cursor:pointer;margin-top:16px;}
+</style>
 
 <script>
 // ══════════════════════════════════════════
@@ -8072,6 +9080,8 @@ function initDesktopSidebar() {
   const isAdmin = CURRENT_USER?.email === ADMIN_EMAIL;
   const nombre = CURRENT_USER?.nombre || CURRENT_USER?.email || '';
   const iniciales = nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || 'U';
+  const sidebar = document.getElementById('desktopSidebar');
+  if(sidebar) sidebar.style.display = ''; // CSS body.app-ready controla la visibilidad
 
   const av = document.getElementById('dsbAvatar');
   const nm = document.getElementById('dsbNombre');
@@ -8091,13 +9101,15 @@ function dsbNav(tab) {
   setTimeout(dsbUpdateActive, 150);
 }
 
+
+
 function dsbUpdateActive() {
   const sidebar = document.getElementById('desktopSidebar');
   if (!sidebar) return;
   const viewMap = {
     viewMain: 'diario', viewMiMenu: 'menu', viewChat: 'chat',
     viewFavoritos: 'favoritos', viewConfig: 'perfil',
-    viewAdmin: 'clientes', viewAdminMenu: 'clientes', viewAdminMacros: 'clientes',
+    viewAdmin: 'clientes', viewAdminMenu: 'clientes', viewAdminMacros: 'clientes', viewMenuSemanal: 'clientes',
     viewBuscador: 'diario'
   };
   const activeView = document.querySelector('.view.active');
@@ -8109,5 +9121,6 @@ function dsbUpdateActive() {
 }
 </script>
 
+</div><!-- /mainApp -->
 </body>
 </html>
