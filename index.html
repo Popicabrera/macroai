@@ -6708,11 +6708,11 @@ async function handleFotoProducto(e) {
   <!-- DÍAS -->
   <div id="menuSemDias" style="display:flex;gap:6px;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;"></div>
   <!-- BODY DOS COLUMNAS -->
-  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;">
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;">
     <!-- Col izquierda: comidas del día -->
-    <div style="border-right:1px solid var(--border);overflow-y:auto;" id="menuSemComidas"></div>
+    <div style="border-right:1px solid var(--border);overflow-y:auto;min-height:0;" id="menuSemComidas"></div>
     <!-- Col derecha: biblioteca -->
-    <div style="display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
       <!-- Header biblioteca -->
       <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);margin-bottom:8px;">Biblioteca de menús</div>
@@ -7610,21 +7610,26 @@ async function renderMenuSemanal() {
     _menuSemPerfil = Array.isArray(rows)&&rows.length?rows[0]:null;
   } catch(e){}
 
-  // Cargar menús asignados esta semana
-  const lunesStr = lunes.toISOString().split('T')[0];
-  try {
-    const res = await supaAdmin(`/rest/v1/menus_semana?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&fecha_lunes=eq.${lunesStr}&select=*,biblioteca_menus(*)`);
-    const rows = await res.json();
-    _menuSemData = {};
-    if(Array.isArray(rows)) rows.forEach(r => {
-      if(!_menuSemData[r.dia]) _menuSemData[r.dia] = {};
-      _menuSemData[r.dia][r.momento] = r;
-    });
-  } catch(e){}
-
+  // Render inmediato — no esperar a Supabase
   renderDiasSem();
   renderComidasDia();
+  renderBibFiltros();
   cargarBiblioteca();
+
+  // Cargar menús asignados esta semana (en background)
+  const lunesStr = lunes.toISOString().split('T')[0];
+  try {
+    const res = await supaAdmin(`/rest/v1/menus_semana?cliente_email=eq.${encodeURIComponent(_menuSemEmail)}&fecha_lunes=eq.${lunesStr}&select=id,dia,momento,menu_id,biblioteca_menus(id,nombre,ingredientes,kcal,proteina,hidratos,grasa)`);
+    const rows = await res.json();
+    if(Array.isArray(rows)) {
+      _menuSemData = {};
+      rows.forEach(r => {
+        if(!_menuSemData[r.dia]) _menuSemData[r.dia] = {};
+        _menuSemData[r.dia][r.momento] = r;
+      });
+      renderComidasDia();
+    }
+  } catch(e){ console.warn('menus_semana load error:', e); }
 }
 
 function renderDiasSem() {
