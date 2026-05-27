@@ -9660,7 +9660,7 @@ async function bibIngBuscar(idx, q) {
   clearTimeout(_cocIngSearchTimers[idx]);
   _cocIngSearchTimers[idx] = setTimeout(async () => {
     try {
-      const res = await supaFetch(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&nombre=ilike.*${encodeURIComponent(q)}*&limit=6`);
+      const res = await supaAdmin(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&nombre=ilike.*${encodeURIComponent(q)}*&limit=6`);
       const rows = await res.json();
       if (!Array.isArray(rows) || !rows.length) { drop.style.display = 'none'; return; }
       drop.innerHTML = '';
