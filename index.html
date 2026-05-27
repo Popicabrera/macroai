@@ -9368,7 +9368,7 @@ async function cocCargarBiblioteca() {
   const lista = document.getElementById('bibLista');
   lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
   try {
-    const res = await supaFetch('/rest/v1/biblioteca_comidas?select=*&order=nombre.asc');
+    const res = await supaAdmin('/rest/v1/biblioteca_comidas?select=*&order=nombre.asc');
     const rows = await res.json();
     if (!Array.isArray(rows)) throw new Error('no array');
     _cocBibComidas = rows;
@@ -9476,7 +9476,7 @@ function cerrarCtxBib() {
 async function eliminarComidaBib(id, nombre) {
   if (!confirm(`¿Eliminar "${nombre}" de la biblioteca?`)) return;
   try {
-    await supaFetch('/rest/v1/biblioteca_comidas?id=eq.' + id, { method: 'DELETE' });
+    await supaAdmin('/rest/v1/biblioteca_comidas?id=eq.' + id, { method: 'DELETE' });
     _cocBibComidas = _cocBibComidas.filter(c => c.id !== id);
     cocRenderBiblioteca(_cocBibComidas);
     showToast('🗑️ Comida eliminada');
@@ -9792,7 +9792,7 @@ async function guardarComidaBib() {
   try {
     if (_cocEditorId) {
       // Editar
-      await supaFetch('/rest/v1/biblioteca_comidas?id=eq.' + _cocEditorId, {
+      await supaAdmin('/rest/v1/biblioteca_comidas?id=eq.' + _cocEditorId, {
         method: 'PATCH',
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify(payload)
@@ -9802,7 +9802,7 @@ async function guardarComidaBib() {
       showToast('✅ Comida actualizada');
     } else {
       // Nueva
-      const res = await supaFetch('/rest/v1/biblioteca_comidas', {
+      const res = await supaAdmin('/rest/v1/biblioteca_comidas', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify(payload)
