@@ -2340,6 +2340,7 @@ function showView(id){
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
   if(id==='viewMiMenu'){_menuActivoCache=null;_menuDiaOffset=0;cargarMiMenu();}
+  if(id==='viewCocina'){switchCocinaTab('biblioteca');cocCargarBiblioteca();}
   if(document.getElementById('desktopSidebar')) dsbUpdateActive();
 }
 
@@ -9167,9 +9168,122 @@ function dsbUpdateActive() {
 }
 </script>
 
+<!-- ══════════════ ESTILOS COCINA ══════════════ -->
+<style>
+/* ── Tarjeta comida biblioteca ── */
+.bib-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;margin-bottom:10px;cursor:pointer;
+  transition:transform 0.15s,box-shadow 0.15s;
+  -webkit-user-select:none;user-select:none;
+}
+.bib-card:active{transform:scale(0.985);}
+.bib-card-body{padding:13px 14px 11px;}
+.bib-card-name{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.bib-card-cat{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+.bib-card-macros{display:flex;gap:6px;flex-wrap:wrap;}
+.bib-macro-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.bib-macro-pill.kcal{background:rgba(192,57,43,0.10);color:var(--accent);border:1px solid rgba(192,57,43,0.18);}
+.bib-macro-pill.prot{background:rgba(192,57,43,0.07);color:var(--red);border:1px solid rgba(192,57,43,0.12);}
+.bib-macro-pill.ch{background:rgba(232,168,56,0.10);color:#9a6f00;border:1px solid rgba(232,168,56,0.2);}
+.bib-macro-pill.grasa{background:rgba(91,141,184,0.10);color:var(--blue);border:1px solid rgba(91,141,184,0.2);}
+.bib-card-ings{padding:8px 14px 10px;border-top:1px solid var(--border);background:rgba(0,0,0,0.02);
+  font-size:12px;color:var(--muted);line-height:1.7;}
+
+/* ── FAB botón nueva comida ── */
+.cocina-fab{
+  position:absolute;bottom:20px;right:16px;
+  width:48px;height:48px;border-radius:50%;
+  background:var(--accent);border:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;color:#fff;cursor:pointer;
+  box-shadow:0 4px 16px rgba(192,57,43,0.35);
+  transition:transform 0.15s,box-shadow 0.15s;
+  z-index:10;
+}
+.cocina-fab:active{transform:scale(0.92);}
+
+/* ── Editor overlay ── */
+.bib-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  z-index:9999;display:flex;align-items:flex-end;
+  animation:fadeIn 0.15s ease;
+}
+.bib-sheet{
+  background:var(--s1);border-radius:20px 20px 0 0;
+  width:100%;max-height:92vh;overflow-y:auto;
+  padding:20px 16px 36px;
+  animation:slideUp 0.22s ease;
+}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+.bib-sheet-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;}
+.bib-field-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:5px;}
+.bib-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+  padding:11px 13px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif;
+  transition:border-color 0.2s;}
+.bib-input:focus{border-color:rgba(192,57,43,0.45);}
+.bib-select{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+  padding:11px 13px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif;
+  appearance:none;-webkit-appearance:none;cursor:pointer;}
+
+/* ── Fila ingrediente ── */
+.ing-row{display:flex;gap:7px;align-items:center;margin-bottom:8px;}
+.ing-row .bib-input{flex:2;}
+.ing-row .bib-input.grams{flex:1;text-align:center;}
+.ing-del-btn{width:32px;height:32px;border-radius:9px;background:rgba(192,57,43,0.1);
+  border:1px solid rgba(192,57,43,0.2);color:var(--red);font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+
+/* ── Totales en tiempo real ── */
+.bib-totales{
+  background:var(--s2);border:1px solid var(--border);border-radius:12px;
+  padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  margin-bottom:16px;
+}
+.bib-tot-label{font-size:11px;color:var(--muted);font-weight:600;margin-right:4px;}
+
+/* ── Botones acción ── */
+.bib-btn-row{display:flex;gap:10px;margin-top:4px;}
+.bib-btn{flex:1;padding:13px;border-radius:12px;font-family:'Space Grotesk',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all 0.15s;}
+.bib-btn.primary{background:var(--accent);color:#fff;}
+.bib-btn.primary:active{opacity:0.85;}
+.bib-btn.secondary{background:var(--s3);color:var(--text);}
+
+/* ── Context menu bib ── */
+.bib-ctx{
+  position:fixed;z-index:10000;background:var(--s1);
+  border:1px solid var(--border);border-radius:14px;
+  padding:6px;min-width:180px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  animation:fadeIn 0.12s ease;
+}
+.bib-ctx-item{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:9px;font-size:14px;cursor:pointer;color:var(--text);transition:background 0.15s;}
+.bib-ctx-item:active{background:var(--s3);}
+.bib-ctx-item.danger{color:var(--red);}
+.bib-ctx-sep{height:1px;background:var(--border);margin:3px 0;}
+
+/* ── Buscador inline en editor ── */
+.ing-search-wrap{position:relative;}
+.ing-search-dropdown{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:100;
+  background:var(--s1);border:1px solid var(--border);border-radius:12px;
+  max-height:180px;overflow-y:auto;
+  box-shadow:0 6px 20px rgba(0,0,0,0.2);
+}
+.ing-search-item{padding:10px 13px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;transition:background 0.12s;}
+.ing-search-item:last-child{border-bottom:none;}
+.ing-search-item:active{background:var(--s3);}
+.ing-search-macros{font-size:11px;color:var(--muted);}
+</style>
+
 <!-- ══════════════ VIEW COCINA (ADMIN) ══════════════ -->
 <div class="view" id="viewCocina">
-  <div class="aw">
+  <div class="aw" style="position:relative;">
     <!-- Header -->
     <div class="header">
       <div class="logo">Macro<em>AI</em></div>
@@ -9194,44 +9308,523 @@ function dsbUpdateActive() {
     </div>
 
     <!-- Tab Biblioteca -->
-    <div id="tabCocina-biblioteca" class="main-scroll-area" style="flex:1;overflow-y:auto;padding:20px 16px;">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:60px 0;text-align:center;">
-        <div style="font-size:48px;">📚</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);">Biblioteca de comidas</div>
-        <div style="font-size:14px;color:var(--muted);max-width:260px;line-height:1.6;">Aquí crearás comidas reutilizables con sus ingredientes y macros.</div>
-        <div style="font-size:12px;color:var(--muted2);margin-top:8px;">Próximamente...</div>
+    <div id="tabCocina-biblioteca" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 80px;display:flex;flex-direction:column;min-height:0;">
+      <!-- Buscador biblioteca -->
+      <div style="position:relative;margin-bottom:12px;">
+        <input id="bibSearchInput" type="text" placeholder="🔍  Buscar en biblioteca..."
+          oninput="cocBibFiltrar(this.value)"
+          style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+          padding:10px 14px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
       </div>
+      <!-- Lista -->
+      <div id="bibLista"></div>
     </div>
 
     <!-- Tab Menús -->
-    <div id="tabCocina-menus" class="main-scroll-area" style="flex:1;overflow-y:auto;padding:20px 16px;display:none;">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:60px 0;text-align:center;">
-        <div style="font-size:48px;">🗓</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);">Planificador de menús</div>
-        <div style="font-size:14px;color:var(--muted);max-width:260px;line-height:1.6;">Aquí combinarás comidas de la biblioteca para crear menús semanales.</div>
-        <div style="font-size:12px;color:var(--muted2);margin-top:8px;">Próximamente...</div>
-      </div>
+    <div id="tabCocina-menus" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;">
+      <div style="font-size:48px;">🗓</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;">Planificador de menús</div>
+      <div style="font-size:14px;color:var(--muted);max-width:260px;line-height:1.6;">Aquí combinarás comidas de la biblioteca para crear menús semanales.</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:8px;">Próximamente...</div>
     </div>
+
+    <!-- FAB nueva comida (solo visible en tab biblioteca) -->
+    <button class="cocina-fab" id="bibFab" onclick="abrirEditorBiblioteca(null)" title="Nueva comida">＋</button>
   </div>
 </div>
 
 <script>
+// ══════════════════════════════════════════
+// ── COCINA: BIBLIOTECA
+// ══════════════════════════════════════════
+
+let _cocBibComidas = [];
+let _cocBibCtxEl = null;
+
+// ── Tab switch ──
 function switchCocinaTab(tab) {
-  const tabs = ['biblioteca','menus'];
-  tabs.forEach(t => {
-    const panel = document.getElementById('tabCocina-' + t);
-    const btn   = document.getElementById('tabCocina' === t ? 'tabBibliotecaBtn' : 'tab' + t.charAt(0).toUpperCase() + t.slice(1) + 'Btn');
-    if (panel) panel.style.display = (t === tab) ? '' : 'none';
-  });
-  const btnBib = document.getElementById('tabBibliotecaBtn');
-  const btnMen = document.getElementById('tabMenusBtn');
-  if (btnBib) {
-    btnBib.style.color = tab==='biblioteca' ? 'var(--accent)' : 'var(--muted)';
-    btnBib.style.borderBottomColor = tab==='biblioteca' ? 'var(--accent)' : 'transparent';
+  const bibPanel = document.getElementById('tabCocina-biblioteca');
+  const menPanel = document.getElementById('tabCocina-menus');
+  const btnBib   = document.getElementById('tabBibliotecaBtn');
+  const btnMen   = document.getElementById('tabMenusBtn');
+  const fab      = document.getElementById('bibFab');
+
+  bibPanel.style.display = tab === 'biblioteca' ? 'flex' : 'none';
+  bibPanel.style.flexDirection = 'column';
+  menPanel.style.display = tab === 'menus' ? 'flex' : 'none';
+
+  btnBib.style.color = tab === 'biblioteca' ? 'var(--accent)' : 'var(--muted)';
+  btnBib.style.borderBottomColor = tab === 'biblioteca' ? 'var(--accent)' : 'transparent';
+  btnMen.style.color = tab === 'menus' ? 'var(--accent)' : 'var(--muted)';
+  btnMen.style.borderBottomColor = tab === 'menus' ? 'var(--accent)' : 'transparent';
+
+  if (fab) fab.style.display = tab === 'biblioteca' ? 'flex' : 'none';
+}
+
+// cargarBiblioteca se llama desde showView original (ver patch en CSS block)
+
+// ── CARGAR DESDE SUPABASE ──
+async function cocCargarBiblioteca() {
+  const lista = document.getElementById('bibLista');
+  lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
+  try {
+    const res = await supaFetch('/rest/v1/biblioteca_comidas?select=*&order=nombre.asc');
+    const rows = await res.json();
+    if (!Array.isArray(rows)) throw new Error('no array');
+    _cocBibComidas = rows;
+    cocRenderBiblioteca(_bibComidas);
+  } catch(e) {
+    lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Error al cargar la biblioteca.</div>';
   }
-  if (btnMen) {
-    btnMen.style.color = tab==='menus' ? 'var(--accent)' : 'var(--muted)';
-    btnMen.style.borderBottomColor = tab==='menus' ? 'var(--accent)' : 'transparent';
+}
+
+function cocBibFiltrar(q) {
+  if (!q || !q.trim()) { cocRenderBiblioteca(_bibComidas); return; }
+  const qn = q.toLowerCase();
+  cocRenderBiblioteca(_cocBibComidas.filter(c =>
+    (c.nombre||'').toLowerCase().includes(qn) ||
+    (c.categoria||'').toLowerCase().includes(qn)
+  ));
+}
+
+function cocRenderBiblioteca(comidas) {
+  const lista = document.getElementById('bibLista');
+  if (!comidas.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:60px 0;display:flex;flex-direction:column;align-items:center;gap:10px;">
+      <div style="font-size:44px;">🍽️</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--text);">Sin comidas todavía</div>
+      <div style="font-size:13px;color:var(--muted);max-width:240px;line-height:1.6;">Pulsa <strong>＋</strong> para crear tu primera comida reutilizable.</div>
+    </div>`;
+    return;
+  }
+  lista.innerHTML = '';
+  comidas.forEach(c => {
+    const ings = Array.isArray(c.ingredientes) ? c.ingredientes : [];
+    const ingsTexto = ings.map(i => `${i.nombre}${i.gramos ? ' · ' + i.gramos + 'g' : ''}`).join(', ');
+    const card = document.createElement('div');
+    card.className = 'bib-card';
+    card.innerHTML = `
+      <div class="bib-card-body">
+        <div class="bib-card-name">${escapeHtml(c.nombre||'Sin nombre')}</div>
+        ${c.categoria ? `<div class="bib-card-cat">${escapeHtml(c.categoria)}</div>` : ''}
+        <div class="bib-card-macros">
+          <span class="bib-macro-pill kcal">${Math.round(c.kcal_total||0)} kcal</span>
+          <span class="bib-macro-pill prot">P ${Math.round((c.prot_total||0)*10)/10}g</span>
+          <span class="bib-macro-pill ch">CH ${Math.round((c.ch_total||0)*10)/10}g</span>
+          <span class="bib-macro-pill grasa">G ${Math.round((c.grasa_total||0)*10)/10}g</span>
+        </div>
+      </div>
+      ${ingsTexto ? `<div class="bib-card-ings">${escapeHtml(ingsTexto)}</div>` : ''}
+    `;
+    // Long press → menú contextual
+    let lpTimer;
+    const startLp = (e) => {
+      lpTimer = setTimeout(() => { e.preventDefault(); mostrarCtxBib(c, card); }, 500);
+    };
+    const cancelLp = () => clearTimeout(lpTimer);
+    card.addEventListener('touchstart', startLp, { passive: true });
+    card.addEventListener('touchend', cancelLp);
+    card.addEventListener('touchmove', cancelLp);
+    card.addEventListener('mousedown', startLp);
+    card.addEventListener('mouseup', cancelLp);
+    card.addEventListener('mouseleave', cancelLp);
+    // Tap normal → expandir/colapsar ingredientes (o abrir editor)
+    card.addEventListener('click', () => {
+      const ingsEl = card.querySelector('.bib-card-ings');
+      if (ingsEl) ingsEl.style.display = ingsEl.style.display === 'none' ? '' : 'none';
+    });
+    lista.appendChild(card);
+  });
+}
+
+// ── CONTEXT MENU ──
+function mostrarCtxBib(comida, cardEl) {
+  cerrarCtxBib();
+  const menu = document.createElement('div');
+  menu.className = 'bib-ctx';
+  const rect = cardEl.getBoundingClientRect();
+
+  const items = [
+    { icon: '✏️', label: 'Editar', action: () => { cerrarCtxBib(); abrirEditorBiblioteca(comida); } },
+    { type: 'sep' },
+    { icon: '🗑️', label: 'Eliminar', danger: true, action: () => { cerrarCtxBib(); eliminarComidaBib(comida.id, comida.nombre); } }
+  ];
+
+  items.forEach(it => {
+    if (it.type === 'sep') { const sep = document.createElement('div'); sep.className = 'bib-ctx-sep'; menu.appendChild(sep); return; }
+    const el = document.createElement('div');
+    el.className = 'bib-ctx-item' + (it.danger ? ' danger' : '');
+    el.innerHTML = `${it.icon} ${it.label}`;
+    el.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); it.action(); });
+    menu.appendChild(el);
+  });
+
+  const top = Math.min(rect.bottom + 4, window.innerHeight - 120);
+  const left = Math.min(Math.max(rect.left, 8), window.innerWidth - 196);
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+  document.body.appendChild(menu);
+  _cocBibCtxEl = menu;
+  setTimeout(() => document.addEventListener('pointerdown', cerrarCtxBib, { once: true }), 50);
+}
+
+function cerrarCtxBib() {
+  if (_cocBibCtxEl) { _cocBibCtxEl.remove(); _cocBibCtxEl = null; }
+}
+
+// ── ELIMINAR ──
+async function eliminarComidaBib(id, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}" de la biblioteca?`)) return;
+  try {
+    await supaFetch('/rest/v1/biblioteca_comidas?id=eq.' + id, { method: 'DELETE' });
+    _cocBibComidas = _cocBibComidas.filter(c => c.id !== id);
+    cocRenderBiblioteca(_bibComidas);
+    showToast('🗑️ Comida eliminada');
+  } catch(e) {
+    showToast('Error al eliminar');
+  }
+}
+
+// ══════════════════════════════════════════
+// ── EDITOR DE COMIDA (crear / editar)
+// ══════════════════════════════════════════
+
+let _cocEditorIngs = [];   // [{nombre, gramos, kcal_100, p_100, hc_100, g_100}]
+let _cocEditorId   = null; // null = nueva, string = editar
+
+function abrirEditorBiblioteca(comida) {
+  cerrarCtxBib();
+  _cocEditorId = comida ? comida.id : null;
+  _cocEditorIngs = comida && Array.isArray(comida.ingredientes)
+    ? comida.ingredientes.map(i => ({...i}))
+    : [];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'bib-overlay';
+  overlay.id = 'bibEditorOverlay';
+
+  overlay.innerHTML = `
+    <div class="bib-sheet" id="bibEditorSheet">
+      <div class="bib-sheet-title">${comida ? '✏️ Editar comida' : '🍽️ Nueva comida'}</div>
+
+      <!-- Nombre -->
+      <div class="bib-field-label">Nombre</div>
+      <input id="bibEdNombre" class="bib-input" type="text" placeholder="Ej: Pollo con arroz"
+        value="${escapeHtml(comida?.nombre || '')}" style="margin-bottom:12px;">
+
+      <!-- Categoría -->
+      <div class="bib-field-label">Categoría</div>
+      <select id="bibEdCat" class="bib-select" style="margin-bottom:16px;">
+        ${['Desayuno','Almuerzo','Comida','Merienda','Cena','General'].map(cat =>
+          `<option value="${cat}" ${(comida?.categoria||'General')===cat?'selected':''}>${cat}</option>`
+        ).join('')}
+      </select>
+
+      <!-- Ingredientes -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="bib-field-label" style="margin-bottom:0;">Ingredientes</div>
+        <button onclick="bibAddIngRow()" style="background:var(--accent-dim);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;">+ Añadir</button>
+      </div>
+
+      <div id="bibIngRows" style="margin-bottom:12px;"></div>
+
+      <!-- Totales en tiempo real -->
+      <div class="bib-totales" id="bibEdTotales">
+        <span class="bib-tot-label">Total:</span>
+        <span class="bib-macro-pill kcal" id="bibtKcal">0 kcal</span>
+        <span class="bib-macro-pill prot" id="bibtProt">P 0g</span>
+        <span class="bib-macro-pill ch"   id="bibtCh">CH 0g</span>
+        <span class="bib-macro-pill grasa" id="bibtGrasa">G 0g</span>
+      </div>
+
+      <!-- Nota macros manuales -->
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+        💡 Los macros se calculan automáticamente desde los ingredientes. Si un ingrediente no está en la base de datos, ajusta manualmente los valores totales abajo.
+      </div>
+
+      <!-- Macros manuales (override) -->
+      <div class="bib-field-label">Ajuste manual de macros (opcional)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal</div>
+          <input id="bibEdKcal" class="bib-input" type="number" min="0" placeholder="Auto"
+            value="${comida?.kcal_total != null ? Math.round(comida.kcal_total) : ''}"
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
+          <input id="bibEdProt" class="bib-input" type="number" min="0" placeholder="Auto"
+            value="${comida?.prot_total != null ? Math.round(comida.prot_total*10)/10 : ''}"
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">CH g</div>
+          <input id="bibEdCh" class="bib-input" type="number" min="0" placeholder="Auto"
+            value="${comida?.ch_total != null ? Math.round(comida.ch_total*10)/10 : ''}"
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
+          <input id="bibEdGrasa" class="bib-input" type="number" min="0" placeholder="Auto"
+            value="${comida?.grasa_total != null ? Math.round(comida.grasa_total*10)/10 : ''}"
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="bib-btn-row">
+        <button class="bib-btn secondary" onclick="cerrarEditorBib()">Cancelar</button>
+        <button class="bib-btn primary" onclick="guardarComidaBib()">Guardar</button>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) cerrarEditorBib(); });
+  document.body.appendChild(overlay);
+
+  // Renderizar filas de ingredientes existentes
+  _cocEditorIngs.forEach((ing, idx) => bibRenderIngRow(idx));
+  if (!_cocEditorIngs.length) bibAddIngRow(); // siempre al menos 1 fila vacía
+  bibRecalcTotales();
+}
+
+function cerrarEditorBib() {
+  const ov = document.getElementById('bibEditorOverlay');
+  if (ov) ov.remove();
+}
+
+// ── Fila ingrediente ──
+function bibAddIngRow() {
+  const idx = _cocEditorIngs.length;
+  _cocEditorIngs.push({ nombre: '', gramos: 0, kcal_100: 0, p_100: 0, hc_100: 0, g_100: 0 });
+  bibRenderIngRow(idx);
+  bibRecalcTotales();
+}
+
+function bibRenderIngRow(idx) {
+  const container = document.getElementById('bibIngRows');
+  if (!container) return;
+
+  // Eliminar fila anterior si existe
+  const prev = document.getElementById('bibIngRow_' + idx);
+  if (prev) prev.remove();
+
+  const ing = _cocEditorIngs[idx] || {};
+  const row = document.createElement('div');
+  row.className = 'ing-row';
+  row.id = 'bibIngRow_' + idx;
+  row.innerHTML = `
+    <div class="ing-search-wrap" style="flex:2;position:relative;">
+      <input type="text" class="bib-input" placeholder="Ingrediente"
+        id="bibIngNombre_${idx}"
+        value="${escapeHtml(ing.nombre || '')}"
+        autocomplete="off"
+        oninput="bibIngBuscar(${idx}, this.value)"
+        style="width:100%;">
+      <div id="bibIngDrop_${idx}" class="ing-search-dropdown" style="display:none;"></div>
+    </div>
+    <input type="number" class="bib-input grams" placeholder="g"
+      id="bibIngGramos_${idx}"
+      value="${ing.gramos || ''}"
+      min="0"
+      oninput="bibIngActualizarGramos(${idx}, this.value)"
+      style="flex:0.8;text-align:center;">
+    <div class="ing-del-btn" onclick="bibDelIngRow(${idx})">✕</div>
+  `;
+  // Insertar en posición correcta (por idx)
+  const rows = container.querySelectorAll('.ing-row');
+  if (rows[idx]) {
+    container.insertBefore(row, rows[idx]);
+  } else {
+    container.appendChild(row);
+  }
+}
+
+function bibDelIngRow(idx) {
+  _cocEditorIngs.splice(idx, 1);
+  const container = document.getElementById('bibIngRows');
+  container.innerHTML = '';
+  _cocEditorIngs.forEach((_, i) => bibRenderIngRow(i));
+  bibRecalcTotales();
+}
+
+// ── Búsqueda de ingrediente en BD ──
+let _cocIngSearchTimers = {};
+async function bibIngBuscar(idx, q) {
+  _cocEditorIngs[idx] = _cocEditorIngs[idx] || {};
+  _cocEditorIngs[idx].nombre = q;
+  const drop = document.getElementById('bibIngDrop_' + idx);
+  if (!drop) return;
+  if (!q || q.length < 2) { drop.style.display = 'none'; return; }
+
+  clearTimeout(_cocIngSearchTimers[idx]);
+  _cocIngSearchTimers[idx] = setTimeout(async () => {
+    try {
+      const res = await supaFetch(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&nombre=ilike.*${encodeURIComponent(q)}*&limit=6`);
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows.length) { drop.style.display = 'none'; return; }
+      drop.innerHTML = '';
+      rows.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'ing-search-item';
+        item.innerHTML = `<span>${escapeHtml(r.nombre)}</span><span class="ing-search-macros">${r.kcal_100} kcal/100g · P${r.p_100} HC${r.hc_100} G${r.g_100}</span>`;
+        item.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          document.getElementById('bibIngNombre_' + idx).value = r.nombre;
+          _cocEditorIngs[idx].nombre  = r.nombre;
+          _cocEditorIngs[idx].kcal_100 = r.kcal_100 || 0;
+          _cocEditorIngs[idx].p_100   = r.p_100 || 0;
+          _cocEditorIngs[idx].hc_100  = r.hc_100 || 0;
+          _cocEditorIngs[idx].g_100   = r.g_100 || 0;
+          drop.style.display = 'none';
+          bibRecalcTotales();
+          // Focus en gramos
+          const gInput = document.getElementById('bibIngGramos_' + idx);
+          if (gInput) { gInput.focus(); gInput.select(); }
+        });
+        drop.appendChild(item);
+      });
+      drop.style.display = 'block';
+    } catch(e) { drop.style.display = 'none'; }
+  }, 400);
+}
+
+function bibIngActualizarGramos(idx, val) {
+  if (!_cocEditorIngs[idx]) _cocEditorIngs[idx] = {};
+  _cocEditorIngs[idx].gramos = parseFloat(val) || 0;
+  bibRecalcTotales();
+}
+
+// ── Calcular totales desde ingredientes ──
+function bibRecalcTotales() {
+  let kcal = 0, prot = 0, ch = 0, grasa = 0;
+  let hayDatos = false;
+  _cocEditorIngs.forEach(ing => {
+    const g = ing.gramos || 0;
+    if (g > 0 && (ing.kcal_100 > 0 || ing.p_100 > 0)) {
+      hayDatos = true;
+      kcal  += (ing.kcal_100 || 0) * g / 100;
+      prot  += (ing.p_100    || 0) * g / 100;
+      ch    += (ing.hc_100   || 0) * g / 100;
+      grasa += (ing.g_100    || 0) * g / 100;
+    }
+  });
+
+  const tKcal  = document.getElementById('bibtKcal');
+  const tProt  = document.getElementById('bibtProt');
+  const tCh    = document.getElementById('bibtCh');
+  const tGrasa = document.getElementById('bibtGrasa');
+  if (tKcal)  tKcal.textContent  = Math.round(kcal) + ' kcal';
+  if (tProt)  tProt.textContent  = 'P ' + (Math.round(prot*10)/10) + 'g';
+  if (tCh)    tCh.textContent    = 'CH ' + (Math.round(ch*10)/10) + 'g';
+  if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(grasa*10)/10) + 'g';
+
+  // Auto-rellenar campos manuales si están vacíos y hay datos
+  if (hayDatos) {
+    const inpK = document.getElementById('bibEdKcal');
+    const inpP = document.getElementById('bibEdProt');
+    const inpC = document.getElementById('bibEdCh');
+    const inpG = document.getElementById('bibEdGrasa');
+    if (inpK && !inpK.value) inpK.value = Math.round(kcal);
+    if (inpP && !inpP.value) inpP.value = Math.round(prot*10)/10;
+    if (inpC && !inpC.value) inpC.value = Math.round(ch*10)/10;
+    if (inpG && !inpG.value) inpG.value = Math.round(grasa*10)/10;
+  }
+}
+
+function bibRecalcManual() {
+  // Solo actualizar los pills de totales con los valores manuales
+  const k = parseFloat(document.getElementById('bibEdKcal')?.value) || 0;
+  const p = parseFloat(document.getElementById('bibEdProt')?.value) || 0;
+  const c = parseFloat(document.getElementById('bibEdCh')?.value)   || 0;
+  const g = parseFloat(document.getElementById('bibEdGrasa')?.value) || 0;
+  const tKcal  = document.getElementById('bibtKcal');
+  const tProt  = document.getElementById('bibtProt');
+  const tCh    = document.getElementById('bibtCh');
+  const tGrasa = document.getElementById('bibtGrasa');
+  if (tKcal)  tKcal.textContent  = Math.round(k) + ' kcal';
+  if (tProt)  tProt.textContent  = 'P ' + (Math.round(p*10)/10) + 'g';
+  if (tCh)    tCh.textContent    = 'CH ' + (Math.round(c*10)/10) + 'g';
+  if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(g*10)/10) + 'g';
+}
+
+// ── GUARDAR ──
+async function guardarComidaBib() {
+  const nombre = (document.getElementById('bibEdNombre')?.value || '').trim();
+  if (!nombre) { showToast('❌ Escribe un nombre'); return; }
+
+  const categoria = document.getElementById('bibEdCat')?.value || 'General';
+
+  // Leer macros — priorizar campos manuales si tienen valor
+  const kcalM  = parseFloat(document.getElementById('bibEdKcal')?.value);
+  const protM  = parseFloat(document.getElementById('bibEdProt')?.value);
+  const chM    = parseFloat(document.getElementById('bibEdCh')?.value);
+  const grasaM = parseFloat(document.getElementById('bibEdGrasa')?.value);
+
+  // Calcular desde ingredientes
+  let kcalI=0, protI=0, chI=0, grasaI=0;
+  _cocEditorIngs.forEach(ing => {
+    const g = ing.gramos || 0;
+    if (g > 0) {
+      kcalI  += (ing.kcal_100||0)*g/100;
+      protI  += (ing.p_100   ||0)*g/100;
+      chI    += (ing.hc_100  ||0)*g/100;
+      grasaI += (ing.g_100   ||0)*g/100;
+    }
+  });
+
+  const kcal_total  = !isNaN(kcalM)  ? kcalM  : Math.round(kcalI);
+  const prot_total  = !isNaN(protM)  ? protM  : Math.round(protI*10)/10;
+  const ch_total    = !isNaN(chM)    ? chM    : Math.round(chI*10)/10;
+  const grasa_total = !isNaN(grasaM) ? grasaM : Math.round(grasaI*10)/10;
+
+  // Limpiar ingredientes — solo los que tienen nombre
+  const ingredientes = _cocEditorIngs
+    .filter(i => i.nombre && i.nombre.trim())
+    .map(i => ({
+      nombre:   i.nombre.trim(),
+      gramos:   i.gramos || 0,
+      kcal_100: i.kcal_100 || 0,
+      p_100:    i.p_100 || 0,
+      hc_100:   i.hc_100 || 0,
+      g_100:    i.g_100 || 0
+    }));
+
+  const payload = {
+    nombre, categoria, ingredientes,
+    kcal_total, prot_total, ch_total, grasa_total
+  };
+
+  const btn = document.querySelector('#bibEditorOverlay .bib-btn.primary');
+  if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
+
+  try {
+    if (_cocEditorId) {
+      // Editar
+      await supaFetch('/rest/v1/biblioteca_comidas?id=eq.' + _cocEditorId, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(payload)
+      });
+      const idx = _bibComidas.findIndex(c => c.id === _cocEditorId);
+      if (idx >= 0) _bibComidas[idx] = { ..._bibComidas[idx], ...payload };
+      showToast('✅ Comida actualizada');
+    } else {
+      // Nueva
+      const res = await supaFetch('/rest/v1/biblioteca_comidas', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify(payload)
+      });
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows[0]) _bibComidas.push(rows[0]);
+      showToast('✅ Comida guardada en biblioteca');
+    }
+    cerrarEditorBib();
+    cocRenderBiblioteca(_bibComidas);
+  } catch(e) {
+    showToast('❌ Error al guardar');
+    if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
   }
 }
 </script>
