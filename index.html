@@ -7395,6 +7395,10 @@ async function renderAdminMacros() {
   } catch(e){}
   _drumVals = { kcalE:perfil?.kcal_objetivo||2200, kcalD:perfil?.kcal_descanso||1900, pE:perfil?.p_objetivo||160, hcE:perfil?.hc_objetivo||220, gE:perfil?.g_objetivo||65, pD:perfil?.p_descanso||150, hcD:perfil?.hc_descanso||170, gD:perfil?.g_descanso||60 };
   _amModoDesktop = perfil?.modo_macros||'ed';
+  const _btnEd = document.getElementById('amModoBtn-ed');
+  const _btnIgual = document.getElementById('amModoBtn-igual');
+  if(_btnEd) _btnEd.className = 'am-modo-btn ' + (_amModoDesktop==='ed'?'on':'off');
+  if(_btnIgual) _btnIgual.className = 'am-modo-btn ' + (_amModoDesktop==='igual'?'on':'off');
   _drumModo='g'; _drumContainer='adminMacrosBody';
   renderAdminMacrosUI();
 }
