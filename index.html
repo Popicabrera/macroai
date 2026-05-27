@@ -814,13 +814,13 @@ body{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     <span>Favoritos</span>
   </div>
-
-  <!-- Nav cuenta -->
-  <div class="dsb-section-label" style="margin-top:8px;">Cuenta</div>
   <div class="dsb-item" data-tab="perfil" onclick="dsbNav('perfil')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span>Perfil</span>
   </div>
+
+  <!-- Nav cuenta (admin) -->
+  <div class="dsb-section-label" style="margin-top:8px;">Cuenta</div>
   <div class="dsb-item" id="dsb-clientes" data-tab="clientes" onclick="dsbNav('clientes')" style="display:none;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
     <span>Clientes</span>
@@ -9372,14 +9372,14 @@ async function cocCargarBiblioteca() {
     const rows = await res.json();
     if (!Array.isArray(rows)) throw new Error('no array');
     _cocBibComidas = rows;
-    cocRenderBiblioteca(_bibComidas);
+    cocRenderBiblioteca(_cocBibComidas);
   } catch(e) {
     lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Error al cargar la biblioteca.</div>';
   }
 }
 
 function cocBibFiltrar(q) {
-  if (!q || !q.trim()) { cocRenderBiblioteca(_bibComidas); return; }
+  if (!q || !q.trim()) { cocRenderBiblioteca(_cocBibComidas); return; }
   const qn = q.toLowerCase();
   cocRenderBiblioteca(_cocBibComidas.filter(c =>
     (c.nombre||'').toLowerCase().includes(qn) ||
@@ -9478,7 +9478,7 @@ async function eliminarComidaBib(id, nombre) {
   try {
     await supaFetch('/rest/v1/biblioteca_comidas?id=eq.' + id, { method: 'DELETE' });
     _cocBibComidas = _cocBibComidas.filter(c => c.id !== id);
-    cocRenderBiblioteca(_bibComidas);
+    cocRenderBiblioteca(_cocBibComidas);
     showToast('🗑️ Comida eliminada');
   } catch(e) {
     showToast('Error al eliminar');
@@ -9806,8 +9806,8 @@ async function guardarComidaBib() {
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify(payload)
       });
-      const idx = _bibComidas.findIndex(c => c.id === _cocEditorId);
-      if (idx >= 0) _bibComidas[idx] = { ..._bibComidas[idx], ...payload };
+      const idx = _cocBibComidas.findIndex(c => c.id === _cocEditorId);
+      if (idx >= 0) _cocBibComidas[idx] = { ..._cocBibComidas[idx], ...payload };
       showToast('✅ Comida actualizada');
     } else {
       // Nueva
@@ -9817,11 +9817,11 @@ async function guardarComidaBib() {
         body: JSON.stringify(payload)
       });
       const rows = await res.json();
-      if (Array.isArray(rows) && rows[0]) _bibComidas.push(rows[0]);
+      if (Array.isArray(rows) && rows[0]) _cocBibComidas.push(rows[0]);
       showToast('✅ Comida guardada en biblioteca');
     }
     cerrarEditorBib();
-    cocRenderBiblioteca(_bibComidas);
+    cocRenderBiblioteca(_cocBibComidas);
   } catch(e) {
     showToast('❌ Error al guardar');
     if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
