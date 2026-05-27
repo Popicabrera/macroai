@@ -9548,25 +9548,25 @@ function abrirEditorBiblioteca(comida) {
         <div>
           <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal</div>
           <input id="bibEdKcal" class="bib-input" type="number" min="0" placeholder="Auto"
-            value="${comida?.kcal_total != null ? Math.round(comida.kcal_total) : ''}"
+            value=""
             style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
         </div>
         <div>
           <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
           <input id="bibEdProt" class="bib-input" type="number" min="0" placeholder="Auto"
-            value="${comida?.prot_total != null ? Math.round(comida.prot_total*10)/10 : ''}"
+            value=""
             style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
         </div>
         <div>
           <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">CH g</div>
           <input id="bibEdCh" class="bib-input" type="number" min="0" placeholder="Auto"
-            value="${comida?.ch_total != null ? Math.round(comida.ch_total*10)/10 : ''}"
+            value=""
             style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
         </div>
         <div>
           <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
           <input id="bibEdGrasa" class="bib-input" type="number" min="0" placeholder="Auto"
-            value="${comida?.grasa_total != null ? Math.round(comida.grasa_total*10)/10 : ''}"
+            value=""
             style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
         </div>
       </div>
@@ -9719,17 +9719,8 @@ function bibRecalcTotales() {
   if (tCh)    tCh.textContent    = 'CH ' + (Math.round(ch*10)/10) + 'g';
   if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(grasa*10)/10) + 'g';
 
-  // Auto-rellenar campos manuales si están vacíos y hay datos
-  if (hayDatos) {
-    const inpK = document.getElementById('bibEdKcal');
-    const inpP = document.getElementById('bibEdProt');
-    const inpC = document.getElementById('bibEdCh');
-    const inpG = document.getElementById('bibEdGrasa');
-    if (inpK && !inpK.value) inpK.value = Math.round(kcal);
-    if (inpP && !inpP.value) inpP.value = Math.round(prot*10)/10;
-    if (inpC && !inpC.value) inpC.value = Math.round(ch*10)/10;
-    if (inpG && !inpG.value) inpG.value = Math.round(grasa*10)/10;
-  }
+  // Los campos de ajuste manual se dejan siempre vacíos (placeholder "Auto")
+  // El usuario los rellena solo si quiere sobreescribir el cálculo automático
 }
 
 function bibRecalcManual() {
