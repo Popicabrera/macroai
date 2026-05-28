@@ -8064,7 +8064,8 @@ async function abrirBibEditor(id) {
       <input id="_bibNombre" type="text" placeholder="Nombre del menú" value="${item?.nombre||''}"
         style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;margin-bottom:8px;">
       <select id="_bibMomento" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;margin-bottom:14px;">
-        <option value="desayuno" ${(item?.momento||_bibFiltro)==='desayuno'?'selected':''}>Desayuno</option>
+        <option value="desayuno salado" ${(item?.momento||_bibFiltro)==='desayuno salado'?'selected':''}>Desayuno salado</option>
+        <option value="desayuno dulce" ${(item?.momento||_bibFiltro)==='desayuno dulce'?'selected':''}>Desayuno dulce</option>
         <option value="almuerzo" ${(item?.momento||_bibFiltro)==='almuerzo'?'selected':''}>Almuerzo</option>
         <option value="comida" ${(item?.momento||_bibFiltro)==='comida'?'selected':''}>Comida</option>
         <option value="merienda" ${(item?.momento||_bibFiltro)==='merienda'?'selected':''}>Merienda</option>
@@ -9309,13 +9310,6 @@ function dsbUpdateActive() {
 
     <!-- Tab Biblioteca -->
     <div id="tabCocina-biblioteca" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 80px;display:flex;flex-direction:column;min-height:0;">
-      <!-- Buscador biblioteca -->
-      <div style="position:relative;margin-bottom:12px;">
-        <input id="bibSearchInput" type="text" placeholder="🔍  Buscar en biblioteca..."
-          oninput="cocBibFiltrar(this.value)"
-          style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;
-          padding:10px 14px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
-      </div>
       <!-- Lista -->
       <div id="bibLista"></div>
     </div>
@@ -9432,8 +9426,28 @@ function cocRenderBiblioteca(comidas) {
     </div>`;
     return;
   }
-  lista.innerHTML = '';
+  const ORDER = ['desayuno salado','desayuno dulce','almuerzo','comida','merienda','cena'];
+  const LABELS = {
+    'desayuno salado': 'Desayuno salado',
+    'desayuno dulce':  'Desayuno dulce',
+    'almuerzo':        'Almuerzo',
+    'comida':          'Comida',
+    'merienda':        'Merienda',
+    'cena':            'Cena'
+  };
+  // Agrupar
+  const grupos = {};
+  ORDER.forEach(k => grupos[k] = []);
+  const sinCat = [];
   comidas.forEach(c => {
+    const cat = (c.tipo||'').toLowerCase().trim();
+    if (grupos[cat] !== undefined) grupos[cat].push(c);
+    else sinCat.push(c);
+  });
+
+  lista.innerHTML = '';
+
+  const renderCard = (c) => {
     let ings = [];
     if (Array.isArray(c.ingredientes)) ings = c.ingredientes;
     else if (typeof c.ingredientes === 'string') { try { ings = JSON.parse(c.ingredientes); } catch(e){} }
@@ -9443,7 +9457,6 @@ function cocRenderBiblioteca(comidas) {
     card.innerHTML = `
       <div class="bib-card-body">
         <div class="bib-card-name">${escapeHtml(c.nombre||'Sin nombre')}</div>
-        ${c.tipo ? `<div class="bib-card-cat">${escapeHtml(c.tipo.charAt(0).toUpperCase()+c.tipo.slice(1))}</div>` : ''}
         <div class="bib-card-macros">
           <span class="bib-macro-pill kcal">${Math.round(c.kcal||0)} kcal</span>
           <span class="bib-macro-pill prot">P ${Math.round((c.proteina||0)*10)/10}g</span>
@@ -9453,11 +9466,8 @@ function cocRenderBiblioteca(comidas) {
       </div>
       ${ingsTexto ? `<div class="bib-card-ings">${escapeHtml(ingsTexto)}</div>` : ''}
     `;
-    // Long press → menú contextual
     let lpTimer;
-    const startLp = (e) => {
-      lpTimer = setTimeout(() => { e.preventDefault(); mostrarCtxBib(c, card); }, 500);
-    };
+    const startLp = (e) => { lpTimer = setTimeout(() => { e.preventDefault(); mostrarCtxBib(c, card); }, 500); };
     const cancelLp = () => clearTimeout(lpTimer);
     card.addEventListener('touchstart', startLp, { passive: true });
     card.addEventListener('touchend', cancelLp);
@@ -9465,13 +9475,28 @@ function cocRenderBiblioteca(comidas) {
     card.addEventListener('mousedown', startLp);
     card.addEventListener('mouseup', cancelLp);
     card.addEventListener('mouseleave', cancelLp);
-    // Tap normal → expandir/colapsar ingredientes (o abrir editor)
     card.addEventListener('click', () => {
       const ingsEl = card.querySelector('.bib-card-ings');
       if (ingsEl) ingsEl.style.display = ingsEl.style.display === 'none' ? '' : 'none';
     });
-    lista.appendChild(card);
+    return card;
+  };
+
+  ORDER.forEach(cat => {
+    if (!grupos[cat] || !grupos[cat].length) return;
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 2px 6px;';
+    hdr.textContent = LABELS[cat];
+    lista.appendChild(hdr);
+    grupos[cat].forEach(c => lista.appendChild(renderCard(c)));
   });
+  if (sinCat.length) {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 2px 6px;';
+    hdr.textContent = 'Sin categoría';
+    lista.appendChild(hdr);
+    sinCat.forEach(c => lista.appendChild(renderCard(c)));
+  }
 }
 
 // ── CONTEXT MENU ──
