@@ -9583,8 +9583,8 @@ function abrirEditorBiblioteca(comida) {
       <!-- Categoría -->
       <div class="bib-field-label">Categoría</div>
       <select id="bibEdCat" class="bib-select" style="margin-bottom:16px;">
-        ${['Desayuno','Almuerzo','Comida','Merienda','Cena','General'].map(cat =>
-          `<option value="${cat}" ${(comida?.tipo ? comida.tipo.charAt(0).toUpperCase()+comida.tipo.slice(1) : 'General')===cat?'selected':''}>${cat}</option>`
+        ${[['desayuno salado','Desayuno salado'],['desayuno dulce','Desayuno dulce'],['almuerzo','Almuerzo'],['comida','Comida'],['merienda','Merienda'],['cena','Cena']].map(([val,label]) =>
+          `<option value="${val}" ${(comida?.tipo||'').toLowerCase()===val?'selected':''}>${label}</option>`
         ).join('')}
       </select>
 
