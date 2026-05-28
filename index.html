@@ -9623,39 +9623,6 @@ function abrirEditorBiblioteca(comida) {
         <span class="bib-macro-pill grasa" id="bibtGrasa">G 0g</span>
       </div>
 
-      <!-- Nota macros manuales -->
-      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
-        💡 Los macros se calculan automáticamente desde los ingredientes. Si un ingrediente no está en la base de datos, ajusta manualmente los valores totales abajo.
-      </div>
-
-      <!-- Macros manuales (override) -->
-      <div class="bib-field-label">Ajuste manual de macros (opcional)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
-        <div>
-          <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal</div>
-          <input id="bibEdKcal" class="bib-input" type="number" min="0" placeholder="Auto"
-            value=""
-            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
-          <input id="bibEdProt" class="bib-input" type="number" min="0" placeholder="Auto"
-            value=""
-            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
-        </div>
-        <div>
-          <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">CH g</div>
-          <input id="bibEdCh" class="bib-input" type="number" min="0" placeholder="Auto"
-            value=""
-            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
-          <input id="bibEdGrasa" class="bib-input" type="number" min="0" placeholder="Auto"
-            value=""
-            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
-        </div>
-      </div>
 
       <!-- Botones -->
       <div class="bib-btn-row">
@@ -9805,25 +9772,9 @@ function bibRecalcTotales() {
   if (tCh)    tCh.textContent    = 'CH ' + (Math.round(ch*10)/10) + 'g';
   if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(grasa*10)/10) + 'g';
 
-  // Los campos de ajuste manual se dejan siempre vacíos (placeholder "Auto")
-  // El usuario los rellena solo si quiere sobreescribir el cálculo automático
 }
 
-function bibRecalcManual() {
-  // Solo actualizar los pills de totales con los valores manuales
-  const k = parseFloat(document.getElementById('bibEdKcal')?.value) || 0;
-  const p = parseFloat(document.getElementById('bibEdProt')?.value) || 0;
-  const c = parseFloat(document.getElementById('bibEdCh')?.value)   || 0;
-  const g = parseFloat(document.getElementById('bibEdGrasa')?.value) || 0;
-  const tKcal  = document.getElementById('bibtKcal');
-  const tProt  = document.getElementById('bibtProt');
-  const tCh    = document.getElementById('bibtCh');
-  const tGrasa = document.getElementById('bibtGrasa');
-  if (tKcal)  tKcal.textContent  = Math.round(k) + ' kcal';
-  if (tProt)  tProt.textContent  = 'P ' + (Math.round(p*10)/10) + 'g';
-  if (tCh)    tCh.textContent    = 'CH ' + (Math.round(c*10)/10) + 'g';
-  if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(g*10)/10) + 'g';
-}
+
 
 // ── GUARDAR ──
 async function guardarComidaBib() {
@@ -9832,13 +9783,7 @@ async function guardarComidaBib() {
 
   const categoria = document.getElementById('bibEdCat')?.value || 'General';
 
-  // Leer macros — priorizar campos manuales si tienen valor
-  const kcalM  = parseFloat(document.getElementById('bibEdKcal')?.value);
-  const protM  = parseFloat(document.getElementById('bibEdProt')?.value);
-  const chM    = parseFloat(document.getElementById('bibEdCh')?.value);
-  const grasaM = parseFloat(document.getElementById('bibEdGrasa')?.value);
-
-  // Calcular desde ingredientes
+  // Calcular macros desde ingredientes
   let kcalI=0, protI=0, chI=0, grasaI=0;
   _cocEditorIngs.forEach(ing => {
     const g = ing.gramos || 0;
@@ -9850,10 +9795,10 @@ async function guardarComidaBib() {
     }
   });
 
-  const kcal_total  = !isNaN(kcalM)  ? kcalM  : Math.round(kcalI);
-  const prot_total  = !isNaN(protM)  ? protM  : Math.round(protI*10)/10;
-  const ch_total    = !isNaN(chM)    ? chM    : Math.round(chI*10)/10;
-  const grasa_total = !isNaN(grasaM) ? grasaM : Math.round(grasaI*10)/10;
+  const kcal_total  = Math.round(kcalI);
+  const prot_total  = Math.round(protI*10)/10;
+  const ch_total    = Math.round(chI*10)/10;
+  const grasa_total = Math.round(grasaI*10)/10;
 
   // Limpiar ingredientes — solo los que tienen nombre
   const ingredientes = _cocEditorIngs
