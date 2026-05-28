@@ -9864,7 +9864,7 @@ async function guardarComidaBib() {
 .menu-dia-body{display:flex;flex-direction:column;}
 .menu-franja-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;min-height:54px;}
 .menu-franja-row:last-child{border-bottom:none;}
-.menu-franja-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;width:72px;flex-shrink:0;}
+.menu-franja-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;width:88px;flex-shrink:0;white-space:nowrap;}
 .menu-franja-content{flex:1;min-width:0;}
 .menu-celda-asignada{display:flex;flex-direction:column;gap:2px;}
 .menu-celda-nombre{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -9897,6 +9897,7 @@ const MENU_FRANJAS = ['Desayuno','Media mañana','Comida','Merienda','Cena'];
 let _menuGrid = {};
 let _menuId   = null;
 let _menuDiasColapsados = {};
+let _menuListCache = [];
 
 function menuIniciarGrid() {
   _menuGrid = {};
@@ -10126,8 +10127,9 @@ async function menuMostrarExistentes() {
       btnVer.textContent='📋 Ver / cargar menús guardados';
       return;
     }
+    _menuListCache = rows;
     listDiv.innerHTML='';
-    rows.forEach(m=>{
+    rows.forEach((m,idx)=>{
       const item=document.createElement('div');
       item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:10px 14px;gap:8px;';
       item.innerHTML=`
@@ -10135,7 +10137,10 @@ async function menuMostrarExistentes() {
           <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.nombre||'Sin nombre')}</div>
           <div style="font-size:11px;color:var(--muted);">${m.activo?'● Activo':'Inactivo'}</div>
         </div>
-        <button onclick="menuCargarExistente('${m.id}')" style="padding:7px 12px;background:var(--accent);border:none;border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;">Cargar</button>`;
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="menuCargarExistente('${m.id}')" style="padding:7px 12px;background:var(--s2);border:1px solid var(--border);border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--text);cursor:pointer;">Cargar</button>
+          <button onclick="menuAbrirAsignacion('${m.id}',${idx})" style="padding:7px 12px;background:var(--accent);border:none;border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;">Asignar</button>
+        </div>`;
       listDiv.appendChild(item);
     });
     listDiv.style.cssText='display:flex;flex-direction:column;gap:6px;';
@@ -10186,7 +10191,89 @@ async function menuCargarExistente(menuId) {
     showToast('❌ Error al cargar el menú'); console.error(e);
   }
 }
+
+// ══════════════════════════════════════════
+// ── PASO 6: ASIGNAR MENÚ A CLIENTE
+// ══════════════════════════════════════════
+
+function menuAbrirAsignacion(menuId, cacheIdx) {
+  const menuNombre = (_menuListCache[cacheIdx]||{}).nombre || '';
+  cerrarMenuAsignacion();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'menu-asig-overlay';
+  overlay.id = 'menuAsigOverlay';
+
+  const clientes = _adminUsersData.filter(u => u.email !== ADMIN_EMAIL);
+
+  overlay.innerHTML = `
+    <div class="menu-asig-sheet">
+      <div class="menu-asig-title">📋 Asignar menú a cliente</div>
+      <div class="menu-asig-subtitle">${escapeHtml(menuNombre)}</div>
+      <div class="menu-asig-list" id="menuAsigList">
+        ${clientes.length === 0
+          ? '<div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px;">Sin clientes registrados</div>'
+          : clientes.map(u => `
+            <div class="menu-asig-item" onclick="menuConfirmarAsignacion('${menuId}','${escapeHtml(menuNombre).replace(/'/g,"\\'")}','${u.email}','${escapeHtml(u.nombre||u.email).replace(/'/g,"\\'")}')">
+              <div class="menu-asig-nombre">${escapeHtml(u.nombre||u.email)}</div>
+              <div class="menu-asig-email">${escapeHtml(u.email)}</div>
+            </div>`).join('')
+        }
+      </div>
+      <button class="menu-asig-cancel" onclick="cerrarMenuAsignacion()">Cancelar</button>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) cerrarMenuAsignacion(); });
+  document.body.appendChild(overlay);
+}
+
+function cerrarMenuAsignacion() {
+  const ov = document.getElementById('menuAsigOverlay');
+  if (ov) ov.remove();
+}
+
+async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, clienteNombre) {
+  cerrarMenuAsignacion();
+  showToast('\u23f3 Asignando...');
+  try {
+    // 1. Desactivar cualquier menú activo anterior de este cliente
+    await supaAdmin(
+      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&activo=eq.true`,
+      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: false }) }
+    );
+    // 2. Asignar y activar el menú seleccionado
+    await supaAdmin(
+      `/rest/v1/menus_macroai?id=eq.${menuId}`,
+      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, activo: true }) }
+    );
+    showToast(`\u2705 Menú asignado a ${clienteNombre}`);
+    // Reabrir la lista para reflejar estado Activo actualizado
+    const ld = document.getElementById('menuListaExistentes');
+    if (ld) ld.style.display = 'none';
+    const bv = document.getElementById('menuBtnVerExistentes');
+    if (bv) bv.textContent = '\ud83d\udccb Ver / cargar menús guardados';
+    menuMostrarExistentes();
+  } catch(e) {
+    showToast('\u274c Error al asignar el menú'); console.error(e);
+  }
+}
+
 </script>
+
+
+<style>
+/* PASO 6 — Asignación menú a cliente */
+.menu-asig-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+.menu-asig-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:70vh;display:flex;flex-direction:column;gap:10px;}
+.menu-asig-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);}
+.menu-asig-subtitle{font-size:12px;color:var(--muted);text-align:center;margin-top:-4px;}
+.menu-asig-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;}
+.menu-asig-item{background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 14px;cursor:pointer;transition:background .15s;}
+.menu-asig-item:active{background:var(--s2);}
+.menu-asig-nombre{font-size:13px;font-weight:600;color:var(--text);}
+.menu-asig-email{font-size:11px;color:var(--muted);margin-top:2px;}
+.menu-asig-cancel{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+</style>
 
 </div><!-- /mainApp -->
 </body>
