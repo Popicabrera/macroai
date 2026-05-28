@@ -9447,6 +9447,16 @@ function cocRenderBiblioteca(comidas) {
 
   lista.innerHTML = '';
 
+  const ICONS = {
+    'desayuno salado': '🍳',
+    'desayuno dulce':  '🥣',
+    'almuerzo':        '🥗',
+    'comida':          '🍽️',
+    'merienda':        '🍎',
+    'cena':            '🌙',
+    '__sin__':         '📦'
+  };
+
   const renderCard = (c) => {
     let ings = [];
     if (Array.isArray(c.ingredientes)) ings = c.ingredientes;
@@ -9464,7 +9474,7 @@ function cocRenderBiblioteca(comidas) {
           <span class="bib-macro-pill grasa">G ${Math.round((c.grasa||0)*10)/10}g</span>
         </div>
       </div>
-      ${ingsTexto ? `<div class="bib-card-ings">${escapeHtml(ingsTexto)}</div>` : ''}
+      ${ingsTexto ? `<div class="bib-card-ings" style="display:none;">${escapeHtml(ingsTexto)}</div>` : ''}
     `;
     let lpTimer;
     const startLp = (e) => { lpTimer = setTimeout(() => { e.preventDefault(); mostrarCtxBib(c, card); }, 500); };
@@ -9482,21 +9492,37 @@ function cocRenderBiblioteca(comidas) {
     return card;
   };
 
-  ORDER.forEach(cat => {
-    if (!grupos[cat] || !grupos[cat].length) return;
+  const renderGrupo = (cat, label, items) => {
+    if (!items.length) return;
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'border-bottom:1px solid var(--border);';
+
     const hdr = document.createElement('div');
-    hdr.style.cssText = 'font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 2px 6px;';
-    hdr.textContent = LABELS[cat];
-    lista.appendChild(hdr);
-    grupos[cat].forEach(c => lista.appendChild(renderCard(c)));
-  });
-  if (sinCat.length) {
-    const hdr = document.createElement('div');
-    hdr.style.cssText = 'font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 2px 6px;';
-    hdr.textContent = 'Sin categoría';
-    lista.appendChild(hdr);
-    sinCat.forEach(c => lista.appendChild(renderCard(c)));
-  }
+    hdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:13px 2px;cursor:pointer;user-select:none;';
+    hdr.innerHTML = `
+      <span style="font-size:20px;line-height:1;">${ICONS[cat]||'🍽️'}</span>
+      <span style="flex:1;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);">${label}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px;">${items.length}</span>
+      <span class="bib-chevron" style="font-size:16px;color:var(--muted);transition:transform .2s;">▾</span>
+    `;
+
+    const body = document.createElement('div');
+    body.style.cssText = 'display:none;padding-bottom:8px;';
+    items.forEach(c => body.appendChild(renderCard(c)));
+
+    hdr.addEventListener('click', () => {
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      hdr.querySelector('.bib-chevron').style.transform = open ? '' : 'rotate(-90deg)';
+    });
+
+    wrapper.appendChild(hdr);
+    wrapper.appendChild(body);
+    lista.appendChild(wrapper);
+  };
+
+  ORDER.forEach(cat => renderGrupo(cat, LABELS[cat], grupos[cat]||[]));
+  if (sinCat.length) renderGrupo('__sin__', 'Sin categoría', sinCat);
 }
 
 // ── CONTEXT MENU ──
