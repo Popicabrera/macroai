@@ -9828,10 +9828,11 @@ async function guardarComidaBib() {
     nombre,
     tipo: categoria,
     ingredientes: ingredientes,
-    kcal:     kcal_total,
-    proteina: prot_total,
-    hc:       ch_total,
-    grasa:    grasa_total
+    kcal:      kcal_total,
+    proteina:  prot_total,
+    hc:        ch_total,
+    grasa:     grasa_total,
+    creado_por: CURRENT_USER?.id || null
   };
 
   const btn = document.querySelector('#bibEditorOverlay .bib-btn.primary');
