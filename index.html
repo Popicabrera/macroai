@@ -9399,15 +9399,17 @@ function switchCocinaTab(tab) {
 // ── CARGAR DESDE SUPABASE ──
 async function cocCargarBiblioteca() {
   const lista = document.getElementById('bibLista');
+  if (!lista) return;
   lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
   try {
     const res = await supaAdmin('/rest/v1/biblioteca_comidas?select=*&order=nombre.asc');
     const rows = await res.json();
-    if (!Array.isArray(rows)) throw new Error('no array');
+    if (!res.ok) throw new Error((rows.message || rows.error || JSON.stringify(rows)));
+    if (!Array.isArray(rows)) throw new Error('Respuesta inesperada: ' + JSON.stringify(rows).slice(0,80));
     _cocBibComidas = rows;
     cocRenderBiblioteca(_cocBibComidas);
   } catch(e) {
-    lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Error al cargar la biblioteca.</div>';
+    lista.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--red);font-size:12px;max-width:300px;margin:0 auto;line-height:1.6;">❌ Error al cargar la biblioteca.<br><span style="color:var(--muted);font-size:11px;">${e.message}</span></div>`;
   }
 }
 
@@ -9433,9 +9435,8 @@ function cocRenderBiblioteca(comidas) {
   lista.innerHTML = '';
   comidas.forEach(c => {
     let ings = [];
-    if (Array.isArray(c.ingredientes_json)) ings = c.ingredientes_json;
-    else if (typeof c.ingredientes_json === 'string') { try { ings = JSON.parse(c.ingredientes_json); } catch(e){} }
-    else if (Array.isArray(c.ingredientes)) ings = c.ingredientes;
+    if (Array.isArray(c.ingredientes)) ings = c.ingredientes;
+    else if (typeof c.ingredientes === 'string') { try { ings = JSON.parse(c.ingredientes); } catch(e){} }
     const ingsTexto = ings.map(i => `${i.nombre}${i.gramos ? ' · ' + i.gramos + 'g' : ''}`).join(', ');
     const card = document.createElement('div');
     card.className = 'bib-card';
@@ -9533,12 +9534,10 @@ function abrirEditorBiblioteca(comida) {
   _cocEditorId = comida ? comida.id : null;
   let _rawIngs = [];
   if (comida) {
-    if (Array.isArray(comida.ingredientes_json)) {
-      _rawIngs = comida.ingredientes_json;
-    } else if (typeof comida.ingredientes_json === 'string') {
-      try { _rawIngs = JSON.parse(comida.ingredientes_json); } catch(e) {}
-    } else if (Array.isArray(comida.ingredientes)) {
+    if (Array.isArray(comida.ingredientes)) {
       _rawIngs = comida.ingredientes;
+    } else if (typeof comida.ingredientes === 'string') {
+      try { _rawIngs = JSON.parse(comida.ingredientes); } catch(e) {}
     }
   }
   _cocEditorIngs = _rawIngs.map(i => ({...i}));
@@ -9827,7 +9826,7 @@ async function guardarComidaBib() {
 
   const payload = {
     nombre, categoria,
-    ingredientes_json: JSON.stringify(ingredientes),
+    ingredientes: ingredientes,
     kcal_total, prot_total, ch_total, grasa_total
   };
 
@@ -9852,11 +9851,16 @@ async function guardarComidaBib() {
         headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify(payload)
       });
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + errBody);
+      }
       const rows = await res.json();
       if (Array.isArray(rows) && rows[0]) _cocBibComidas.push(rows[0]);
       showToast('✅ Comida guardada en biblioteca');
     }
     cerrarEditorBib();
+    await new Promise(r => setTimeout(r, 300)); // pequeña espera para que Supabase commitee
     await cocCargarBiblioteca();
   } catch(e) {
     showToast('❌ Error al guardar');
