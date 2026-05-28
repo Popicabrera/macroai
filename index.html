@@ -9191,18 +9191,7 @@ function dsbUpdateActive() {
 .bib-card-ings{padding:8px 14px 10px;border-top:1px solid var(--border);background:rgba(0,0,0,0.02);
   font-size:12px;color:var(--muted);line-height:1.7;}
 
-/* ── FAB botón nueva comida ── */
-.cocina-fab{
-  position:absolute;bottom:20px;right:16px;
-  width:48px;height:48px;border-radius:50%;
-  background:var(--accent);border:none;
-  display:flex;align-items:center;justify-content:center;
-  font-size:24px;color:#fff;cursor:pointer;
-  box-shadow:0 4px 16px rgba(192,57,43,0.35);
-  transition:transform 0.15s,box-shadow 0.15s;
-  z-index:10;
-}
-.cocina-fab:active{transform:scale(0.92);}
+
 
 /* ── Editor overlay ── */
 .bib-overlay{
@@ -9298,18 +9287,25 @@ function dsbUpdateActive() {
         style="flex:1;padding:12px 8px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;
         letter-spacing:0.5px;text-transform:uppercase;border:none;cursor:pointer;
         background:none;color:var(--accent);border-bottom:2px solid var(--accent);transition:all .2s;">
-        📚 Biblioteca
+        Biblioteca
       </button>
       <button id="tabMenusBtn" onclick="switchCocinaTab('menus')"
         style="flex:1;padding:12px 8px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;
         letter-spacing:0.5px;text-transform:uppercase;border:none;cursor:pointer;
         background:none;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;">
-        🗓 Menús
+        Menús
       </button>
     </div>
 
     <!-- Tab Biblioteca -->
     <div id="tabCocina-biblioteca" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 80px;display:flex;flex-direction:column;min-height:0;">
+      <!-- Botón nueva comida -->
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+        <button onclick="abrirEditorBiblioteca(null)"
+          style="padding:7px 14px;background:var(--accent);border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;letter-spacing:0.3px;">
+          + Nueva comida
+        </button>
+      </div>
       <!-- Lista -->
       <div id="bibLista"></div>
     </div>
@@ -9349,8 +9345,7 @@ function dsbUpdateActive() {
       <div id="menuGridContainer"></div>
     </div>
 
-    <!-- FAB nueva comida (solo visible en tab biblioteca) -->
-    <button class="cocina-fab" id="bibFab" onclick="abrirEditorBiblioteca(null)" title="Nueva comida">＋</button>
+
   </div>
 </div>
 
@@ -9368,8 +9363,6 @@ function switchCocinaTab(tab) {
   const menPanel = document.getElementById('tabCocina-menus');
   const btnBib   = document.getElementById('tabBibliotecaBtn');
   const btnMen   = document.getElementById('tabMenusBtn');
-  const fab      = document.getElementById('bibFab');
-
   bibPanel.style.display = tab === 'biblioteca' ? 'flex' : 'none';
   bibPanel.style.flexDirection = 'column';
   menPanel.style.display = tab === 'menus' ? 'flex' : 'none';
@@ -9379,7 +9372,6 @@ function switchCocinaTab(tab) {
   btnMen.style.color = tab === 'menus' ? 'var(--accent)' : 'var(--muted)';
   btnMen.style.borderBottomColor = tab === 'menus' ? 'var(--accent)' : 'transparent';
 
-  if (fab) fab.style.display = tab === 'biblioteca' ? 'flex' : 'none';
 
   // Inicializar grid de menús la primera vez que se abre la pestaña
   if (tab === 'menus') {
@@ -9599,7 +9591,7 @@ function abrirEditorBiblioteca(comida) {
 
   overlay.innerHTML = `
     <div class="bib-sheet" id="bibEditorSheet">
-      <div class="bib-sheet-title">${comida ? '✏️ Editar comida' : '🍽️ Nueva comida'}</div>
+      <div class="bib-sheet-title">${comida ? 'Editar comida' : 'Nueva comida'}</div>
 
       <!-- Nombre -->
       <div class="bib-field-label">Nombre</div>
