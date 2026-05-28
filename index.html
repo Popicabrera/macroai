@@ -9443,7 +9443,7 @@ function cocRenderBiblioteca(comidas) {
     card.innerHTML = `
       <div class="bib-card-body">
         <div class="bib-card-name">${escapeHtml(c.nombre||'Sin nombre')}</div>
-        ${c.categoria ? `<div class="bib-card-cat">${escapeHtml(c.categoria)}</div>` : ''}
+        ${c.tipo ? `<div class="bib-card-cat">${escapeHtml(c.tipo.charAt(0).toUpperCase()+c.tipo.slice(1))}</div>` : ''}
         <div class="bib-card-macros">
           <span class="bib-macro-pill kcal">${Math.round(c.kcal||0)} kcal</span>
           <span class="bib-macro-pill prot">P ${Math.round((c.proteina||0)*10)/10}g</span>
@@ -9559,7 +9559,7 @@ function abrirEditorBiblioteca(comida) {
       <div class="bib-field-label">Categoría</div>
       <select id="bibEdCat" class="bib-select" style="margin-bottom:16px;">
         ${['Desayuno','Almuerzo','Comida','Merienda','Cena','General'].map(cat =>
-          `<option value="${cat}" ${(comida?.categoria||'General')===cat?'selected':''}>${cat}</option>`
+          `<option value="${cat}" ${(comida?.tipo ? comida.tipo.charAt(0).toUpperCase()+comida.tipo.slice(1) : 'General')===cat?'selected':''}>${cat}</option>`
         ).join('')}
       </select>
 
