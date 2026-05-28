@@ -9863,7 +9863,8 @@ async function guardarComidaBib() {
     await new Promise(r => setTimeout(r, 300)); // pequeña espera para que Supabase commitee
     await cocCargarBiblioteca();
   } catch(e) {
-    showToast('❌ Error al guardar');
+    console.error('guardarComidaBib error:', e.message);
+    showToast('❌ ' + (e.message || 'Error al guardar').slice(0, 120));
     if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
   }
 }
