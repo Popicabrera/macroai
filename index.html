@@ -9826,7 +9826,7 @@ async function guardarComidaBib() {
 
   const payload = {
     nombre,
-    tipo: categoria,
+    tipo: (categoria||'').toLowerCase(),
     ingredientes: ingredientes,
     kcal:      kcal_total,
     proteina:  prot_total,
