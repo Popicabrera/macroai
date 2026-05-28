@@ -9445,10 +9445,10 @@ function cocRenderBiblioteca(comidas) {
         <div class="bib-card-name">${escapeHtml(c.nombre||'Sin nombre')}</div>
         ${c.categoria ? `<div class="bib-card-cat">${escapeHtml(c.categoria)}</div>` : ''}
         <div class="bib-card-macros">
-          <span class="bib-macro-pill kcal">${Math.round(c.kcal_total||0)} kcal</span>
-          <span class="bib-macro-pill prot">P ${Math.round((c.prot_total||0)*10)/10}g</span>
-          <span class="bib-macro-pill ch">CH ${Math.round((c.ch_total||0)*10)/10}g</span>
-          <span class="bib-macro-pill grasa">G ${Math.round((c.grasa_total||0)*10)/10}g</span>
+          <span class="bib-macro-pill kcal">${Math.round(c.kcal||0)} kcal</span>
+          <span class="bib-macro-pill prot">P ${Math.round((c.proteina||0)*10)/10}g</span>
+          <span class="bib-macro-pill ch">CH ${Math.round((c.hc||0)*10)/10}g</span>
+          <span class="bib-macro-pill grasa">G ${Math.round((c.grasa||0)*10)/10}g</span>
         </div>
       </div>
       ${ingsTexto ? `<div class="bib-card-ings">${escapeHtml(ingsTexto)}</div>` : ''}
@@ -9825,9 +9825,13 @@ async function guardarComidaBib() {
     }));
 
   const payload = {
-    nombre, categoria,
+    nombre,
+    tipo: categoria,
     ingredientes: ingredientes,
-    kcal_total, prot_total, ch_total, grasa_total
+    kcal:     kcal_total,
+    proteina: prot_total,
+    hc:       ch_total,
+    grasa:    grasa_total
   };
 
   const btn = document.querySelector('#bibEditorOverlay .bib-btn.primary');
@@ -10052,10 +10056,10 @@ function menuAbrirSelector(diaNum, fi, franjaLabel) {
     _menuGrid[`d${diaNum}-f${fi}`] = {
       comida_id: comida.id,
       nombre:    comida.nombre,
-      kcal:      comida.kcal_total  || 0,
-      prot:      Math.round((comida.prot_total  ||0)*10)/10,
-      ch:        Math.round((comida.ch_total    ||0)*10)/10,
-      grasa:     Math.round((comida.grasa_total ||0)*10)/10,
+      kcal:      comida.kcal  || 0,
+      prot:      Math.round((comida.proteina  ||0)*10)/10,
+      ch:        Math.round((comida.hc        ||0)*10)/10,
+      grasa:     Math.round((comida.grasa     ||0)*10)/10,
     };
     cerrarMenuSelector();
     menuRenderGrid();
@@ -10080,7 +10084,7 @@ function menuRenderSelectorList(comidas) {
     item.className = 'menu-selector-item';
     item.innerHTML = `
       <div class="menu-selector-item-nombre">${escapeHtml(c.nombre||'')}</div>
-      <div class="menu-selector-item-macros">${Math.round(c.kcal_total||0)} kcal · P${Math.round((c.prot_total||0)*10)/10}g CH${Math.round((c.ch_total||0)*10)/10}g G${Math.round((c.grasa_total||0)*10)/10}g</div>`;
+      <div class="menu-selector-item-macros">${Math.round(c.kcal||0)} kcal · P${Math.round((c.proteina||0)*10)/10}g CH${Math.round((c.hc||0)*10)/10}g G${Math.round((c.grasa||0)*10)/10}g</div>`;
     item.addEventListener('click', ()=>{ if(_menuSelectorCallback) _menuSelectorCallback(c); });
     ul.appendChild(item);
   });
@@ -10189,10 +10193,10 @@ async function menuCargarExistente(menuId) {
           const fi = MENU_FRANJAS.indexOf(c.franja);
           if (fi>=0) _menuGrid[`d${c.dia}-f${fi}`] = {
             comida_id: comida.id, nombre: comida.nombre,
-            kcal:  comida.kcal_total  ||0,
-            prot:  Math.round((comida.prot_total  ||0)*10)/10,
-            ch:    Math.round((comida.ch_total    ||0)*10)/10,
-            grasa: Math.round((comida.grasa_total ||0)*10)/10,
+            kcal:  comida.kcal  ||0,
+            prot:  Math.round((comida.proteina  ||0)*10)/10,
+            ch:    Math.round((comida.hc        ||0)*10)/10,
+            grasa: Math.round((comida.grasa     ||0)*10)/10,
           };
         }
       });
