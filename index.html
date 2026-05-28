@@ -9321,11 +9321,38 @@ function dsbUpdateActive() {
     </div>
 
     <!-- Tab Menús -->
-    <div id="tabCocina-menus" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;">
-      <div style="font-size:48px;">🗓</div>
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;">Planificador de menús</div>
-      <div style="font-size:14px;color:var(--muted);max-width:260px;line-height:1.6;">Aquí combinarás comidas de la biblioteca para crear menús semanales.</div>
-      <div style="font-size:12px;color:var(--muted2);margin-top:8px;">Próximamente...</div>
+    <div id="tabCocina-menus" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 100px;display:none;flex-direction:column;gap:12px;">
+
+      <!-- Nombre del menú -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="menuNombreInput" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
+          style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+          padding:10px 14px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
+        <button onclick="menuGuardarMenuCompleto()"
+          style="padding:10px 14px;background:var(--accent);border:none;border-radius:11px;
+          font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;">
+          💾 Guardar
+        </button>
+      </div>
+
+      <!-- Selector de menú existente -->
+      <div id="menuListaExistentes" style="display:none;flex-direction:column;gap:6px;"></div>
+      <button onclick="menuMostrarExistentes()" id="menuBtnVerExistentes"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 14px;
+        font-size:12px;color:var(--muted);cursor:pointer;text-align:left;font-family:'Inter',sans-serif;">
+        📋 Ver / cargar menús guardados
+      </button>
+
+      <!-- Totales del menú -->
+      <div id="menuTotalesBar" style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span id="mntKcal" style="background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--accent);">— kcal/día</span>
+        <span id="mntProt" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">P —g</span>
+        <span id="mntCh"   style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">CH —g</span>
+        <span id="mntGrasa" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">G —g</span>
+      </div>
+
+      <!-- Grid 7 días × 5 franjas -->
+      <div id="menuGridContainer"></div>
     </div>
 
     <!-- FAB nueva comida (solo visible en tab biblioteca) -->
@@ -9359,6 +9386,12 @@ function switchCocinaTab(tab) {
   btnMen.style.borderBottomColor = tab === 'menus' ? 'var(--accent)' : 'transparent';
 
   if (fab) fab.style.display = tab === 'biblioteca' ? 'flex' : 'none';
+
+  // Inicializar grid de menús la primera vez que se abre la pestaña
+  if (tab === 'menus') {
+    const container = document.getElementById('menuGridContainer');
+    if (container && !container.hasChildNodes()) menuIniciarGrid();
+  }
 }
 
 // cargarBiblioteca se llama desde showView original (ver patch en CSS block)
@@ -9812,10 +9845,345 @@ async function guardarComidaBib() {
       showToast('✅ Comida guardada en biblioteca');
     }
     cerrarEditorBib();
-    cocRenderBiblioteca(_cocBibComidas);
+    await cocCargarBiblioteca();
   } catch(e) {
     showToast('❌ Error al guardar');
     if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
+  }
+}
+</script>
+
+<style>
+/* ══════════════════════════════════════════
+   MENU GRID — Paso 5
+══════════════════════════════════════════ */
+.menu-dia-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;}
+.menu-dia-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.menu-dia-label{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+.menu-dia-kcal{font-size:11px;color:var(--muted);font-weight:500;}
+.menu-dia-body{display:flex;flex-direction:column;}
+.menu-franja-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;min-height:54px;}
+.menu-franja-row:last-child{border-bottom:none;}
+.menu-franja-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;width:72px;flex-shrink:0;}
+.menu-franja-content{flex:1;min-width:0;}
+.menu-celda-asignada{display:flex;flex-direction:column;gap:2px;}
+.menu-celda-nombre{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.menu-celda-macros{font-size:11px;color:var(--muted);}
+.menu-celda-add{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 0;transition:color .15s;}
+.menu-celda-add:active{color:var(--accent);}
+.menu-celda-add-icon{width:26px;height:26px;border-radius:8px;background:var(--s2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.menu-celda-del{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s;}
+.menu-celda-del:active{color:var(--red);}
+.menu-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+.menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:75vh;display:flex;flex-direction:column;gap:12px;}
+.menu-selector-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);}
+.menu-selector-search{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif;}
+.menu-selector-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;}
+.menu-selector-item{background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 14px;cursor:pointer;transition:background .15s;}
+.menu-selector-item:active{background:var(--s2);}
+.menu-selector-item-nombre{font-size:13px;font-weight:600;color:var(--text);}
+.menu-selector-item-macros{font-size:11px;color:var(--muted);margin-top:2px;}
+.menu-selector-cancel{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+</style>
+
+<script>
+// ══════════════════════════════════════════
+// ── PASO 5: PLANIFICADOR DE MENÚS (7×5)
+// ══════════════════════════════════════════
+
+const MENU_DIAS    = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MENU_FRANJAS = ['Desayuno','Media mañana','Comida','Merienda','Cena'];
+
+let _menuGrid = {};
+let _menuId   = null;
+let _menuDiasColapsados = {};
+
+function menuIniciarGrid() {
+  _menuGrid = {};
+  _menuId   = null;
+  _menuDiasColapsados = {};
+  const ni = document.getElementById('menuNombreInput');
+  if (ni) ni.value = '';
+  const ld = document.getElementById('menuListaExistentes');
+  if (ld) ld.style.display = 'none';
+  const bv = document.getElementById('menuBtnVerExistentes');
+  if (bv) bv.textContent = '📋 Ver / cargar menús guardados';
+  menuRenderGrid();
+  menuActualizarTotales();
+}
+
+function menuRenderGrid() {
+  const container = document.getElementById('menuGridContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  MENU_DIAS.forEach((dia, diaIdx) => {
+    const diaNum   = diaIdx + 1;
+    const colapsado = _menuDiasColapsados[diaIdx] || false;
+
+    let diaKcal = 0;
+    MENU_FRANJAS.forEach((_, fi) => {
+      const cell = _menuGrid[`d${diaNum}-f${fi}`];
+      if (cell) diaKcal += cell.kcal || 0;
+    });
+
+    const card   = document.createElement('div');
+    card.className = 'menu-dia-card';
+
+    const header = document.createElement('div');
+    header.className = 'menu-dia-header';
+    header.innerHTML = `
+      <span class="menu-dia-label">${dia}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${diaKcal > 0 ? `<span class="menu-dia-kcal">${Math.round(diaKcal)} kcal</span>` : ''}
+        <span style="color:var(--muted);font-size:14px;">${colapsado ? '▸' : '▾'}</span>
+      </div>`;
+    header.addEventListener('click', () => {
+      _menuDiasColapsados[diaIdx] = !_menuDiasColapsados[diaIdx];
+      menuRenderGrid();
+    });
+
+    const body = document.createElement('div');
+    body.className = 'menu-dia-body';
+    body.style.display = colapsado ? 'none' : 'flex';
+
+    MENU_FRANJAS.forEach((franja, fi) => {
+      const key  = `d${diaNum}-f${fi}`;
+      const cell = _menuGrid[key];
+      const row  = document.createElement('div');
+      row.className = 'menu-franja-row';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'menu-franja-label';
+      lbl.textContent = franja;
+
+      const content = document.createElement('div');
+      content.className = 'menu-franja-content';
+
+      if (cell) {
+        content.innerHTML = `
+          <div class="menu-celda-asignada">
+            <div class="menu-celda-nombre">${escapeHtml(cell.nombre)}</div>
+            <div class="menu-celda-macros">${Math.round(cell.kcal)} kcal · P${cell.prot}g CH${cell.ch}g G${cell.grasa}g</div>
+          </div>`;
+        const del = document.createElement('button');
+        del.className = 'menu-celda-del';
+        del.textContent = '✕';
+        del.addEventListener('click', e => {
+          e.stopPropagation();
+          delete _menuGrid[key];
+          menuRenderGrid();
+          menuActualizarTotales();
+        });
+        row.appendChild(lbl); row.appendChild(content); row.appendChild(del);
+      } else {
+        content.innerHTML = `
+          <div class="menu-celda-add">
+            <div class="menu-celda-add-icon">＋</div>
+            <span>Añadir comida</span>
+          </div>`;
+        content.addEventListener('click', () => menuAbrirSelector(diaNum, fi, franja));
+        row.appendChild(lbl); row.appendChild(content);
+      }
+      body.appendChild(row);
+    });
+
+    card.appendChild(header);
+    card.appendChild(body);
+    container.appendChild(card);
+  });
+}
+
+function menuActualizarTotales() {
+  let tKcal=0, tProt=0, tCh=0, tGrasa=0, diasDatos=0;
+  for (let d=1;d<=7;d++) {
+    let dK=0,dP=0,dC=0,dG=0,hay=false;
+    MENU_FRANJAS.forEach((_,fi)=>{
+      const c=_menuGrid[`d${d}-f${fi}`];
+      if(c){dK+=c.kcal||0;dP+=c.prot||0;dC+=c.ch||0;dG+=c.grasa||0;hay=true;}
+    });
+    if(hay){tKcal+=dK;tProt+=dP;tCh+=dC;tGrasa+=dG;diasDatos++;}
+  }
+  const div=diasDatos||1;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('mntKcal',  diasDatos ? Math.round(tKcal/div)+' kcal/día' : '— kcal/día');
+  set('mntProt',  diasDatos ? 'P '+Math.round(tProt/div*10)/10+'g' : 'P —g');
+  set('mntCh',    diasDatos ? 'CH '+Math.round(tCh/div*10)/10+'g' : 'CH —g');
+  set('mntGrasa', diasDatos ? 'G '+Math.round(tGrasa/div*10)/10+'g' : 'G —g');
+}
+
+let _menuSelectorCallback = null;
+
+function menuAbrirSelector(diaNum, fi, franjaLabel) {
+  cerrarMenuSelector();
+  const overlay = document.createElement('div');
+  overlay.className = 'menu-selector-overlay';
+  overlay.id = 'menuSelectorOverlay';
+  const sheet = document.createElement('div');
+  sheet.className = 'menu-selector-sheet';
+  sheet.innerHTML = `
+    <div class="menu-selector-title">📅 ${MENU_DIAS[diaNum-1]} · ${franjaLabel}</div>
+    <input class="menu-selector-search" placeholder="🔍  Buscar en biblioteca..." oninput="menuFiltrarSelector(this.value)">
+    <div class="menu-selector-list" id="menuSelectorList"></div>
+    <button class="menu-selector-cancel" onclick="cerrarMenuSelector()">Cancelar</button>`;
+  overlay.appendChild(sheet);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) cerrarMenuSelector(); });
+  document.body.appendChild(overlay);
+
+  _menuSelectorCallback = (comida) => {
+    _menuGrid[`d${diaNum}-f${fi}`] = {
+      comida_id: comida.id,
+      nombre:    comida.nombre,
+      kcal:      comida.kcal_total  || 0,
+      prot:      Math.round((comida.prot_total  ||0)*10)/10,
+      ch:        Math.round((comida.ch_total    ||0)*10)/10,
+      grasa:     Math.round((comida.grasa_total ||0)*10)/10,
+    };
+    cerrarMenuSelector();
+    menuRenderGrid();
+    menuActualizarTotales();
+  };
+  menuRenderSelectorList(_cocBibComidas);
+}
+
+function menuFiltrarSelector(q) {
+  const lista = !q||!q.trim() ? _cocBibComidas
+    : _cocBibComidas.filter(c=>(c.nombre||'').toLowerCase().includes(q.toLowerCase()));
+  menuRenderSelectorList(lista);
+}
+
+function menuRenderSelectorList(comidas) {
+  const ul = document.getElementById('menuSelectorList');
+  if (!ul) return;
+  if (!comidas.length) { ul.innerHTML='<div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px;">Sin resultados</div>'; return; }
+  ul.innerHTML = '';
+  comidas.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'menu-selector-item';
+    item.innerHTML = `
+      <div class="menu-selector-item-nombre">${escapeHtml(c.nombre||'')}</div>
+      <div class="menu-selector-item-macros">${Math.round(c.kcal_total||0)} kcal · P${Math.round((c.prot_total||0)*10)/10}g CH${Math.round((c.ch_total||0)*10)/10}g G${Math.round((c.grasa_total||0)*10)/10}g</div>`;
+    item.addEventListener('click', ()=>{ if(_menuSelectorCallback) _menuSelectorCallback(c); });
+    ul.appendChild(item);
+  });
+}
+
+function cerrarMenuSelector() {
+  const ov = document.getElementById('menuSelectorOverlay');
+  if (ov) ov.remove();
+  _menuSelectorCallback = null;
+}
+
+async function menuGuardarMenuCompleto() {
+  const nombre = (document.getElementById('menuNombreInput')?.value||'').trim();
+  if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
+
+  const celdas = [];
+  for (let d=1;d<=7;d++) {
+    MENU_FRANJAS.forEach((franja,fi)=>{
+      const cell = _menuGrid[`d${d}-f${fi}`];
+      if (cell) celdas.push({ dia:d, franja, comida_id:cell.comida_id, ingredientes:null });
+    });
+  }
+  if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
+
+  const btn = document.querySelector('[onclick="menuGuardarMenuCompleto()"]');
+  if (btn) { btn.textContent='Guardando...'; btn.disabled=true; }
+
+  try {
+    if (_menuId) {
+      await supaAdmin(`/rest/v1/menus_macroai?id=eq.${_menuId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
+      await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${_menuId}`,{method:'DELETE'});
+    } else {
+      const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,cliente_email:null})});
+      const rows = await res.json();
+      if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú');
+      _menuId = rows[0].id;
+    }
+    await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
+    showToast('✅ Menú guardado');
+  } catch(e) {
+    showToast('❌ Error al guardar el menú'); console.error(e);
+  } finally {
+    if (btn) { btn.textContent='💾 Guardar'; btn.disabled=false; }
+  }
+}
+
+async function menuMostrarExistentes() {
+  const listDiv = document.getElementById('menuListaExistentes');
+  const btnVer  = document.getElementById('menuBtnVerExistentes');
+  if (listDiv.style.display !== 'none') {
+    listDiv.style.display='none';
+    btnVer.textContent='📋 Ver / cargar menús guardados';
+    return;
+  }
+  btnVer.textContent='Cargando...';
+  try {
+    const res  = await supaAdmin('/rest/v1/menus_macroai?select=*&order=created_at.desc&limit=20');
+    const rows = await res.json();
+    if (!Array.isArray(rows)||!rows.length) {
+      showToast('No hay menús guardados todavía');
+      btnVer.textContent='📋 Ver / cargar menús guardados';
+      return;
+    }
+    listDiv.innerHTML='';
+    rows.forEach(m=>{
+      const item=document.createElement('div');
+      item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:10px 14px;gap:8px;';
+      item.innerHTML=`
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.nombre||'Sin nombre')}</div>
+          <div style="font-size:11px;color:var(--muted);">${m.activo?'● Activo':'Inactivo'}</div>
+        </div>
+        <button onclick="menuCargarExistente('${m.id}')" style="padding:7px 12px;background:var(--accent);border:none;border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;">Cargar</button>`;
+      listDiv.appendChild(item);
+    });
+    listDiv.style.cssText='display:flex;flex-direction:column;gap:6px;';
+    btnVer.textContent='▲ Ocultar lista';
+  } catch(e) {
+    showToast('Error al cargar menús');
+    btnVer.textContent='📋 Ver / cargar menús guardados';
+  }
+}
+
+async function menuCargarExistente(menuId) {
+  showToast('⏳ Cargando menú...');
+  try {
+    const resM  = await supaAdmin(`/rest/v1/menus_macroai?id=eq.${menuId}&select=*&limit=1`);
+    const menu  = (await resM.json())[0];
+    if (!menu) throw new Error('Menú no encontrado');
+    const resC  = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=*`);
+    const celdas = await resC.json();
+
+    _menuGrid = {};
+    _menuId   = menuId;
+    const ni = document.getElementById('menuNombreInput');
+    if (ni) ni.value = menu.nombre||'';
+
+    if (Array.isArray(celdas)) {
+      celdas.forEach(c=>{
+        const comida = _cocBibComidas.find(b=>b.id===c.comida_id);
+        if (comida) {
+          const fi = MENU_FRANJAS.indexOf(c.franja);
+          if (fi>=0) _menuGrid[`d${c.dia}-f${fi}`] = {
+            comida_id: comida.id, nombre: comida.nombre,
+            kcal:  comida.kcal_total  ||0,
+            prot:  Math.round((comida.prot_total  ||0)*10)/10,
+            ch:    Math.round((comida.ch_total    ||0)*10)/10,
+            grasa: Math.round((comida.grasa_total ||0)*10)/10,
+          };
+        }
+      });
+    }
+    menuRenderGrid();
+    menuActualizarTotales();
+    const ld=document.getElementById('menuListaExistentes');
+    if(ld) ld.style.display='none';
+    const bv=document.getElementById('menuBtnVerExistentes');
+    if(bv) bv.textContent='📋 Ver / cargar menús guardados';
+    showToast('✅ Menú cargado');
+  } catch(e) {
+    showToast('❌ Error al cargar el menú'); console.error(e);
   }
 }
 </script>
