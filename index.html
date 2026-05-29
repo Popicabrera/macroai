@@ -9016,9 +9016,8 @@ function dsbUpdateActive() {
   #viewCocina .aw{max-width:100%!important;padding:0!important;display:flex!important;flex-direction:column!important;height:100%!important;}
   #cocinaTabsBar{display:none!important;}
   #cocina-desktop-split{display:grid!important;}
-  #tabCocina-biblioteca,#tabCocina-menus{display:flex!important;flex-direction:column!important;}
-  #tabCocina-biblioteca{padding:0!important;overflow:hidden!important;}
-  #tabCocina-menus{padding:0!important;overflow:hidden!important;}
+  #tabCocina-biblioteca,#tabCocina-menus{display:none!important;}
+
   #bib-nueva-btn-wrap{flex-shrink:0;padding:10px 14px 8px;border-bottom:1px solid var(--border);}
   #bib-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 40px;}
   #menu-sticky-top{flex-shrink:0;padding:10px 14px 10px;border-bottom:1px solid var(--border);background:var(--s1);}
@@ -9035,7 +9034,9 @@ function dsbUpdateActive() {
 #cocina-split-bib{
   display:flex;flex-direction:column;overflow:hidden;
   border-right:1px solid var(--border);
+  min-width:0;
 }
+#cocina-split-bib *{min-width:0;}
 #cocina-split-menu{
   display:flex;flex-direction:column;overflow:hidden;
 }
