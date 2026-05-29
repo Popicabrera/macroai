@@ -9037,6 +9037,7 @@ function dsbUpdateActive() {
   min-width:0;
 }
 #cocina-split-bib *{min-width:0;}
+#bib-scroll-area{overflow-x:hidden!important;}
 #cocina-split-menu{
   display:flex;flex-direction:column;overflow:hidden;
 }
@@ -9089,8 +9090,8 @@ function dsbUpdateActive() {
             + Nueva comida
           </button>
         </div>
-        <div id="bib-scroll-area" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
-          <div id="bibLista" style="padding:4px 0;"></div>
+        <div id="bib-scroll-area" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+          <div id="bibLista" style="padding:4px 14px;"></div>
         </div>
       </div>
       <div id="cocina-split-menu">
@@ -9237,13 +9238,18 @@ function cocBibFiltrar(q) {
 }
 
 function cocRenderBiblioteca(comidas) {
-  const lista = cocGetLista();
+  // Pintar siempre en ambos contenedores — el CSS decide cuál es visible
+  const listaDesktop = document.getElementById('bibLista');
+  const listaMobile  = document.getElementById('bibListaMobile');
+  const targets = [listaDesktop, listaMobile].filter(Boolean);
+
   if (!comidas.length) {
-    lista.innerHTML = `<div style="text-align:center;padding:60px 0;display:flex;flex-direction:column;align-items:center;gap:10px;">
+    const emptyHTML = `<div style="text-align:center;padding:60px 0;display:flex;flex-direction:column;align-items:center;gap:10px;">
       <div style="font-size:44px;">🍽️</div>
       <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--text);">Sin comidas todavía</div>
       <div style="font-size:13px;color:var(--muted);max-width:240px;line-height:1.6;">Pulsa <strong>＋</strong> para crear tu primera comida reutilizable.</div>
     </div>`;
+    targets.forEach(t => t.innerHTML = emptyHTML);
     return;
   }
   const ORDER = ['desayuno salado','desayuno dulce','almuerzo','comida','merienda','cena'];
@@ -9265,7 +9271,7 @@ function cocRenderBiblioteca(comidas) {
     else sinCat.push(c);
   });
 
-  lista.innerHTML = '';
+  targets.forEach(t => t.innerHTML = '');
 
   const ICONS = {
     'desayuno salado': '🍳',
@@ -9277,7 +9283,7 @@ function cocRenderBiblioteca(comidas) {
     '__sin__':         '📦'
   };
 
-  const renderCard = (c) => {
+  const makeCard = (c) => {
     let ings = [];
     if (Array.isArray(c.ingredientes)) ings = c.ingredientes;
     else if (typeof c.ingredientes === 'string') { try { ings = JSON.parse(c.ingredientes); } catch(e){} }
@@ -9312,7 +9318,7 @@ function cocRenderBiblioteca(comidas) {
     return card;
   };
 
-  const renderGrupo = (cat, label, items) => {
+  const renderGrupoEn = (target, cat, label, items) => {
     if (!items.length) return;
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'border-bottom:1px solid var(--border);';
@@ -9328,7 +9334,7 @@ function cocRenderBiblioteca(comidas) {
 
     const body = document.createElement('div');
     body.style.cssText = 'display:none;padding-bottom:8px;';
-    items.forEach(c => body.appendChild(renderCard(c)));
+    items.forEach(c => body.appendChild(makeCard(c)));
 
     hdr.addEventListener('click', () => {
       const open = body.style.display !== 'none';
@@ -9338,11 +9344,13 @@ function cocRenderBiblioteca(comidas) {
 
     wrapper.appendChild(hdr);
     wrapper.appendChild(body);
-    lista.appendChild(wrapper);
+    target.appendChild(wrapper);
   };
 
-  ORDER.forEach(cat => renderGrupo(cat, LABELS[cat], grupos[cat]||[]));
-  if (sinCat.length) renderGrupo('__sin__', 'Sin categoría', sinCat);
+  targets.forEach(target => {
+    ORDER.forEach(cat => renderGrupoEn(target, cat, LABELS[cat], grupos[cat]||[]));
+    if (sinCat.length) renderGrupoEn(target, '__sin__', 'Sin categoría', sinCat);
+  });
 }
 
 // ── CONTEXT MENU ──
