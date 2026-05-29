@@ -10014,6 +10014,106 @@ async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, cliente
   }
 }
 
+// ── NUEVO ALIMENTO DESDE MODAL EDITOR DE COMIDA ──
+function abrirNuevoAlimentoDesdeModal() {
+  const ov = document.createElement('div');
+  ov.id = '_nuevoAlOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10200;display:flex;align-items:flex-end;justify-content:center;';
+
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-width:540px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px;">➕ Nuevo alimento</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Introduce los macros por 100g del alimento.</div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <input id="_naName" type="text" placeholder="Nombre del alimento *"
+          style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal *</div>
+            <input id="_naKcal" type="number" min="0" placeholder="0"
+              style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;font-size:13px;text-align:center;color:var(--text);outline:none;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
+            <input id="_naProt" type="number" min="0" placeholder="0"
+              style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;font-size:13px;text-align:center;color:var(--text);outline:none;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">CH g</div>
+            <input id="_naHc" type="number" min="0" placeholder="0"
+              style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;font-size:13px;text-align:center;color:var(--text);outline:none;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
+            <input id="_naGrasa" type="number" min="0" placeholder="0"
+              style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;font-size:13px;text-align:center;color:var(--text);outline:none;">
+          </div>
+        </div>
+      </div>
+
+      <div id="_naMsg" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px;"></div>
+
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('_nuevoAlOverlay').remove()"
+          style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">
+          Cancelar
+        </button>
+        <button id="_naGuardarBtn" onclick="_guardarNuevoAlimento()"
+          style="flex:2;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+          Guardar alimento
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(ov);
+  setTimeout(() => document.getElementById('_naName')?.focus(), 100);
+}
+
+async function _guardarNuevoAlimento() {
+  const nombre = (document.getElementById('_naName')?.value || '').trim();
+  const kcal   = parseFloat(document.getElementById('_naKcal')?.value)  || 0;
+  const prot   = parseFloat(document.getElementById('_naProt')?.value)  || 0;
+  const hc     = parseFloat(document.getElementById('_naHc')?.value)    || 0;
+  const grasa  = parseFloat(document.getElementById('_naGrasa')?.value) || 0;
+  const msg    = document.getElementById('_naMsg');
+  const btn    = document.getElementById('_naGuardarBtn');
+
+  if (!nombre || !kcal) {
+    msg.style.cssText = 'display:block;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';
+    msg.textContent = 'Nombre y calorías son obligatorios.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    const r = await fetch(WORKER_URL + '/save-food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre, kcal_100: kcal, p_100: prot, hc_100: hc, g_100: grasa,
+        categoria: 'GENERAL', creado_por: CURRENT_USER?.id || null, fuente: 'manual'
+      })
+    });
+    const d = await r.json();
+    if (r.ok && !d.error) {
+      msg.style.cssText = 'display:block;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);';
+      msg.textContent = '✅ Alimento guardado. Ya puedes buscarlo en los ingredientes.';
+      setTimeout(() => document.getElementById('_nuevoAlOverlay')?.remove(), 1400);
+    } else {
+      throw new Error(d.error || 'Error');
+    }
+  } catch(e) {
+    msg.style.cssText = 'display:block;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);color:var(--red);';
+    msg.textContent = 'Error al guardar. Comprueba tu conexión.';
+    btn.disabled = false;
+    btn.textContent = 'Guardar alimento';
+  }
+}
+
 </script>
 
 
