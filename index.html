@@ -2340,7 +2340,15 @@ function showView(id){
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
   if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuDiaActual=0;cargarMiMenu();}
-  if(id==='viewCocina'){switchCocinaTab('biblioteca');cocCargarBiblioteca();}
+  if(id==='viewCocina'){
+    cocCargarBiblioteca();
+    if(window.innerWidth>=900){
+      const gc=document.getElementById('menuGridContainer');
+      if(gc&&!gc.hasChildNodes()) menuIniciarGrid();
+    } else {
+      switchCocinaTab('biblioteca');
+    }
+  }
   if(document.getElementById('desktopSidebar')) dsbUpdateActive();
 }
 
@@ -9002,6 +9010,35 @@ function dsbUpdateActive() {
 
 /* ── Buscador inline en editor ── */
 .ing-search-wrap{position:relative;}
+
+/* ── COCINA DESKTOP: split layout ── */
+@media(min-width:900px){
+  #viewCocina .aw{max-width:100%!important;padding:0!important;display:flex!important;flex-direction:column!important;height:100%!important;}
+  #cocinaTabsBar{display:none!important;}
+  #cocina-desktop-split{display:grid!important;}
+  #tabCocina-biblioteca,#tabCocina-menus{display:flex!important;flex-direction:column!important;}
+  #tabCocina-biblioteca{padding:0!important;overflow:hidden!important;}
+  #tabCocina-menus{padding:0!important;overflow:hidden!important;}
+  #bib-nueva-btn-wrap{flex-shrink:0;padding:10px 14px 8px;border-bottom:1px solid var(--border);}
+  #bib-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 40px;}
+  #menu-sticky-top{flex-shrink:0;padding:10px 14px 10px;border-bottom:1px solid var(--border);background:var(--s1);}
+  #menu-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 40px;}
+}
+#cocina-desktop-split{
+  display:none;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);
+  gap:0;
+  flex:1;
+  min-height:0;
+  border-top:1px solid var(--border);
+}
+#cocina-split-bib{
+  display:flex;flex-direction:column;overflow:hidden;
+  border-right:1px solid var(--border);
+}
+#cocina-split-menu{
+  display:flex;flex-direction:column;overflow:hidden;
+}
 .ing-search-dropdown{
   position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:100;
   background:var(--s1);border:1px solid var(--border);border-radius:12px;
@@ -9025,8 +9062,8 @@ function dsbUpdateActive() {
       <div style="width:30px;"></div>
     </div>
 
-    <!-- Tabs Biblioteca / Menús -->
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1);">
+    <!-- Tabs Biblioteca / Menús (solo mobile) -->
+    <div id="cocinaTabsBar" style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1);">
       <button id="tabBibliotecaBtn" onclick="switchCocinaTab('biblioteca')"
         style="flex:1;padding:12px 8px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;
         letter-spacing:0.5px;text-transform:uppercase;border:none;cursor:pointer;
@@ -9041,25 +9078,66 @@ function dsbUpdateActive() {
       </button>
     </div>
 
-    <!-- Tab Biblioteca -->
+    <!-- ── DESKTOP: split biblioteca | menú ── -->
+    <div id="cocina-desktop-split">
+      <div id="cocina-split-bib">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);">Biblioteca</span>
+          <button onclick="abrirEditorBiblioteca(null)"
+            style="padding:5px 12px;background:var(--accent);border:none;border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;">
+            + Nueva comida
+          </button>
+        </div>
+        <div id="bib-scroll-area" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+          <div id="bibLista" style="padding:4px 0;"></div>
+        </div>
+      </div>
+      <div id="cocina-split-menu">
+        <div style="flex-shrink:0;padding:10px 14px 10px;border-bottom:1px solid var(--border);">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <input id="menuNombreInput" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
+              style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+              padding:9px 13px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
+            <button onclick="menuGuardarMenuCompleto()"
+              style="padding:9px 14px;background:var(--accent);border:none;border-radius:11px;
+              font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;">
+              💾 Guardar
+            </button>
+          </div>
+          <div id="menuTotalesBar" style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span id="mntKcal" style="background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);">— kcal/día</span>
+            <span id="mntProt" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text);">P —g</span>
+            <span id="mntCh"   style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text);">CH —g</span>
+            <span id="mntGrasa" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text);">G —g</span>
+          </div>
+        </div>
+        <div id="menu-scroll-area" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+          <div id="menuListaExistentes" style="display:none;flex-direction:column;gap:6px;padding:8px 14px;"></div>
+          <button onclick="menuMostrarExistentes()" id="menuBtnVerExistentes"
+            style="width:100%;background:var(--s2);border:none;border-bottom:1px solid var(--border);padding:9px 14px;
+            font-size:12px;color:var(--muted);cursor:pointer;text-align:left;font-family:'Inter',sans-serif;display:block;">
+            📋 Ver / cargar menús guardados
+          </button>
+          <div id="menuGridContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MOBILE: Tab Biblioteca ── -->
     <div id="tabCocina-biblioteca" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 80px;display:flex;flex-direction:column;min-height:0;">
-      <!-- Botón nueva comida -->
       <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
         <button onclick="abrirEditorBiblioteca(null)"
           style="padding:7px 14px;background:var(--accent);border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;letter-spacing:0.3px;">
           + Nueva comida
         </button>
       </div>
-      <!-- Lista -->
-      <div id="bibLista"></div>
+      <div id="bibListaMobile"></div>
     </div>
 
-    <!-- Tab Menús -->
+    <!-- ── MOBILE: Tab Menús ── -->
     <div id="tabCocina-menus" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 100px;display:none;flex-direction:column;gap:12px;">
-
-      <!-- Nombre del menú -->
       <div style="display:flex;gap:8px;align-items:center;">
-        <input id="menuNombreInput" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
+        <input id="menuNombreInputMobile" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
           style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
           padding:10px 14px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
         <button onclick="menuGuardarMenuCompleto()"
@@ -9068,25 +9146,19 @@ function dsbUpdateActive() {
           💾 Guardar
         </button>
       </div>
-
-      <!-- Selector de menú existente -->
-      <div id="menuListaExistentes" style="display:none;flex-direction:column;gap:6px;"></div>
-      <button onclick="menuMostrarExistentes()" id="menuBtnVerExistentes"
+      <div id="menuListaExistentesMobile" style="display:none;flex-direction:column;gap:6px;"></div>
+      <button onclick="menuMostrarExistentes()" id="menuBtnVerExistentesMobile"
         style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 14px;
         font-size:12px;color:var(--muted);cursor:pointer;text-align:left;font-family:'Inter',sans-serif;">
         📋 Ver / cargar menús guardados
       </button>
-
-      <!-- Totales del menú -->
-      <div id="menuTotalesBar" style="display:flex;gap:6px;flex-wrap:wrap;">
-        <span id="mntKcal" style="background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--accent);">— kcal/día</span>
-        <span id="mntProt" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">P —g</span>
-        <span id="mntCh"   style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">CH —g</span>
-        <span id="mntGrasa" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">G —g</span>
+      <div id="menuTotalesBarMobile" style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span id="mntKcalMobile" style="background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--accent);">— kcal/día</span>
+        <span id="mntProtMobile" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">P —g</span>
+        <span id="mntChMobile"   style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">CH —g</span>
+        <span id="mntGrasaMobile" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);">G —g</span>
       </div>
-
-      <!-- Grid 7 días × 5 franjas -->
-      <div id="menuGridContainer"></div>
+      <div id="menuGridContainerMobile"></div>
     </div>
 
 
@@ -9103,6 +9175,14 @@ let _cocBibCtxEl = null;
 
 // ── Tab switch ──
 function switchCocinaTab(tab) {
+  const isDesktop = window.innerWidth >= 900;
+  if (isDesktop) {
+    // En desktop el split ya muestra todo — solo inicializar grid si hace falta
+    const container = document.getElementById('menuGridContainer');
+    if (container && !container.hasChildNodes()) menuIniciarGrid();
+    return;
+  }
+  // Mobile: tabs normales
   const bibPanel = document.getElementById('tabCocina-biblioteca');
   const menPanel = document.getElementById('tabCocina-menus');
   const btnBib   = document.getElementById('tabBibliotecaBtn');
@@ -9110,25 +9190,28 @@ function switchCocinaTab(tab) {
   bibPanel.style.display = tab === 'biblioteca' ? 'flex' : 'none';
   bibPanel.style.flexDirection = 'column';
   menPanel.style.display = tab === 'menus' ? 'flex' : 'none';
-
   btnBib.style.color = tab === 'biblioteca' ? 'var(--accent)' : 'var(--muted)';
   btnBib.style.borderBottomColor = tab === 'biblioteca' ? 'var(--accent)' : 'transparent';
   btnMen.style.color = tab === 'menus' ? 'var(--accent)' : 'var(--muted)';
   btnMen.style.borderBottomColor = tab === 'menus' ? 'var(--accent)' : 'transparent';
-
-
-  // Inicializar grid de menús la primera vez que se abre la pestaña
   if (tab === 'menus') {
-    const container = document.getElementById('menuGridContainer');
+    const container = document.getElementById('menuGridContainerMobile');
     if (container && !container.hasChildNodes()) menuIniciarGrid();
   }
 }
 
 // cargarBiblioteca se llama desde showView original (ver patch en CSS block)
 
+// ── Obtener el contenedor correcto según viewport ──
+function cocGetLista() {
+  return window.innerWidth >= 900
+    ? document.getElementById('bibLista')
+    : document.getElementById('bibListaMobile');
+}
+
 // ── CARGAR DESDE SUPABASE ──
 async function cocCargarBiblioteca() {
-  const lista = document.getElementById('bibLista');
+  const lista = cocGetLista();
   if (!lista) return;
   lista.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Cargando...</div>';
   try {
@@ -9153,7 +9236,7 @@ function cocBibFiltrar(q) {
 }
 
 function cocRenderBiblioteca(comidas) {
-  const lista = document.getElementById('bibLista');
+  const lista = cocGetLista();
   if (!comidas.length) {
     lista.innerHTML = `<div style="text-align:center;padding:60px 0;display:flex;flex-direction:column;align-items:center;gap:10px;">
       <div style="font-size:44px;">🍽️</div>
@@ -9655,22 +9738,35 @@ let _menuId   = null;
 let _menuDiasColapsados = {};
 let _menuListCache = [];
 
+// ── Helper: input nombre según viewport ──
+function menuGetNombreInput() {
+  return window.innerWidth >= 900
+    ? document.getElementById('menuNombreInput')
+    : document.getElementById('menuNombreInputMobile');
+}
+// ── Helper: contenedor grid según viewport ──
+function menuGetGridContainer() {
+  return window.innerWidth >= 900
+    ? document.getElementById('menuGridContainer')
+    : document.getElementById('menuGridContainerMobile');
+}
+
 function menuIniciarGrid() {
   _menuGrid = {};
   _menuId   = null;
   _menuDiasColapsados = {};
-  const ni = document.getElementById('menuNombreInput');
+  const ni = menuGetNombreInput();
   if (ni) ni.value = '';
-  const ld = document.getElementById('menuListaExistentes');
+  const ld = document.getElementById('menuListaExistentes') || document.getElementById('menuListaExistentesMobile');
   if (ld) ld.style.display = 'none';
-  const bv = document.getElementById('menuBtnVerExistentes');
+  const bv = document.getElementById('menuBtnVerExistentes') || document.getElementById('menuBtnVerExistentesMobile');
   if (bv) bv.textContent = '📋 Ver / cargar menús guardados';
   menuRenderGrid();
   menuActualizarTotales();
 }
 
 function menuRenderGrid() {
-  const container = document.getElementById('menuGridContainer');
+  const container = menuGetGridContainer();
   if (!container) return;
   container.innerHTML = '';
 
@@ -9762,7 +9858,10 @@ function menuActualizarTotales() {
     if(hay){tKcal+=dK;tProt+=dP;tCh+=dC;tGrasa+=dG;diasDatos++;}
   }
   const div=diasDatos||1;
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  const set=(id,v)=>{
+    const el=document.getElementById(id);if(el)el.textContent=v;
+    const elM=document.getElementById(id+'Mobile');if(elM)elM.textContent=v;
+  };
   set('mntKcal',  diasDatos ? Math.round(tKcal/div)+' kcal/día' : '— kcal/día');
   set('mntProt',  diasDatos ? 'P '+Math.round(tProt/div*10)/10+'g' : 'P —g');
   set('mntCh',    diasDatos ? 'CH '+Math.round(tCh/div*10)/10+'g' : 'CH —g');
@@ -9832,7 +9931,7 @@ function cerrarMenuSelector() {
 }
 
 async function menuGuardarMenuCompleto() {
-  const nombre = (document.getElementById('menuNombreInput')?.value||'').trim();
+  const nombre = (menuGetNombreInput()?.value||'').trim();
   if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
 
   const celdas = [];
@@ -9918,7 +10017,7 @@ async function menuCargarExistente(menuId) {
 
     _menuGrid = {};
     _menuId   = menuId;
-    const ni = document.getElementById('menuNombreInput');
+    const ni = menuGetNombreInput();
     if (ni) ni.value = menu.nombre||'';
 
     if (Array.isArray(celdas)) {
