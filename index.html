@@ -9624,6 +9624,11 @@ function abrirEditorBiblioteca(comida) {
       </div>
 
 
+      <!-- Nuevo alimento -->
+      <div style="margin-bottom:14px;">
+        <button onclick="abrirNuevoAlimento()" style="width:100%;background:transparent;border:1px dashed rgba(192,57,43,0.35);border-radius:10px;padding:9px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;letter-spacing:0.2px;">+ Nuevo alimento</button>
+      </div>
+
       <!-- Botones -->
       <div class="bib-btn-row">
         <button class="bib-btn secondary" onclick="cerrarEditorBib()">Cancelar</button>
@@ -9640,6 +9645,113 @@ function abrirEditorBiblioteca(comida) {
   if (!_cocEditorIngs.length) bibAddIngRow(); // siempre al menos 1 fila vacía
   bibRecalcTotales();
 }
+
+// ── NUEVO ALIMENTO (sheet sobre el modal de comida) ──────────────────────────
+function abrirNuevoAlimento() {
+  if (document.getElementById('nuevoAlimentoSheet')) return;
+
+  const sheet = document.createElement('div');
+  sheet.id = 'nuevoAlimentoSheet';
+  sheet.style.cssText = `
+    position:fixed;inset:0;z-index:1100;
+    display:flex;align-items:flex-end;justify-content:center;
+    background:rgba(0,0,0,0.45);
+  `;
+  sheet.innerHTML = `
+    <div style="
+      background:var(--bg);border-radius:20px 20px 0 0;
+      width:100%;max-width:480px;padding:24px 20px 32px;
+      display:flex;flex-direction:column;gap:12px;
+    ">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px;">Nuevo alimento</div>
+
+      <div class="bib-field-label">Nombre</div>
+      <input id="naluNombre" class="bib-input" type="text" placeholder="Ej: Queso fresco batido"
+        style="margin-bottom:4px;">
+
+      <div class="bib-field-label" style="margin-top:4px;">Macros por 100 g</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+        <div>
+          <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal</div>
+          <input id="naluKcal" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
+          <input id="naluProt" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">HC g</div>
+          <input id="naluHc" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
+          <input id="naluGrasa" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button onclick="cerrarNuevoAlimento()"
+          style="flex:1;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
+                 font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;">
+          Cancelar
+        </button>
+        <button id="naluGuardarBtn" onclick="guardarNuevoAlimento()"
+          style="flex:1;padding:13px;background:var(--accent);border:none;border-radius:12px;
+                 font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;">
+          Guardar
+        </button>
+      </div>
+    </div>
+  `;
+  sheet.addEventListener('click', e => { if (e.target === sheet) cerrarNuevoAlimento(); });
+  document.body.appendChild(sheet);
+  setTimeout(() => document.getElementById('naluNombre')?.focus(), 100);
+}
+
+function cerrarNuevoAlimento() {
+  document.getElementById('nuevoAlimentoSheet')?.remove();
+}
+
+async function guardarNuevoAlimento() {
+  const nombre = (document.getElementById('naluNombre')?.value || '').trim();
+  if (!nombre) { showToast('❌ Escribe un nombre'); return; }
+
+  const kcal_100  = parseFloat(document.getElementById('naluKcal')?.value)  || 0;
+  const p_100     = parseFloat(document.getElementById('naluProt')?.value)   || 0;
+  const hc_100    = parseFloat(document.getElementById('naluHc')?.value)     || 0;
+  const g_100     = parseFloat(document.getElementById('naluGrasa')?.value)  || 0;
+
+  const btn = document.getElementById('naluGuardarBtn');
+  if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
+
+  try {
+    const res = await supaAdmin('/rest/v1/alimentos_macroai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=representation' },
+      body: JSON.stringify({
+        nombre,
+        kcal_100,
+        p_100,
+        hc_100,
+        g_100,
+        categoria: 'general',
+        creado_por: CURRENT_USER?.id || null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+
+    showToast('✅ Alimento creado');
+    cerrarNuevoAlimento();
+  } catch(e) {
+    showToast('❌ Error al guardar: ' + e.message);
+    if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function cerrarEditorBib() {
   const ov = document.getElementById('bibEditorOverlay');
