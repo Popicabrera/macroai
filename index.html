@@ -9039,7 +9039,7 @@ function dsbUpdateActive() {
   min-width:0;overflow:hidden;
 }
 #cocina-split-bib *{min-width:0;}
-#bib-scroll-area{overflow-x:hidden!important;}
+#bib-scroll-area{overflow-x:hidden!important;min-height:0!important;}
 #cocina-split-menu{
   display:flex;flex-direction:column;
   min-width:0;overflow:hidden;
@@ -9093,8 +9093,8 @@ function dsbUpdateActive() {
             + Nueva comida
           </button>
         </div>
-        <div id="bib-scroll-area" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
-          <div id="bibLista" style="padding:4px 14px;"></div>
+        <div id="bib-scroll-area" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+          <div id="bibLista" style="padding:4px 14px;min-height:0;"></div>
         </div>
       </div>
       <div id="cocina-split-menu">
@@ -9116,7 +9116,7 @@ function dsbUpdateActive() {
             <span id="mntGrasa" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text);">G —g</span>
           </div>
         </div>
-        <div id="menu-scroll-area" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+        <div id="menu-scroll-area" style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
           <div id="menuListaExistentes" style="display:none;flex-direction:column;gap:6px;padding:8px 14px;"></div>
           <button onclick="menuMostrarExistentes()" id="menuBtnVerExistentes"
             style="width:100%;background:var(--s2);border:none;border-bottom:1px solid var(--border);padding:9px 14px;
