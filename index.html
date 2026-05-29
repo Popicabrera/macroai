@@ -2339,7 +2339,7 @@ function showView(id){
   if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
-  if(id==='viewMiMenu'){_menuActivoCache=null;_menuDiaOffset=0;cargarMiMenu();}
+  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuDiaActual=0;cargarMiMenu();}
   if(id==='viewCocina'){switchCocinaTab('biblioteca');cocCargarBiblioteca();}
   if(document.getElementById('desktopSidebar')) dsbUpdateActive();
 }
@@ -6778,7 +6778,7 @@ async function handleFotoProducto(e) {
     </div>
   </div>
 
-  <!-- NAVEGACIÓN DÍAS igual que diario -->
+  <!-- NAVEGACIÓN DÍAS SEMANA (1=Lun … 7=Dom) -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;">
     <button onclick="menuNavegar(-1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8249;</button>
     <div id="menuFechaLabel" onclick="menuIrHoy()" style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;padding:4px 12px;border-radius:8px;user-select:none;">Hoy</div>
@@ -7036,160 +7036,220 @@ const MENU_ICONOS   = { desayuno:'🌅', almuerzo:'🍎', comida:'☀️', merie
 const MENU_CLASES   = { desayuno:'mc-ic-des', almuerzo:'mc-ic-alm', comida:'mc-ic-com', merienda:'mc-ic-mer', cena:'mc-ic-cen' };
 
 // Offset en días respecto a hoy (0 = hoy, -1 = ayer, +1 = mañana)
-let _menuDiaOffset = 0;
-// Almacena el menú activo cargado (objeto JS)
-let _menuActivoCache = null;
-// Estado de completado por comida: { 'desayuno': true/false, ... }
-// Guardado en localStorage por fecha
-function _menuCompletadoKey(fecha) { return 'macroai_menu_done_' + fecha; }
-function _menuLoadDone(fecha) {
-  try { return JSON.parse(localStorage.getItem(_menuCompletadoKey(fecha)) || '{}'); } catch(e) { return {}; }
-}
-function _menuSaveDone(fecha, obj) {
-  try { localStorage.setItem(_menuCompletadoKey(fecha), JSON.stringify(obj)); } catch(e) {}
-}
+// ── PASO 7: VISTA MENÚ CLIENTE ──────────────────────────────────────────────
+// Días de semana: 1=Lunes … 7=Domingo. _menuDiaActual es el día actual (1-7).
+// Navegación circular: < y > mueven entre días 1-7.
 
-function menuGetFecha(offset) {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().split('T')[0];
+let _menuDiaActual = 0;  // se inicializa en menuIrHoy()
+let _menuActivoCache = null;       // row de menus_macroai
+let _menuCeldasCache = null;       // array de menu_celdas
+let _menuBibCache = null;          // map comida_id → row biblioteca_comidas
+
+const _MENU_DIAS_NOMBRES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+// Iconos y clases reutilizados del sistema anterior
+const _MENU_FRANJA_META = {
+  'Desayuno':      { emoji:'🌅', clase:'mc-ic-des' },
+  'Media mañana':  { emoji:'☕', clase:'mc-ic-alm' },
+  'Comida':        { emoji:'☀️', clase:'mc-ic-com' },
+  'Merienda':      { emoji:'🍎', clase:'mc-ic-mer' },
+  'Cena':          { emoji:'🌙', clase:'mc-ic-cen' },
+};
+
+// Devuelve el día de semana ISO (1=Lun, 7=Dom) de hoy
+function _menuDiaHoy() {
+  const d = new Date().getDay(); // 0=Dom, 1=Lun…6=Sab
+  return d === 0 ? 7 : d;
 }
 
 function menuNavegar(delta) {
-  _menuDiaOffset += delta;
-  cargarMiMenu();
+  _menuDiaActual = ((_menuDiaActual - 1 + delta + 7) % 7) + 1;
+  _renderMenuDia();
 }
 
 function menuIrHoy() {
-  _menuDiaOffset = 0;
-  cargarMiMenu();
+  _menuDiaActual = _menuDiaHoy();
+  _renderMenuDia();
 }
 
-function _menuFechaLabel(offset) {
-  if (offset === 0) return 'Hoy';
-  if (offset === -1) return 'Ayer';
-  if (offset === 1) return 'Mañana';
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+// Clave localStorage para estado "completado" por día fijo de semana
+function _menuDoneKey(diaNum) { return 'macroai_mdone_d' + diaNum; }
+function _menuLoadDone(diaNum) {
+  try { return JSON.parse(localStorage.getItem(_menuDoneKey(diaNum)) || '{}'); } catch(e) { return {}; }
+}
+function _menuSaveDone(diaNum, obj) {
+  try { localStorage.setItem(_menuDoneKey(diaNum), JSON.stringify(obj)); } catch(e) {}
 }
 
 async function cargarMiMenu() {
-  const fecha = menuGetFecha(_menuDiaOffset);
-  const fechaLabel = _menuFechaLabel(_menuDiaOffset);
+  // Inicializar día si no está establecido
+  if (!_menuDiaActual) _menuDiaActual = _menuDiaHoy();
 
-  // Actualizar cabecera fecha
-  const labelEl = document.getElementById('menuFechaLabel');
-  if (labelEl) labelEl.textContent = fechaLabel;
-
-  // Limpiar panel macros y comidas
   const comidasEl = document.getElementById('menuComidas');
   comidasEl.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--muted);"><div class="auth-spinner" style="margin:0 auto 12px;"></div><div style="font-size:13px;">Cargando menú...</div></div>`;
   _resetMenuMacroPanel();
 
   try {
-    // Buscar menú activo para este cliente (el más reciente marcado como activo)
+    // 1. Menú activo del cliente
     if (!_menuActivoCache) {
-      const res = await supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&activo=eq.true&order=created_at.desc&limit=1&select=*`);
+      const res = await supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&activo=eq.true&order=created_at.desc&limit=1&select=id,nombre`);
       const rows = await res.json();
       _menuActivoCache = (Array.isArray(rows) && rows.length) ? rows[0] : null;
     }
+    if (!_menuActivoCache) { comidasEl.innerHTML = _menuVacioHtml(); return; }
 
-    const menuRow = _menuActivoCache;
-
-    if (!menuRow || !menuRow.menu) {
-      comidasEl.innerHTML = _menuVacioHtml();
-      return;
+    // 2. Celdas del menú (todas, no solo las del día — las filtramos al renderizar)
+    if (!_menuCeldasCache) {
+      const res = await supaFetch(`/rest/v1/menu_celdas?menu_id=eq.${_menuActivoCache.id}&select=*`);
+      const rows = await res.json();
+      _menuCeldasCache = Array.isArray(rows) ? rows : [];
     }
 
-    // Parsear el JSON del menú
-    let menuData = menuRow.menu;
-    if (typeof menuData === 'string') { try { menuData = JSON.parse(menuData); } catch(e) { menuData = null; } }
-    if (!menuData?.comidas?.length) { comidasEl.innerHTML = _menuVacioHtml(); return; }
-
-    // Determinar tipo de día según la fecha (usa el campo dias_semana del menú si existe, o tipo_dia genérico)
-    // Por ahora: si el menú tiene tipo_dia, usarlo; en el futuro habrá días diferenciados
-    const tipoDia = menuRow.tipo_dia || 'entreno';
-    const esEntreno = tipoDia === 'entreno';
-
-    // Actualizar badge tipo día
-    const badgeEl = document.getElementById('menuTipoBadge');
-    const dotEl = document.getElementById('menuPillDot');
-    const labelTipoEl = document.getElementById('menuTipoLabel');
-    if (badgeEl && dotEl && labelTipoEl) {
-      dotEl.className = 'pdot' + (esEntreno ? '' : ' rest');
-      labelTipoEl.textContent = esEntreno ? 'Día de entreno' : 'Día de descanso';
+    // 3. Biblioteca de comidas (necesaria para resolver nombres/macros)
+    if (!_menuBibCache) {
+      const res = await supaFetch(`/rest/v1/biblioteca_comidas?select=id,nombre,kcal,proteina,hc,grasa,ingredientes&order=nombre.asc`);
+      const rows = await res.json();
+      _menuBibCache = {};
+      if (Array.isArray(rows)) rows.forEach(r => { _menuBibCache[r.id] = r; });
     }
 
-    // Actualizar panel macros
-    _updateMenuMacroPanel(menuRow.kcal_total, menuRow.prot_total, menuRow.hc_total, menuRow.grasa_total);
-
-    // Cargar estado completado del día
-    const doneState = _menuLoadDone(fecha);
-
-    // Renderizar comidas
-    let html = '';
-    menuData.comidas.forEach((c, idx) => {
-      const momentoKey = (c.momento || '').toLowerCase();
-      const emoji = MENU_ICONOS[momentoKey] || '🍽️';
-      const claseIcon = MENU_CLASES[momentoKey] || 'mc-ic-com';
-      const nombre = MENU_NOMBRES[MENU_MOMENTOS.indexOf(momentoKey)] || c.momento;
-      const alimentos = c.alimentos || [];
-      const kcalComida = Math.round(alimentos.reduce((a, i) => a + (i.kcal || 0), 0));
-      const protComida = Math.round(alimentos.reduce((a, i) => a + (i.p || i.prot || 0), 0));
-      const hcComida   = Math.round(alimentos.reduce((a, i) => a + (i.hc || 0), 0));
-      const grasaComida= Math.round(alimentos.reduce((a, i) => a + (i.grasa || i.g_grasa || 0), 0));
-      const isDone = !!doneState[momentoKey];
-
-      let alimentosHtml = '';
-      alimentos.forEach(a => {
-        const gramos = a.g || a.cantidad_g || 0;
-        const kcalA = Math.round(a.kcal || 0);
-        const pA = Math.round(a.p || a.prot || 0);
-        const hcA = Math.round(a.hc || 0);
-        const gA = Math.round(a.grasa || a.g_grasa || 0);
-        alimentosHtml += `
-          <div class="mc-alimento-row">
-            <div>
-              <div class="mc-alimento-nombre">${a.nombre}</div>
-              <div class="mc-alimento-macros">HC${hcA}g · P${pA}g · G${gA}g</div>
-            </div>
-            <div class="mc-alimento-right">
-              <div class="mc-alimento-gramos">${gramos}g</div>
-              <div class="mc-alimento-kcal">${kcalA} kcal</div>
-            </div>
-          </div>`;
-      });
-
-      const secId = `mc-sec-${idx}`;
-      const bodyId = `mc-body-${idx}`;
-      html += `
-        <div class="mc-comida-sec" id="${secId}">
-          <div class="mc-comida-hdr" onclick="mcToggleComida('${bodyId}')">
-            <div class="mc-comida-hdr-left">
-              <div class="mc-comida-icon ${claseIcon}">${emoji}</div>
-              <div>
-                <div class="mc-comida-titulo">${nombre}</div>
-                <div class="mc-comida-sub">HC${hcComida}g · P${protComida}g · G${grasaComida}g</div>
-              </div>
-            </div>
-            <div class="mc-comida-right">
-              <span class="mc-comida-kcal">${kcalComida} kcal</span>
-              <div class="mc-check ${isDone ? 'done' : ''}" onclick="event.stopPropagation();mcToggleDone('${fecha}','${momentoKey}',this)">${isDone ? '✓' : ''}</div>
-            </div>
-          </div>
-          <div id="${bodyId}" style="display:none;">
-            ${alimentosHtml}
-          </div>
-        </div>`;
-    });
-
-    comidasEl.innerHTML = html;
+    _renderMenuDia();
 
   } catch(e) {
     console.error('cargarMiMenu:', e);
-    document.getElementById('menuComidas').innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);font-size:13px;">Error cargando el menú.</div>`;
+    comidasEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);font-size:13px;">Error cargando el menú.</div>`;
   }
+}
+
+function _renderMenuDia() {
+  if (!_menuActivoCache || !_menuCeldasCache || !_menuBibCache) return;
+
+  const diaNum = _menuDiaActual;
+  const esHoy  = diaNum === _menuDiaHoy();
+
+  // Actualizar etiqueta de día
+  const labelEl = document.getElementById('menuFechaLabel');
+  if (labelEl) {
+    const nombre = _MENU_DIAS_NOMBRES[diaNum - 1];
+    labelEl.textContent = esHoy ? `📅 ${nombre} · Hoy` : `📅 ${nombre}`;
+  }
+
+  // Filtrar celdas de este día
+  const celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
+
+  // Agrupar por franja (respetando el orden de MENU_FRANJAS)
+  const porFranja = {};
+  celdasDia.forEach(c => {
+    if (!porFranja[c.franja]) porFranja[c.franja] = [];
+    porFranja[c.franja].push(c);
+  });
+
+  const franjasDia = MENU_FRANJAS.filter(f => porFranja[f]);
+
+  if (!franjasDia.length) {
+    document.getElementById('menuComidas').innerHTML = `
+      <div style="text-align:center;padding:50px 20px;color:var(--muted);">
+        <div style="font-size:36px;margin-bottom:12px;">🥗</div>
+        <div style="font-size:14px;line-height:1.7;">Sin comidas para este día.<br>
+        <span style="font-size:12px;color:var(--muted2);">Consulta con tu entrenador.</span></div>
+      </div>`;
+    _resetMenuMacroPanel();
+    return;
+  }
+
+  // Calcular totales del día para el panel de macros
+  let totalKcal=0, totalProt=0, totalHc=0, totalGrasa=0;
+  const doneState = _menuLoadDone(diaNum);
+
+  let html = '';
+  franjasDia.forEach((franja, idx) => {
+    const celdas = porFranja[franja];
+    const meta   = _MENU_FRANJA_META[franja] || { emoji:'🍽️', clase:'mc-ic-com' };
+    const isDone = !!doneState[franja];
+
+    let franjaKcal=0, franjaProt=0, franjaHc=0, franjaGrasa=0;
+    let ingredientesHtml = '';
+
+    celdas.forEach(celda => {
+      const bib = _menuBibCache[celda.comida_id];
+      if (!bib) return;
+
+      // La celda puede tener ingredientes propios (jsonb) o heredarlos de la biblioteca
+      const ingredientes = celda.ingredientes || bib.ingredientes || [];
+      const ingArr = Array.isArray(ingredientes) ? ingredientes : (typeof ingredientes === 'string' ? (() => { try { return JSON.parse(ingredientes); } catch(e) { return []; } })() : []);
+
+      // Sumar macros del plato completo (campos directos de biblioteca_comidas)
+      const cKcal  = Math.round(bib.kcal   || 0);
+      const cProt  = Math.round((bib.proteina || 0) * 10) / 10;
+      const cHc    = Math.round((bib.hc      || 0) * 10) / 10;
+      const cGrasa = Math.round((bib.grasa   || 0) * 10) / 10;
+
+      franjaKcal  += cKcal;
+      franjaProt  += cProt;
+      franjaHc    += cHc;
+      franjaGrasa += cGrasa;
+
+      // Detalle: nombre del plato como encabezado + ingredientes si los hay
+      ingredientesHtml += `<div class="mc-alimento-row" style="background:var(--s1);border-radius:10px;margin-bottom:4px;">
+        <div style="flex:1;min-width:0;">
+          <div class="mc-alimento-nombre" style="font-weight:600;">${escapeHtml(bib.nombre)}</div>
+          ${ingArr.length ? `<div class="mc-alimento-macros" style="margin-top:3px;">` +
+            ingArr.map(i => `<span style="display:inline-block;margin-right:8px;font-size:10px;color:var(--muted);">${escapeHtml(i.nombre||'')}${i.cantidad_g ? ' '+i.cantidad_g+'g' : ''}</span>`).join('') +
+            `</div>` : ''}
+        </div>
+        <div class="mc-alimento-right">
+          <div class="mc-alimento-gramos" style="font-size:11px;color:var(--muted);">${cProt>0?'P'+cProt+'g':''}</div>
+          <div class="mc-alimento-kcal">${cKcal} kcal</div>
+        </div>
+      </div>`;
+    });
+
+    totalKcal  += franjaKcal;
+    totalProt  += franjaProt;
+    totalHc    += franjaHc;
+    totalGrasa += franjaGrasa;
+
+    const bodyId = `mc-body-${diaNum}-${idx}`;
+    html += `
+      <div class="mc-comida-sec">
+        <div class="mc-comida-hdr" onclick="mcToggleComida('${bodyId}')">
+          <div class="mc-comida-hdr-left">
+            <div class="mc-comida-icon ${meta.clase}">${meta.emoji}</div>
+            <div>
+              <div class="mc-comida-titulo">${escapeHtml(franja)}</div>
+              <div class="mc-comida-sub">HC${Math.round(franjaHc)}g · P${Math.round(franjaProt)}g · G${Math.round(franjaGrasa)}g</div>
+            </div>
+          </div>
+          <div class="mc-comida-right">
+            <span class="mc-comida-kcal">${Math.round(franjaKcal)} kcal</span>
+            <div class="mc-check ${isDone ? 'done' : ''}" onclick="event.stopPropagation();mcToggleDoneMenu(${diaNum},'${escapeHtml(franja)}',this)">${isDone ? '✓' : ''}</div>
+          </div>
+        </div>
+        <div id="${bodyId}" style="display:none;padding:8px 12px 4px;">
+          ${ingredientesHtml || '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Sin ingredientes detallados.</div>'}
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('menuComidas').innerHTML = html;
+
+  // Badge tipo día (hoy vs otro)
+  const dotEl = document.getElementById('menuPillDot');
+  const labelTipoEl = document.getElementById('menuTipoLabel');
+  if (dotEl && labelTipoEl) {
+    dotEl.className = 'pdot' + (esHoy ? '' : ' rest');
+    labelTipoEl.textContent = esHoy ? 'Tu menú de hoy' : _MENU_DIAS_NOMBRES[diaNum - 1];
+  }
+
+  _updateMenuMacroPanel(totalKcal, totalProt, totalHc, totalGrasa);
+}
+
+function mcToggleDoneMenu(diaNum, franja, el) {
+  const doneState = _menuLoadDone(diaNum);
+  const nuevo = !doneState[franja];
+  doneState[franja] = nuevo;
+  _menuSaveDone(diaNum, doneState);
+  el.classList.toggle('done', nuevo);
+  el.textContent = nuevo ? '✓' : '';
 }
 
 function _menuVacioHtml() {
@@ -9623,10 +9683,38 @@ function abrirEditorBiblioteca(comida) {
         <span class="bib-macro-pill grasa" id="bibtGrasa">G 0g</span>
       </div>
 
+      <!-- Nota macros manuales -->
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+        💡 Los macros se calculan automáticamente desde los ingredientes. Si un ingrediente no está en la base de datos, ajusta manualmente los valores totales abajo.
+      </div>
 
-      <!-- Nuevo alimento -->
-      <div style="margin-bottom:14px;">
-        <button onclick="abrirNuevoAlimento()" style="width:100%;background:transparent;border:1px dashed rgba(192,57,43,0.35);border-radius:10px;padding:9px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;letter-spacing:0.2px;">+ Nuevo alimento</button>
+      <!-- Macros manuales (override) -->
+      <div class="bib-field-label">Ajuste manual de macros (opcional)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal</div>
+          <input id="bibEdKcal" class="bib-input" type="number" min="0" placeholder="Auto"
+            value=""
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
+          <input id="bibEdProt" class="bib-input" type="number" min="0" placeholder="Auto"
+            value=""
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">CH g</div>
+          <input id="bibEdCh" class="bib-input" type="number" min="0" placeholder="Auto"
+            value=""
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
+          <input id="bibEdGrasa" class="bib-input" type="number" min="0" placeholder="Auto"
+            value=""
+            style="text-align:center;padding:8px 4px;" oninput="bibRecalcManual()">
+        </div>
       </div>
 
       <!-- Botones -->
@@ -9645,113 +9733,6 @@ function abrirEditorBiblioteca(comida) {
   if (!_cocEditorIngs.length) bibAddIngRow(); // siempre al menos 1 fila vacía
   bibRecalcTotales();
 }
-
-// ── NUEVO ALIMENTO (sheet sobre el modal de comida) ──────────────────────────
-function abrirNuevoAlimento() {
-  if (document.getElementById('nuevoAlimentoSheet')) return;
-
-  const sheet = document.createElement('div');
-  sheet.id = 'nuevoAlimentoSheet';
-  sheet.style.cssText = `
-    position:fixed;inset:0;z-index:10100;
-    display:flex;align-items:flex-end;justify-content:center;
-    background:rgba(0,0,0,0.45);
-  `;
-  sheet.innerHTML = `
-    <div style="
-      background:var(--bg);border-radius:20px 20px 0 0;
-      width:100%;max-width:480px;padding:24px 20px 32px;
-      display:flex;flex-direction:column;gap:12px;
-    ">
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px;">Nuevo alimento</div>
-
-      <div class="bib-field-label">Nombre</div>
-      <input id="naluNombre" class="bib-input" type="text" placeholder="Ej: Queso fresco batido"
-        style="margin-bottom:4px;">
-
-      <div class="bib-field-label" style="margin-top:4px;">Macros por 100 g</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
-        <div>
-          <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:center;margin-bottom:3px;">kcal</div>
-          <input id="naluKcal" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--red);font-weight:700;text-align:center;margin-bottom:3px;">Prot g</div>
-          <input id="naluProt" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
-        </div>
-        <div>
-          <div style="font-size:10px;color:#9a6f00;font-weight:700;text-align:center;margin-bottom:3px;">HC g</div>
-          <input id="naluHc" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--blue);font-weight:700;text-align:center;margin-bottom:3px;">Grasa g</div>
-          <input id="naluGrasa" class="bib-input" type="number" min="0" placeholder="0" style="text-align:center;padding:8px 4px;">
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-top:8px;">
-        <button onclick="cerrarNuevoAlimento()"
-          style="flex:1;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;
-                 font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;">
-          Cancelar
-        </button>
-        <button id="naluGuardarBtn" onclick="guardarNuevoAlimento()"
-          style="flex:1;padding:13px;background:var(--accent);border:none;border-radius:12px;
-                 font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;">
-          Guardar
-        </button>
-      </div>
-    </div>
-  `;
-  sheet.addEventListener('click', e => { if (e.target === sheet) cerrarNuevoAlimento(); });
-  document.body.appendChild(sheet);
-  setTimeout(() => document.getElementById('naluNombre')?.focus(), 100);
-}
-
-function cerrarNuevoAlimento() {
-  document.getElementById('nuevoAlimentoSheet')?.remove();
-}
-
-async function guardarNuevoAlimento() {
-  const nombre = (document.getElementById('naluNombre')?.value || '').trim();
-  if (!nombre) { showToast('❌ Escribe un nombre'); return; }
-
-  const kcal_100  = parseFloat(document.getElementById('naluKcal')?.value)  || 0;
-  const p_100     = parseFloat(document.getElementById('naluProt')?.value)   || 0;
-  const hc_100    = parseFloat(document.getElementById('naluHc')?.value)     || 0;
-  const g_100     = parseFloat(document.getElementById('naluGrasa')?.value)  || 0;
-
-  const btn = document.getElementById('naluGuardarBtn');
-  if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
-
-  try {
-    const res = await supaAdmin('/rest/v1/alimentos_macroai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=representation' },
-      body: JSON.stringify({
-        nombre,
-        kcal_100,
-        p_100,
-        hc_100,
-        g_100,
-        categoria: 'general',
-        creado_por: CURRENT_USER?.id || null
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err);
-    }
-
-    showToast('✅ Alimento creado');
-    cerrarNuevoAlimento();
-  } catch(e) {
-    showToast('❌ Error al guardar: ' + e.message);
-    if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
 
 function cerrarEditorBib() {
   const ov = document.getElementById('bibEditorOverlay');
@@ -9884,9 +9865,25 @@ function bibRecalcTotales() {
   if (tCh)    tCh.textContent    = 'CH ' + (Math.round(ch*10)/10) + 'g';
   if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(grasa*10)/10) + 'g';
 
+  // Los campos de ajuste manual se dejan siempre vacíos (placeholder "Auto")
+  // El usuario los rellena solo si quiere sobreescribir el cálculo automático
 }
 
-
+function bibRecalcManual() {
+  // Solo actualizar los pills de totales con los valores manuales
+  const k = parseFloat(document.getElementById('bibEdKcal')?.value) || 0;
+  const p = parseFloat(document.getElementById('bibEdProt')?.value) || 0;
+  const c = parseFloat(document.getElementById('bibEdCh')?.value)   || 0;
+  const g = parseFloat(document.getElementById('bibEdGrasa')?.value) || 0;
+  const tKcal  = document.getElementById('bibtKcal');
+  const tProt  = document.getElementById('bibtProt');
+  const tCh    = document.getElementById('bibtCh');
+  const tGrasa = document.getElementById('bibtGrasa');
+  if (tKcal)  tKcal.textContent  = Math.round(k) + ' kcal';
+  if (tProt)  tProt.textContent  = 'P ' + (Math.round(p*10)/10) + 'g';
+  if (tCh)    tCh.textContent    = 'CH ' + (Math.round(c*10)/10) + 'g';
+  if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(g*10)/10) + 'g';
+}
 
 // ── GUARDAR ──
 async function guardarComidaBib() {
@@ -9895,7 +9892,13 @@ async function guardarComidaBib() {
 
   const categoria = document.getElementById('bibEdCat')?.value || 'General';
 
-  // Calcular macros desde ingredientes
+  // Leer macros — priorizar campos manuales si tienen valor
+  const kcalM  = parseFloat(document.getElementById('bibEdKcal')?.value);
+  const protM  = parseFloat(document.getElementById('bibEdProt')?.value);
+  const chM    = parseFloat(document.getElementById('bibEdCh')?.value);
+  const grasaM = parseFloat(document.getElementById('bibEdGrasa')?.value);
+
+  // Calcular desde ingredientes
   let kcalI=0, protI=0, chI=0, grasaI=0;
   _cocEditorIngs.forEach(ing => {
     const g = ing.gramos || 0;
@@ -9907,10 +9910,10 @@ async function guardarComidaBib() {
     }
   });
 
-  const kcal_total  = Math.round(kcalI);
-  const prot_total  = Math.round(protI*10)/10;
-  const ch_total    = Math.round(chI*10)/10;
-  const grasa_total = Math.round(grasaI*10)/10;
+  const kcal_total  = !isNaN(kcalM)  ? kcalM  : Math.round(kcalI);
+  const prot_total  = !isNaN(protM)  ? protM  : Math.round(protI*10)/10;
+  const ch_total    = !isNaN(chM)    ? chM    : Math.round(chI*10)/10;
+  const grasa_total = !isNaN(grasaM) ? grasaM : Math.round(grasaI*10)/10;
 
   // Limpiar ingredientes — solo los que tienen nombre
   const ingredientes = _cocEditorIngs
