@@ -7389,6 +7389,7 @@ async function renderAdminMacros() {
   } catch(e){}
   _drumVals = { kcalE:perfil?.kcal_objetivo||2200, kcalD:perfil?.kcal_descanso||1900, pE:perfil?.p_objetivo||160, hcE:perfil?.hc_objetivo||220, gE:perfil?.g_objetivo||65, pD:perfil?.p_descanso||150, hcD:perfil?.hc_descanso||170, gD:perfil?.g_descanso||60 };
   _amModoDesktop = perfil?.modo_macros||'ed';
+  _amComidasDia  = perfil?.comidas_dia||4;
   const _btnEd = document.getElementById('amModoBtn-ed');
   const _btnIgual = document.getElementById('amModoBtn-igual');
   if(_btnEd) _btnEd.className = 'am-modo-btn ' + (_amModoDesktop==='ed'?'on':'off');
@@ -7398,6 +7399,7 @@ async function renderAdminMacros() {
 }
 
 let _amModoDesktop = 'ed'; // 'ed' = entreno/descanso, 'igual' = todos igual
+let _amComidasDia = 4;   // se actualiza al cargar perfil del cliente
 
 function amSetModoDesktop(modo) {
   _amModoDesktop = modo;
@@ -7638,15 +7640,6 @@ async function renderAdminMenuPerfil(seccion) {
 
     <!-- CONFIG -->
     <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
-        <span style="font-size:13px;color:var(--text);font-weight:500;">Comidas al día</span>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <button onclick="amComidasStep(-1)" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">−</button>
-          <span id="amComidasNum" style="font-size:15px;font-weight:700;min-width:20px;text-align:center;">${comidas}</span>
-          <input type="hidden" id="amComidas" value="${comidas}">
-          <button onclick="amComidasStep(1)" style="width:28px;height:28px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">+</button>
-        </div>
-      </div>
       <div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Restricciones alimentarias</div>
         <input type="text" id="amPrefs" value="${prefs}" placeholder="Ej: sin gluten, sin lactosa, alérgico a frutos secos..."
@@ -7773,7 +7766,6 @@ async function amGuardarPerfilNuevo() {
     hc_descanso: modo==='ed'?g('amHcD'):g('amHcE'),
     p_descanso: modo==='ed'?g('amPD'):g('amPE'),
     g_descanso: modo==='ed'?g('amGD'):g('amGE'),
-    comidas_dia: parseInt(document.getElementById('amComidas')?.value)||4,
     preferencias: document.getElementById('amPrefs')?.value||'',
     modo_macros: modo,
     modo_app: 'menu'
@@ -8013,7 +8005,7 @@ async function guardarPerfil() {
   const protD = _drumVals.pD || 150;
   const hcD = _drumVals.hcD || 170;
   const grasaD = _drumVals.gD || 60;
-  const comidas = parseInt(document.getElementById('amComidas').value) || 4;
+  const comidas = _amComidasDia;
   const prefs = document.getElementById('amPrefs').value.trim();
   const modoApp = 'menu';
 
@@ -8060,7 +8052,7 @@ async function generarMenu(modo) {
   const tipoDia    = document.getElementById('amTipoDia')?.value || 'entreno';
   const instrucciones = document.getElementById('amInstrucciones')?.value.trim() || '';
   const nombre_menu   = document.getElementById('amNombreMenu')?.value.trim() || '';
-  const comidas    = parseInt(document.getElementById('amComidas')?.value) || 4;
+  const comidas    = _amComidasDia;
   const prefs      = document.getElementById('amPrefs')?.value.trim() || '';
   const texto_menu = modo === 'confirmar' ? (document.getElementById('amTextoMenu')?.value.trim() || '') : '';
 
