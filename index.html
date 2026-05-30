@@ -9037,9 +9037,10 @@ function dsbUpdateActive() {
   display:flex;flex-direction:column;
   border-right:1px solid var(--border);
   min-width:0;overflow:hidden;
+  height:0;flex:1;
 }
 #cocina-split-bib *{min-width:0;}
-#bib-scroll-area{overflow-x:hidden!important;min-height:0!important;}
+#bib-scroll-area{overflow-x:hidden!important;min-height:0!important;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 #cocina-split-menu{
   display:flex;flex-direction:column;
   min-width:0;overflow:hidden;
