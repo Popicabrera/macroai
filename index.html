@@ -9880,64 +9880,103 @@ function menuCalcDiaAcum(diaNum) {
   return {kcal:Math.round(k),prot:Math.round(p*10)/10,ch:Math.round(c*10)/10,grasa:Math.round(g*10)/10};
 }
 
-// ── Renderiza la cabecera de día con macros ──
+// ── Renderiza la cabecera de día con macros (Fase 2) ──
 function menuRenderDiaHeader(diaIdx, diaNum) {
   const perfil = _menuCocClientePerfil;
+  if (!perfil) return ''; // sin cliente: silencioso
+
   const acum = menuCalcDiaAcum(diaNum);
 
-  // Determinar si es día de entreno: dias_entreno es array de números (1=Lun..7=Dom)
-  // diaIdx: 0=Lun … 6=Dom → número de día: diaIdx+1
+  // Determinar tipo de día: dias_entreno = array de números 1=Lun…7=Dom
   let esEntreno = true;
-  if (perfil && Array.isArray(perfil.dias_entreno) && perfil.dias_entreno.length > 0) {
+  if (Array.isArray(perfil.dias_entreno) && perfil.dias_entreno.length > 0) {
     esEntreno = perfil.dias_entreno.map(Number).includes(diaIdx + 1);
   }
-
-  // Si modo_macros es 'igual', todos los días usan macros entreno
-  const modoIgual = perfil?.modo_macros === 'igual';
+  const modoIgual  = perfil.modo_macros === 'igual';
   const usaEntreno = modoIgual || esEntreno;
+  const tipoDia    = usaEntreno ? 'entreno' : 'descanso';
 
-  // Macros objetivo
-  const obj = perfil ? {
+  // Colores según tipo de día
+  const accentColor  = tipoDia === 'entreno' ? 'var(--red)'  : 'var(--blue)';
+  const accentDark   = tipoDia === 'entreno' ? '#8b1a10'     : '#2d5a82'; // negativo
+
+  // Objetivo del día
+  const obj = {
     kcal:  usaEntreno ? (perfil.kcal_objetivo||0) : (perfil.kcal_descanso||0),
     prot:  usaEntreno ? (perfil.p_objetivo||0)    : (perfil.p_descanso||0),
     ch:    usaEntreno ? (perfil.hc_objetivo||0)   : (perfil.hc_descanso||0),
     grasa: usaEntreno ? (perfil.g_objetivo||0)    : (perfil.g_descanso||0),
-  } : null;
+  };
 
-  if (!perfil) return ''; // sin cliente: no mostramos cabecera extra
-
-  const badge = modoIgual
-    ? `<span class="mch-badge mch-badge-igual">Todos igual</span>`
-    : (esEntreno
-        ? `<span class="mch-badge mch-badge-entreno">🏋️ Entreno</span>`
-        : `<span class="mch-badge mch-badge-descanso">💤 Descanso</span>`);
-
-  // Barra de progreso
-  const pct = obj.kcal > 0 ? Math.min((acum.kcal / obj.kcal) * 100, 100) : 0;
-  const excedido = obj.kcal > 0 && acum.kcal > obj.kcal;
-  const barColor = excedido ? 'var(--yellow)' : (esEntreno ? 'var(--red)' : 'var(--blue)');
-
-  // Macros restantes
-  const restKcal = obj.kcal - acum.kcal;
+  // Restantes (pueden ser negativos)
+  const restKcal = Math.round(obj.kcal - acum.kcal);
+  const restCh   = Math.round((obj.ch   - acum.ch)  *10)/10;
   const restP    = Math.round((obj.prot  - acum.prot)*10)/10;
-  const restCh   = Math.round((obj.ch   - acum.ch)*10)/10;
   const restG    = Math.round((obj.grasa - acum.grasa)*10)/10;
-  const restColor = (restKcal < 0 || restP < 0 || restCh < 0 || restG < 0) ? 'var(--red)' : '#2a9d5c';
 
-  const objetivoStr = `${obj.kcal} kcal · P${obj.prot}g · CH${obj.ch}g · G${obj.grasa}g`;
+  const negativo     = restKcal < 0;
+  const kcalColor    = negativo ? accentDark : accentColor;
+  const kcalDisplay  = negativo ? `−${Math.abs(restKcal)}` : `${restKcal}`;
+
+  // Colores macros individuales (rojo oscuro si negativo, color habitual si ok)
+  const RED_DARK = '#a02020';
+  const chColor    = restCh   < 0 ? RED_DARK : 'var(--yellow)';
+  const protColor  = restP    < 0 ? RED_DARK : 'var(--blue)';
+  const grasaColor = restG    < 0 ? RED_DARK : '#3a9d5c';
+
+  const chVal    = restCh   < 0 ? `−${Math.abs(restCh)}`   : `${restCh}`;
+  const protVal  = restP    < 0 ? `−${Math.abs(restP)}`    : `${restP}`;
+  const grasaVal = restG    < 0 ? `−${Math.abs(restG)}`    : `${restG}`;
+
+  // Barra de progreso (4px)
+  const pct      = obj.kcal > 0 ? Math.min((acum.kcal / obj.kcal) * 100, 100) : 0;
+  const excedido = obj.kcal > 0 && acum.kcal > obj.kcal;
+  const barColor = excedido ? 'var(--yellow)' : accentColor;
+  const pctStr   = pct.toFixed(1);
 
   return `
-    <div class="mch-wrap">
-      <div class="mch-row1">
-        ${badge}
-        <span class="mch-obj">${objetivoStr}</span>
-        <button class="mch-sugerir" title="Sugerir comidas (próximamente)">✨ Sugerir</button>
+    <div class="mch-panel">
+      <div class="mch-kcal-row">
+        <div class="mch-kcal-label">NUTRIENTES RESTANTES</div>
+        <div class="mch-kcal-val">
+          <span class="mch-kcal-big" style="color:${kcalColor};">${kcalDisplay}</span>
+          <span class="mch-kcal-unit">kcal</span>
+        </div>
       </div>
-      <div class="mch-bar-wrap">
-        <div class="mch-bar-fill" style="width:${pct.toFixed(1)}%;background:${barColor};"></div>
+      <div class="mch-kcal-obj">de ${obj.kcal} kcal</div>
+      <div class="mch-macros-row">
+        <div class="mch-macro">
+          <div class="mch-macro-track"><div class="mch-macro-fill" style="background:var(--yellow);width:${obj.ch>0?Math.min(acum.ch/obj.ch*100,100).toFixed(1):0}%;"></div></div>
+          <div class="mch-macro-nums">
+            <span class="mch-macro-rest" style="color:${chColor};">${chVal}</span>
+            <span class="mch-macro-lbl">Carbos (g)</span>
+          </div>
+        </div>
+        <div class="mch-macro-div"></div>
+        <div class="mch-macro">
+          <div class="mch-macro-track"><div class="mch-macro-fill" style="background:var(--blue);width:${obj.prot>0?Math.min(acum.prot/obj.prot*100,100).toFixed(1):0}%;"></div></div>
+          <div class="mch-macro-nums">
+            <span class="mch-macro-rest" style="color:${protColor};">${protVal}</span>
+            <span class="mch-macro-lbl">Proteínas (g)</span>
+          </div>
+        </div>
+        <div class="mch-macro-div"></div>
+        <div class="mch-macro">
+          <div class="mch-macro-track"><div class="mch-macro-fill" style="background:#3a9d5c;width:${obj.grasa>0?Math.min(acum.grasa/obj.grasa*100,100).toFixed(1):0}%;"></div></div>
+          <div class="mch-macro-nums">
+            <span class="mch-macro-rest" style="color:${grasaColor};">${grasaVal}</span>
+            <span class="mch-macro-lbl">Grasas (g)</span>
+          </div>
+        </div>
       </div>
-      <div class="mch-rest" style="color:${restColor};">
-        ${restP >= 0 ? '+' : ''}${restP}g P · ${restCh >= 0 ? '+' : ''}${restCh}g CH · ${restG >= 0 ? '+' : ''}${restG}g G · ${restKcal >= 0 ? '+' : ''}${Math.round(restKcal)} kcal
+      <div class="mch-bar-row">
+        <div class="mch-bar-wrap">
+          <div class="mch-bar-fill" style="width:${pctStr}%;background:${barColor};"></div>
+        </div>
+        <div class="mch-bar-labels">
+          <span>${obj.kcal} kcal asignadas</span>
+          <span>${pctStr}%</span>
+        </div>
       </div>
     </div>`;
 }
@@ -9987,14 +10026,29 @@ function menuRenderGrid() {
     const card   = document.createElement('div');
     card.className = 'menu-dia-card';
 
+    // ── Header día: nombre + badge Entreno/Descanso + botón Sugerir (una sola línea)
     const header = document.createElement('div');
     header.className = 'menu-dia-header';
-    header.innerHTML = `
-      <span class="menu-dia-label">${dia}</span>
-      <div style="display:flex;align-items:center;gap:8px;">
-        ${diaKcal > 0 ? `<span class="menu-dia-kcal">${Math.round(diaKcal)} kcal</span>` : ''}
-        <span style="color:var(--muted);font-size:14px;">${colapsado ? '▸' : '▾'}</span>
-      </div>`;
+    {
+      const perfil = _menuCocClientePerfil;
+      let badgeHtml = '';
+      if (perfil) {
+        const modoIgual  = perfil.modo_macros === 'igual';
+        const esEntreno  = modoIgual || (Array.isArray(perfil.dias_entreno) && perfil.dias_entreno.map(Number).includes(diaIdx + 1));
+        badgeHtml = modoIgual
+          ? `<span class="mch-badge mch-badge-igual">Todos igual</span>`
+          : (esEntreno
+              ? `<span class="mch-badge mch-badge-entreno">🏋️ Entreno</span>`
+              : `<span class="mch-badge mch-badge-descanso">💤 Descanso</span>`);
+      }
+      header.innerHTML = `
+        <span class="menu-dia-label">${dia}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${badgeHtml}
+          <button class="mch-sugerir" title="Sugerir comidas (próximamente)" style="opacity:${perfil?'0.45':'0.25'};">✨ Sugerir</button>
+          <span style="color:var(--muted);font-size:13px;margin-left:2px;">${colapsado ? '▸' : '▾'}</span>
+        </div>`;
+    }
     header.addEventListener('click', () => {
       _menuDiasColapsados[diaIdx] = !_menuDiasColapsados[diaIdx];
       menuRenderGrid();
@@ -10439,18 +10493,50 @@ async function _guardarNuevoAlimento() {
 .menu-asig-email{font-size:11px;color:var(--muted);margin-top:2px;}
 .menu-asig-cancel{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
 
-/* ── FASE 2: Cabecera macros día semanario ── */
-.mch-wrap{padding:6px 10px 8px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;background:var(--s1);}
-.mch-row1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.mch-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:0.3px;white-space:nowrap;}
+/* ── FASE 2: Cabecera macros día semanario — idéntica a macro-panel del diario ── */
+.mch-panel{
+  flex-shrink:0;
+  padding:9px 12px 10px;
+  background:var(--s1);
+  border-bottom:1px solid var(--border);
+  display:flex;flex-direction:column;gap:7px;
+}
+.mch-kcal-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+.mch-kcal-label{
+  font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:0.8px;font-weight:600;
+}
+.mch-kcal-val{display:flex;align-items:baseline;gap:3px;}
+.mch-kcal-big{
+  font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:800;
+  line-height:1;transition:color 0.3s;
+}
+.mch-kcal-unit{font-size:11px;color:var(--muted);}
+.mch-kcal-obj{font-size:11px;color:var(--muted);font-weight:500;margin-top:-4px;}
+.mch-macros-row{display:flex;align-items:stretch;gap:0;}
+.mch-macro{flex:1;display:flex;flex-direction:column;gap:4px;}
+.mch-macro-div{width:1px;background:var(--border);margin:0 9px;flex-shrink:0;}
+.mch-macro-track{height:4px;background:var(--s3);border-radius:4px;overflow:hidden;}
+.mch-macro-fill{height:100%;border-radius:4px;transition:width 0.4s ease;}
+.mch-macro-nums{display:flex;flex-direction:column;gap:1px;}
+.mch-macro-rest{
+  font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:800;line-height:1;
+  transition:color 0.3s;
+}
+.mch-macro-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+.mch-bar-row{display:flex;flex-direction:column;gap:3px;}
+.mch-bar-wrap{height:4px;background:var(--s3);border-radius:4px;overflow:hidden;}
+.mch-bar-fill{height:100%;border-radius:4px;transition:width 0.3s ease;}
+.mch-bar-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);font-weight:600;letter-spacing:0.2px;}
+/* Badges tipo de día */
+.mch-badge{padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:0.3px;white-space:nowrap;}
 .mch-badge-entreno{background:rgba(192,57,43,0.12);color:var(--red);border:1px solid rgba(192,57,43,0.25);}
 .mch-badge-descanso{background:rgba(91,141,184,0.12);color:var(--blue);border:1px solid rgba(91,141,184,0.25);}
 .mch-badge-igual{background:rgba(120,100,60,0.10);color:#7a6a3a;border:1px solid rgba(120,100,60,0.2);}
-.mch-obj{font-size:10px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mch-sugerir{padding:3px 9px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:not-allowed;white-space:nowrap;opacity:0.6;}
-.mch-bar-wrap{height:4px;background:var(--s2);border-radius:4px;overflow:hidden;}
-.mch-bar-fill{height:100%;border-radius:4px;transition:width 0.3s ease;}
-.mch-rest{font-size:10px;font-weight:600;font-family:'Space Grotesk',sans-serif;letter-spacing:0.2px;}
+/* Botón Sugerir (inactivo) */
+.mch-sugerir{padding:3px 9px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:not-allowed;white-space:nowrap;}
 </style>
 
 </div><!-- /mainApp -->
