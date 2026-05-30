@@ -1,4 +1,4 @@
-*<!DOCTYPE  html>
+<!DOCTYPE  html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -9802,17 +9802,26 @@ async function guardarComidaBib() {
 // ══════════════════════════════════════════
 
 // Templates del menú: tipo_dia es la clave en _menuGrid y en menu_celdas
-const MENU_TEMPLATES = [
-  { key:'entreno_a', label:'Entreno A', tipo:'entreno' },
-  { key:'entreno_b', label:'Entreno B', tipo:'entreno' },
-  { key:'entreno_c', label:'Entreno C', tipo:'entreno' },
-  { key:'entreno_d', label:'Entreno D', tipo:'entreno' },
-  { key:'descanso_a', label:'Descanso A', tipo:'descanso' },
-  { key:'descanso_b', label:'Descanso B', tipo:'descanso' },
-  { key:'descanso_c', label:'Descanso C', tipo:'descanso' },
-];
-// Alias legacy para compatibilidad con código que use MENU_DIAS
-const MENU_DIAS    = MENU_TEMPLATES.map(t=>t.label);
+function _menuGenerarTemplates(perfil) {
+  const LETRAS = ['A','B','C','D','E','F','G'];
+  if (!perfil) {
+    return [
+      ...LETRAS.slice(0,4).map(l=>({ key:'entreno_'+l.toLowerCase(), label:'Entreno '+l, tipo:'entreno' })),
+      ...LETRAS.slice(0,3).map(l=>({ key:'descanso_'+l.toLowerCase(), label:'Descanso '+l, tipo:'descanso' })),
+    ];
+  }
+  const modoIgual = perfil.modo_macros === 'igual';
+  if (modoIgual) {
+    return LETRAS.map(l=>({ key:'dia_'+l.toLowerCase(), label:'Dia '+l, tipo:'igual' }));
+  }
+  const nEntreno  = Array.isArray(perfil.dias_entreno) ? perfil.dias_entreno.length : 4;
+  const nDescanso = 7 - nEntreno;
+  return [
+    ...LETRAS.slice(0, nEntreno) .map(l=>({ key:'entreno_'+l.toLowerCase(),  label:'Entreno '+l,  tipo:'entreno'  })),
+    ...LETRAS.slice(0, nDescanso).map(l=>({ key:'descanso_'+l.toLowerCase(), label:'Descanso '+l, tipo:'descanso' })),
+  ];
+}
+let MENU_TEMPLATES = _menuGenerarTemplates(null);
 const MENU_FRANJAS = ['Desayuno','Almuerzo','Comida','Merienda','Cena'];
 
 let _menuGrid = {};
@@ -9870,6 +9879,10 @@ window._menuCocSeleccionar = function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
   const perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail);
   _menuCocClientePerfil = perfil || null;
+  // Recalcular templates según perfil del cliente
+  MENU_TEMPLATES = _menuGenerarTemplates(perfil || null);
+  _menuGrid = {}; // reset grid al cambiar cliente (templates distintos)
+  _menuDiasColapsados = {};
   const nombre = perfil ? (perfil.nombre || perfil.cliente_email || 'Cliente') : null;
   const label = nombre ? `👤 ${nombre}` : 'Seleccionar cliente para ver macros objetivo';
   const labelColor = nombre ? 'var(--text)' : 'var(--muted)';
@@ -9877,7 +9890,7 @@ window._menuCocSeleccionar = function(clienteEmail) {
     const el = document.getElementById(id);
     if (el) { el.textContent = label; el.style.color = labelColor; el.style.fontWeight = nombre ? '600' : '400'; }
   });
-  menuRenderGrid(); // re-renderizar con cabeceras de macro
+  menuRenderGrid();
 };
 
 // ── Calcula acumulado de un día desde _menuGrid ──
@@ -10042,7 +10055,7 @@ function menuRenderGrid() {
     header.className = 'menu-dia-header';
     const perfil = _menuCocClientePerfil;
     const modoIgual = perfil?.modo_macros === 'igual';
-    const badgeHtml = modoIgual
+    const badgeHtml = tipo === 'igual'
       ? `<span class="mch-badge mch-badge-igual">Todos igual</span>`
       : tipo === 'entreno'
         ? `<span class="mch-badge mch-badge-entreno">🏋️ Entreno</span>`
