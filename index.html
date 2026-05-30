@@ -7625,7 +7625,11 @@ async function renderAdminMenuPerfil(seccion) {
           <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
           <input type="number" id="amGE" value="${gE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
         </div>
-        <div id="amKcalE" style="font-size:22px;font-weight:800;color:#c0392b;text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalE} kcal</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border);">
+          <span style="font-size:12px;color:var(--muted);">Calorías objetivo</span>
+          <input type="number" id="amKcalObjE" value="${kcalE}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amValidaE" style="font-size:11px;font-weight:700;text-align:center;padding:6px 10px;border-radius:8px;margin-top:4px;"></div>
       </div>
       ${modoMacros==='ed'?`
       <div id="amColDescanso" style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;">
@@ -7642,8 +7646,19 @@ async function renderAdminMenuPerfil(seccion) {
           <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
           <input type="number" id="amGD" value="${gD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
         </div>
-        <div id="amKcalD" style="font-size:22px;font-weight:800;color:var(--muted);text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalD} kcal</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border);">
+          <span style="font-size:12px;color:var(--muted);">Calorías objetivo</span>
+          <input type="number" id="amKcalObjD" value="${kcalD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amValidaD" style="font-size:11px;font-weight:700;text-align:center;padding:6px 10px;border-radius:8px;margin-top:4px;"></div>
       </div>`:''}
+    </div>
+
+    <!-- DÍAS DE ENTRENO -->
+    <div id="amDiasEntrenoSection" style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;display:${modoMacros==='ed'?'block':'none'};">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c0392b;margin-bottom:10px;">Días de entreno</div>
+      <div id="amDiasBtns" style="display:flex;gap:6px;justify-content:space-between;"></div>
+      <input type="hidden" id="amDiasEntrenoVal" value="${perfil?.dias_entreno ? JSON.stringify(perfil.dias_entreno.map(Number)) : '[1,2,4,6]'}">
     </div>
 
     <!-- CONFIG -->
@@ -7665,6 +7680,9 @@ async function renderAdminMenuPerfil(seccion) {
     <input type="hidden" id="amModoMacrosVal" value="${modoMacros}">
     <input type="hidden" id="amModoApp" value="${perfil?.modo_app||'menu'}">
   </div>`;
+
+  // Calcular validaciones e inicializar botones días
+  setTimeout(() => { amRecalcKcal(); amRenderDiasBtns(); }, 50);
 }
 
 function amSetModoMacros(modo) {
@@ -7693,16 +7711,17 @@ function amSetModoMacros(modo) {
   if(!grid) return;
 
   if(isED) {
-    // Actualizar título columna entreno
     const hdrE2 = document.getElementById('amHdrEntreno');
     if(hdrE2) hdrE2.textContent = 'Día de entreno';
-    // Mostrar dos columnas — añadir columna descanso si no existe
     grid.style.gridTemplateColumns = '1fr 1fr';
+    // Mostrar sección días entreno
+    const secDias = document.getElementById('amDiasEntrenoSection');
+    if(secDias) { secDias.style.display = 'block'; amRenderDiasBtns(); }
     if(!document.getElementById('amColDescanso')) {
       const hcD = document.getElementById('amHcD_hidden')?.value||170;
-      const pD = document.getElementById('amPD_hidden')?.value||150;
-      const gD = document.getElementById('amGD_hidden')?.value||60;
-      const kcalD = hcD*4 + pD*4 + gD*9;
+      const pD  = document.getElementById('amPD_hidden')?.value||150;
+      const gD  = document.getElementById('amGD_hidden')?.value||60;
+      const kcalObjD = document.getElementById('amKcalObjD_hidden')?.value||(hcD*4+pD*4+gD*9);
       const col = document.createElement('div');
       col.id = 'amColDescanso';
       col.style.cssText = 'background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;';
@@ -7720,17 +7739,23 @@ function amSetModoMacros(modo) {
           <span style="font-size:12px;color:var(--muted);">Grasa (g)</span>
           <input type="number" id="amGD" value="${gD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
         </div>
-        <div id="amKcalD" style="font-size:22px;font-weight:800;color:var(--muted);text-align:center;font-family:'Space Grotesk',sans-serif;">${kcalD} kcal</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border);">
+          <span style="font-size:12px;color:var(--muted);">Calorías objetivo</span>
+          <input type="number" id="amKcalObjD" value="${kcalObjD}" oninput="amRecalcKcal()" style="width:70px;text-align:right;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text);outline:none;">
+        </div>
+        <div id="amValidaD" style="font-size:11px;font-weight:700;text-align:center;padding:6px 10px;border-radius:8px;margin-top:4px;"></div>
       `;
       grid.appendChild(col);
+      amRecalcKcal();
     }
   } else {
-    // Ocultar columna descanso — guardar valores en inputs hidden
     grid.style.gridTemplateColumns = '1fr';
+    // Ocultar sección días entreno
+    const secDias = document.getElementById('amDiasEntrenoSection');
+    if(secDias) secDias.style.display = 'none';
     const colD = document.getElementById('amColDescanso');
     if(colD) {
-      // Guardar valores antes de eliminar
-      ['amHcD','amPD','amGD'].forEach(id => {
+      ['amHcD','amPD','amGD','amKcalObjD'].forEach(id => {
         const src = document.getElementById(id);
         let hidden = document.getElementById(id+'_hidden');
         if(!hidden){ hidden=document.createElement('input'); hidden.type='hidden'; hidden.id=id+'_hidden'; document.body.appendChild(hidden); }
@@ -7738,19 +7763,75 @@ function amSetModoMacros(modo) {
       });
       colD.remove();
     }
-    // Actualizar título columna entreno
     const hdrE = document.getElementById('amHdrEntreno');
     if(hdrE) hdrE.textContent = 'Macros diarios';
+    amRecalcKcal();
   }
 }
 
 function amRecalcKcal() {
   const g = id => parseInt(document.getElementById(id)?.value)||0;
   const calcKcal = (hc,p,gr) => hc*4 + p*4 + gr*9;
-  const elE = document.getElementById('amKcalE');
-  if(elE) elE.textContent = calcKcal(g('amHcE'),g('amPE'),g('amGE')) + ' kcal';
-  const elD = document.getElementById('amKcalD');
-  if(elD) elD.textContent = calcKcal(g('amHcD'),g('amPD'),g('amGD')) + ' kcal';
+
+  // Entreno
+  const kcalMacrosE = calcKcal(g('amHcE'),g('amPE'),g('amGE'));
+  const kcalObjE = g('amKcalObjE') || kcalMacrosE;
+  const elObjE = document.getElementById('amKcalObjE');
+  if(elObjE && !elObjE.value) elObjE.value = kcalMacrosE;
+  const validaE = document.getElementById('amValidaE');
+  if(validaE) {
+    const diff = Math.abs(kcalMacrosE - kcalObjE);
+    const cuadra = diff <= 50;
+    validaE.textContent = cuadra ? `✓ Cuadra · ${kcalMacrosE} / ${kcalObjE} kcal` : `✗ Diferencia ${diff} kcal · ${kcalMacrosE} / ${kcalObjE} kcal`;
+    validaE.style.background = cuadra ? 'rgba(50,180,100,0.1)' : 'rgba(192,57,43,0.08)';
+    validaE.style.color = cuadra ? '#1a7a40' : '#c0392b';
+  }
+
+  // Descanso
+  const kcalMacrosD = calcKcal(g('amHcD'),g('amPD'),g('amGD'));
+  const kcalObjD = g('amKcalObjD') || kcalMacrosD;
+  const validaD = document.getElementById('amValidaD');
+  if(validaD) {
+    const diff = Math.abs(kcalMacrosD - kcalObjD);
+    const cuadra = diff <= 50;
+    validaD.textContent = cuadra ? `✓ Cuadra · ${kcalMacrosD} / ${kcalObjD} kcal` : `✗ Diferencia ${diff} kcal · ${kcalMacrosD} / ${kcalObjD} kcal`;
+    validaD.style.background = cuadra ? 'rgba(50,180,100,0.1)' : 'rgba(192,57,43,0.08)';
+    validaD.style.color = cuadra ? '#1a7a40' : '#c0392b';
+  }
+}
+
+function amRenderDiasBtns() {
+  const wrap = document.getElementById('amDiasBtns');
+  const hiddenInput = document.getElementById('amDiasEntrenoVal');
+  if(!wrap || !hiddenInput) return;
+  let dias = [];
+  try { dias = JSON.parse(hiddenInput.value || '[1,2,4,6]'); } catch(e){ dias=[1,2,4,6]; }
+  const etiq = ['L','M','X','J','V','S','D'];
+  wrap.innerHTML = '';
+  [1,2,3,4,5,6,7].forEach(d => {
+    const activo = dias.includes(d);
+    const btn = document.createElement('button');
+    btn.textContent = etiq[d-1];
+    btn.dataset.dia = d;
+    btn.style.cssText = "flex:1;padding:8px 0;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid " + (activo?"#c0392b":"var(--border)") + ";background:" + (activo?"#c0392b":"var(--s2)") + ";color:" + (activo?"#fff":"var(--muted)") + ";";
+    btn.addEventListener('click', () => amToggleDiaEntreno(btn, d));
+    wrap.appendChild(btn);
+  });
+}
+
+function amToggleDiaEntreno(btn, dia) {
+  const hiddenInput = document.getElementById('amDiasEntrenoVal');
+  if(!hiddenInput) return;
+  let dias = [];
+  try { dias = JSON.parse(hiddenInput.value || '[]'); } catch(e){}
+  const idx = dias.indexOf(dia);
+  if(idx >= 0) dias.splice(idx,1); else dias.push(dia);
+  dias.sort((a,b)=>a-b);
+  hiddenInput.value = JSON.stringify(dias);
+  const activo = dias.includes(dia);
+  btn.style.background = activo ? '#c0392b' : 'var(--s2)';
+  btn.style.color = activo ? '#fff' : 'var(--muted)';
+  btn.style.borderColor = activo ? '#c0392b' : 'var(--border)';
 }
 
 function amComidasStep(delta) {
@@ -7766,16 +7847,20 @@ function amComidasStep(delta) {
 async function amGuardarPerfilNuevo() {
   const g = id => parseInt(document.getElementById(id)?.value)||0;
   const modo = document.getElementById('amModoMacrosVal')?.value||'ed';
+  const diasEntrenoRaw = document.getElementById('amDiasEntrenoVal')?.value||'[1,2,4,6]';
+  let diasEntreno = [1,2,4,6];
+  try { diasEntreno = JSON.parse(diasEntrenoRaw); } catch(e){}
   const payload = {
     cliente_email: _adminMenuEmail,
-    kcal_objetivo: g('amHcE')*4 + g('amPE')*4 + g('amGE')*9,
+    kcal_objetivo: g('amKcalObjE') || (g('amHcE')*4 + g('amPE')*4 + g('amGE')*9),
     hc_objetivo: g('amHcE'), p_objetivo: g('amPE'), g_objetivo: g('amGE'),
-    kcal_descanso: modo==='ed' ? g('amHcD')*4+g('amPD')*4+g('amGD')*9 : g('amHcE')*4+g('amPE')*4+g('amGE')*9,
+    kcal_descanso: modo==='ed' ? (g('amKcalObjD') || g('amHcD')*4+g('amPD')*4+g('amGD')*9) : (g('amKcalObjE') || g('amHcE')*4+g('amPE')*4+g('amGE')*9),
     hc_descanso: modo==='ed'?g('amHcD'):g('amHcE'),
     p_descanso: modo==='ed'?g('amPD'):g('amPE'),
     g_descanso: modo==='ed'?g('amGD'):g('amGE'),
     preferencias: document.getElementById('amPrefs')?.value||'',
     modo_macros: modo,
+    dias_entreno: modo==='ed' ? diasEntreno : [],
     modo_app: 'menu'
   };
   try {
