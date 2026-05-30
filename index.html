@@ -1,4 +1,4 @@
-<!DOCTYPE  html>
+*<!DOCTYPE  html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -9801,7 +9801,18 @@ async function guardarComidaBib() {
 // ── PASO 5: PLANIFICADOR DE MENÚS (7×5)
 // ══════════════════════════════════════════
 
-const MENU_DIAS    = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+// Templates del menú: tipo_dia es la clave en _menuGrid y en menu_celdas
+const MENU_TEMPLATES = [
+  { key:'entreno_a', label:'Entreno A', tipo:'entreno' },
+  { key:'entreno_b', label:'Entreno B', tipo:'entreno' },
+  { key:'entreno_c', label:'Entreno C', tipo:'entreno' },
+  { key:'entreno_d', label:'Entreno D', tipo:'entreno' },
+  { key:'descanso_a', label:'Descanso A', tipo:'descanso' },
+  { key:'descanso_b', label:'Descanso B', tipo:'descanso' },
+  { key:'descanso_c', label:'Descanso C', tipo:'descanso' },
+];
+// Alias legacy para compatibilidad con código que use MENU_DIAS
+const MENU_DIAS    = MENU_TEMPLATES.map(t=>t.label);
 const MENU_FRANJAS = ['Desayuno','Almuerzo','Comida','Merienda','Cena'];
 
 let _menuGrid = {};
@@ -9870,29 +9881,25 @@ window._menuCocSeleccionar = function(clienteEmail) {
 };
 
 // ── Calcula acumulado de un día desde _menuGrid ──
-function menuCalcDiaAcum(diaNum) {
+function menuCalcDiaAcum(templateKey) {
   let k=0,p=0,c=0,g=0;
   MENU_FRANJAS.forEach((_,fi)=>{
-    const cell = _menuGrid[`d${diaNum}-f${fi}`];
+    const cell = _menuGrid[`${templateKey}-f${fi}`];
     if(cell){k+=cell.kcal||0;p+=cell.prot||0;c+=cell.ch||0;g+=cell.grasa||0;}
   });
   return {kcal:Math.round(k),prot:Math.round(p*10)/10,ch:Math.round(c*10)/10,grasa:Math.round(g*10)/10};
 }
 
 // ── Renderiza la cabecera de día con macros (Fase 2) ──
-function menuRenderDiaHeader(diaIdx, diaNum) {
+function menuRenderDiaHeader(tpl) {
+  // tpl = objeto MENU_TEMPLATES[i] con { key, label, tipo }
   const perfil = _menuCocClientePerfil;
   if (!perfil) return ''; // sin cliente: silencioso
 
-  const acum = menuCalcDiaAcum(diaNum);
+  const acum = menuCalcDiaAcum(tpl.key);
 
-  // Determinar tipo de día: dias_entreno = array de números 1=Lun…7=Dom
-  let esEntreno = true;
-  if (Array.isArray(perfil.dias_entreno) && perfil.dias_entreno.length > 0) {
-    esEntreno = perfil.dias_entreno.map(Number).includes(diaIdx + 1);
-  }
   const modoIgual  = perfil.modo_macros === 'igual';
-  const usaEntreno = modoIgual || esEntreno;
+  const usaEntreno = modoIgual || tpl.tipo === 'entreno';
   const tipoDia    = usaEntreno ? 'entreno' : 'descanso';
 
   // Colores según tipo de día
@@ -10012,60 +10019,60 @@ function menuRenderGrid() {
   if (!container) return;
   container.innerHTML = '';
 
-  MENU_DIAS.forEach((dia, diaIdx) => {
-    const diaNum   = diaIdx + 1;
-    const colapsado = _menuDiasColapsados[diaIdx] || false;
+  // Separador visual entre bloque entreno y descanso
+  let lastTipo = null;
 
-    let diaKcal = 0;
-    MENU_FRANJAS.forEach((_, fi) => {
-      const cell = _menuGrid[`d${diaNum}-f${fi}`];
-      if (cell) diaKcal += cell.kcal || 0;
-    });
+  MENU_TEMPLATES.forEach((tpl, tplIdx) => {
+    const { key, label, tipo } = tpl;
+    const colapsado = _menuDiasColapsados[key] || false;
 
-    const card   = document.createElement('div');
+    // Separador Entreno → Descanso
+    if (lastTipo === 'entreno' && tipo === 'descanso') {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0 8px;opacity:0.5;';
+      container.appendChild(sep);
+    }
+    lastTipo = tipo;
+
+    const card = document.createElement('div');
     card.className = 'menu-dia-card';
 
-    // ── Header día: nombre + badge Entreno/Descanso + botón Sugerir (una sola línea)
+    // ── Header: nombre template + badge tipo + botón Sugerir
     const header = document.createElement('div');
     header.className = 'menu-dia-header';
-    {
-      const perfil = _menuCocClientePerfil;
-      let badgeHtml = '';
-      if (perfil) {
-        const modoIgual  = perfil.modo_macros === 'igual';
-        const esEntreno  = modoIgual || (Array.isArray(perfil.dias_entreno) && perfil.dias_entreno.map(Number).includes(diaIdx + 1));
-        badgeHtml = modoIgual
-          ? `<span class="mch-badge mch-badge-igual">Todos igual</span>`
-          : (esEntreno
-              ? `<span class="mch-badge mch-badge-entreno">🏋️ Entreno</span>`
-              : `<span class="mch-badge mch-badge-descanso">💤 Descanso</span>`);
-      }
-      header.innerHTML = `
-        <span class="menu-dia-label">${dia}</span>
-        <div style="display:flex;align-items:center;gap:6px;">
-          ${badgeHtml}
-          <button class="mch-sugerir" title="Sugerir comidas (próximamente)" style="opacity:${perfil?'0.45':'0.25'};">✨ Sugerir</button>
-          <span style="color:var(--muted);font-size:13px;margin-left:2px;">${colapsado ? '▸' : '▾'}</span>
-        </div>`;
-    }
+    const perfil = _menuCocClientePerfil;
+    const modoIgual = perfil?.modo_macros === 'igual';
+    const badgeHtml = modoIgual
+      ? `<span class="mch-badge mch-badge-igual">Todos igual</span>`
+      : tipo === 'entreno'
+        ? `<span class="mch-badge mch-badge-entreno">🏋️ Entreno</span>`
+        : `<span class="mch-badge mch-badge-descanso">💤 Descanso</span>`;
+
+    header.innerHTML = `
+      <span class="menu-dia-label">${label}</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        ${badgeHtml}
+        <button class="mch-sugerir" title="Sugerir comidas (próximamente)" style="opacity:${perfil?'0.45':'0.25'};">✨ Sugerir</button>
+        <span style="color:var(--muted);font-size:13px;margin-left:2px;">${colapsado ? '▸' : '▾'}</span>
+      </div>`;
     header.addEventListener('click', () => {
-      _menuDiasColapsados[diaIdx] = !_menuDiasColapsados[diaIdx];
+      _menuDiasColapsados[key] = !_menuDiasColapsados[key];
       menuRenderGrid();
     });
 
-    // Cabecera de macros (Fase 2)
+    // Cabecera de macros
     const macroHeader = document.createElement('div');
-    macroHeader.id = `mch-dia-${diaNum}`;
-    macroHeader.innerHTML = menuRenderDiaHeader(diaIdx, diaNum);
+    macroHeader.id = `mch-tpl-${key}`;
+    macroHeader.innerHTML = menuRenderDiaHeader(tpl);
 
     const body = document.createElement('div');
     body.className = 'menu-dia-body';
     body.style.display = colapsado ? 'none' : 'flex';
 
     MENU_FRANJAS.forEach((franja, fi) => {
-      const key  = `d${diaNum}-f${fi}`;
-      const cell = _menuGrid[key];
-      const row  = document.createElement('div');
+      const cellKey = `${key}-f${fi}`;
+      const cell    = _menuGrid[cellKey];
+      const row     = document.createElement('div');
       row.className = 'menu-franja-row';
 
       const lbl = document.createElement('div');
@@ -10076,7 +10083,6 @@ function menuRenderGrid() {
       content.className = 'menu-franja-content';
 
       if (cell) {
-        // Obtener ingredientes desde _cocBibComidas (datos vivos de biblioteca)
         const bibItem = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
         let ingArr = [];
         if (bibItem) {
@@ -10084,7 +10090,6 @@ function menuRenderGrid() {
           if (Array.isArray(rawIng)) ingArr = rawIng;
           else if (typeof rawIng === 'string') { try { ingArr = JSON.parse(rawIng); } catch(e){} }
         }
-        // Construir HTML de ingredientes con gramos
         const ingHtml = ingArr.length
           ? `<div class="menu-celda-ings">${ingArr.map(i => {
               const g = i.gramos || i.cantidad_g || '';
@@ -10107,7 +10112,6 @@ function menuRenderGrid() {
             ${ingHtml}
           </div>`;
 
-        // Botón editar (lápiz) — abre modal biblioteca
         const editBtn = document.createElement('button');
         editBtn.className = 'menu-celda-edit';
         editBtn.title = 'Editar comida';
@@ -10115,11 +10119,8 @@ function menuRenderGrid() {
         editBtn.addEventListener('click', e => {
           e.stopPropagation();
           const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
-          if (comidaBib) {
-            abrirEditorBiblioteca(comidaBib);
-          } else {
-            showToast('Comida no encontrada en biblioteca');
-          }
+          if (comidaBib) abrirEditorBiblioteca(comidaBib);
+          else showToast('Comida no encontrada en biblioteca');
         });
 
         const del = document.createElement('button');
@@ -10127,7 +10128,7 @@ function menuRenderGrid() {
         del.textContent = '✕';
         del.addEventListener('click', e => {
           e.stopPropagation();
-          delete _menuGrid[key];
+          delete _menuGrid[cellKey];
           menuRenderGrid();
           menuActualizarTotales();
         });
@@ -10138,7 +10139,7 @@ function menuRenderGrid() {
             <div class="menu-celda-add-icon">＋</div>
             <span>Añadir comida</span>
           </div>`;
-        content.addEventListener('click', () => menuAbrirSelector(diaNum, fi, franja));
+        content.addEventListener('click', () => menuAbrirSelector(key, fi, franja, label));
         row.appendChild(lbl); row.appendChild(content);
       }
       body.appendChild(row);
@@ -10153,14 +10154,14 @@ function menuRenderGrid() {
 
 function menuActualizarTotales() {
   let tKcal=0, tProt=0, tCh=0, tGrasa=0, diasDatos=0;
-  for (let d=1;d<=7;d++) {
+  MENU_TEMPLATES.forEach(tpl => {
     let dK=0,dP=0,dC=0,dG=0,hay=false;
     MENU_FRANJAS.forEach((_,fi)=>{
-      const c=_menuGrid[`d${d}-f${fi}`];
+      const c=_menuGrid[`${tpl.key}-f${fi}`];
       if(c){dK+=c.kcal||0;dP+=c.prot||0;dC+=c.ch||0;dG+=c.grasa||0;hay=true;}
     });
     if(hay){tKcal+=dK;tProt+=dP;tCh+=dC;tGrasa+=dG;diasDatos++;}
-  }
+  });
   const div=diasDatos||1;
   const set=(id,v)=>{
     const el=document.getElementById(id);if(el)el.textContent=v;
@@ -10174,7 +10175,7 @@ function menuActualizarTotales() {
 
 let _menuSelectorCallback = null;
 
-function menuAbrirSelector(diaNum, fi, franjaLabel) {
+function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
   cerrarMenuSelector();
   const overlay = document.createElement('div');
   overlay.className = 'menu-selector-overlay';
@@ -10182,7 +10183,7 @@ function menuAbrirSelector(diaNum, fi, franjaLabel) {
   const sheet = document.createElement('div');
   sheet.className = 'menu-selector-sheet';
   sheet.innerHTML = `
-    <div class="menu-selector-title">📅 ${MENU_DIAS[diaNum-1]} · ${franjaLabel}</div>
+    <div class="menu-selector-title">📅 ${templateLabel} · ${franjaLabel}</div>
     <input class="menu-selector-search" placeholder="🔍  Buscar en biblioteca..." oninput="menuFiltrarSelector(this.value)">
     <div class="menu-selector-list" id="menuSelectorList"></div>
     <button class="menu-selector-cancel" onclick="cerrarMenuSelector()">Cancelar</button>`;
@@ -10191,7 +10192,7 @@ function menuAbrirSelector(diaNum, fi, franjaLabel) {
   document.body.appendChild(overlay);
 
   _menuSelectorCallback = (comida) => {
-    _menuGrid[`d${diaNum}-f${fi}`] = {
+    _menuGrid[`${templateKey}-f${fi}`] = {
       comida_id: comida.id,
       nombre:    comida.nombre,
       kcal:      comida.kcal  || 0,
@@ -10239,12 +10240,12 @@ async function menuGuardarMenuCompleto() {
   if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
 
   const celdas = [];
-  for (let d=1;d<=7;d++) {
+  MENU_TEMPLATES.forEach(tpl => {
     MENU_FRANJAS.forEach((franja,fi)=>{
-      const cell = _menuGrid[`d${d}-f${fi}`];
-      if (cell) celdas.push({ dia:d, franja, comida_id:cell.comida_id, ingredientes:null });
+      const cell = _menuGrid[`${tpl.key}-f${fi}`];
+      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: null });
     });
-  }
+  });
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
 
   const btn = document.querySelector('[onclick="menuGuardarMenuCompleto()"]');
@@ -10329,7 +10330,8 @@ async function menuCargarExistente(menuId) {
         const comida = _cocBibComidas.find(b=>b.id===c.comida_id);
         if (comida) {
           const fi = MENU_FRANJAS.indexOf(c.franja);
-          if (fi>=0) _menuGrid[`d${c.dia}-f${fi}`] = {
+          const key = c.tipo_dia || `entreno_a`; // fallback para menús legacy
+          if (fi>=0) _menuGrid[`${key}-f${fi}`] = {
             comida_id: comida.id, nombre: comida.nombre,
             kcal:  comida.kcal  ||0,
             prot:  Math.round((comida.proteina  ||0)*10)/10,
