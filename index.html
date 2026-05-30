@@ -10354,7 +10354,7 @@ async function menuGuardarMenuCompleto() {
       await supaAdmin(`/rest/v1/menus_macroai?id=eq.${_menuId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
       await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${_menuId}`,{method:'DELETE'});
     } else {
-      const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,cliente_email:null})});
+      const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,cliente_email:_menuCocClientePerfil?.cliente_email||null})});
       const rows = await res.json();
       if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú');
       _menuId = rows[0].id;
@@ -10422,6 +10422,22 @@ async function menuCargarExistente(menuId) {
     _menuId   = menuId;
     const ni = menuGetNombreInput();
     if (ni) ni.value = menu.nombre||'';
+
+    // Si el menu tiene cliente_email y no coincide con el seleccionado, cargar ese perfil
+    if (menu.cliente_email && menu.cliente_email !== _menuCocClientePerfil?.cliente_email) {
+      await menuCocCargarClientes();
+      const perfilMenu = _menuCocClientes.find(c => c.cliente_email === menu.cliente_email);
+      if (perfilMenu) {
+        _menuCocClientePerfil = perfilMenu;
+        MENU_TEMPLATES = _menuGenerarTemplates(perfilMenu);
+        _menuDiasColapsados = {};
+        const nombreCli = perfilMenu.nombre || perfilMenu.cliente_email || 'Cliente';
+        ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { el.textContent = '👤 ' + nombreCli; el.style.color = 'var(--text)'; el.style.fontWeight = '600'; }
+        });
+      }
+    }
 
     if (Array.isArray(celdas)) {
       celdas.forEach(c=>{
