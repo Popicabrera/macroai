@@ -9768,11 +9768,12 @@ async function guardarComidaBib() {
 .menu-dia-body{display:flex;flex-direction:column;}
 .menu-franja-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;min-height:54px;}
 .menu-franja-row:last-child{border-bottom:none;}
-.menu-franja-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;width:88px;flex-shrink:0;white-space:nowrap;}
+.menu-franja-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;width:88px;flex-shrink:0;white-space:nowrap;}
 .menu-franja-content{flex:1;min-width:0;}
 .menu-celda-asignada{display:flex;flex-direction:column;gap:2px;}
 .menu-celda-nombre{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.menu-celda-macros{font-size:11px;color:var(--muted);}
+.menu-celda-macros{font-size:11px;display:flex;flex-wrap:wrap;align-items:center;gap:3px;}
+.mcd-sep{color:var(--muted2);}
 .menu-celda-add{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 0;transition:color .15s;}
 .menu-celda-add:active{color:var(--accent);}
 .menu-celda-add-icon{width:26px;height:26px;border-radius:8px;background:var(--s2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
@@ -10094,7 +10095,15 @@ function menuRenderGrid() {
         content.innerHTML = `
           <div class="menu-celda-asignada">
             <div class="menu-celda-nombre">${escapeHtml(cell.nombre)}</div>
-            <div class="menu-celda-macros">${Math.round(cell.kcal)} kcal · P${cell.prot}g CH${cell.ch}g G${cell.grasa}g</div>
+            <div class="menu-celda-macros">
+              <span style="color:var(--red);font-weight:600;">${Math.round(cell.kcal)} kcal</span>
+              <span class="mcd-sep">·</span>
+              <span style="color:var(--blue);">P ${cell.prot}g</span>
+              <span class="mcd-sep">·</span>
+              <span style="color:var(--yellow);">CH ${cell.ch}g</span>
+              <span class="mcd-sep">·</span>
+              <span style="color:#3a9d5c;">G ${cell.grasa}g</span>
+            </div>
             ${ingHtml}
           </div>`;
 
