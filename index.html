@@ -9108,6 +9108,12 @@ function dsbUpdateActive() {
       </div>
       <div id="cocina-split-menu">
         <div style="flex-shrink:0;padding:10px 14px 10px;border-bottom:1px solid var(--border);">
+          <!-- Selector de cliente -->
+          <div id="menuCocClienteBar" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:11px;cursor:pointer;" onclick="menuCocAbrirSelectorCliente()">
+            <span style="font-size:14px;">👤</span>
+            <span id="menuCocClienteLabel" style="flex:1;font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;">Seleccionar cliente para ver macros objetivo</span>
+            <span style="font-size:11px;color:var(--muted);">▾</span>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
             <input id="menuNombreInput" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
               style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
@@ -9150,6 +9156,12 @@ function dsbUpdateActive() {
 
     <!-- ── MOBILE: Tab Menús ── -->
     <div id="tabCocina-menus" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 100px;display:none;flex-direction:column;gap:12px;">
+      <!-- Selector de cliente mobile -->
+      <div id="menuCocClienteBarMobile" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;cursor:pointer;" onclick="menuCocAbrirSelectorCliente()">
+        <span style="font-size:14px;">👤</span>
+        <span id="menuCocClienteLabelMobile" style="flex:1;font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;">Seleccionar cliente para ver macros objetivo</span>
+        <span style="font-size:11px;color:var(--muted);">▾</span>
+      </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <input id="menuNombreInputMobile" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
           style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
@@ -9797,6 +9809,138 @@ let _menuGrid = {};
 let _menuId   = null;
 let _menuDiasColapsados = {};
 let _menuListCache = [];
+let _menuCocClientePerfil = null; // perfil del cliente seleccionado para el semanario
+
+// ── COCINA: Selector de cliente ──
+let _menuCocClientes = [];
+
+async function menuCocCargarClientes() {
+  if (_menuCocClientes.length > 0) return _menuCocClientes;
+  try {
+    const res = await supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,kcal_objetivo,p_objetivo,hc_objetivo,g_objetivo,kcal_descanso,p_descanso,hc_descanso,g_descanso,dias_entreno,modo_macros&order=cliente_email.asc');
+    const perfiles = await res.json();
+    if (!Array.isArray(perfiles)) { _menuCocClientes = []; return []; }
+    // Enriquecer con nombre desde _adminUsersData si está disponible
+    _menuCocClientes = perfiles.map(p => {
+      const u = (_adminUsersData||[]).find(u => u.email === p.cliente_email);
+      return { ...p, nombre: u?.nombre || p.cliente_email };
+    }).sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
+  } catch(e) { _menuCocClientes = []; }
+  return _menuCocClientes;
+}
+
+async function menuCocAbrirSelectorCliente() {
+  _menuCocClientes = []; // forzar recarga
+  await menuCocCargarClientes();
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.id = '_menuCocCliOverlay';
+
+  const lista = _menuCocClientes.map(c => `
+    <div onclick="_menuCocSeleccionar('${escapeHtml(c.cliente_email||'').replace(/'/g,"\\'")}')"
+      style="padding:11px 14px;background:var(--s1);border:1px solid var(--border);border-radius:11px;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||c.cliente_email||'Sin nombre')}</div>
+      <div style="font-size:11px;color:var(--muted);">${escapeHtml(c.cliente_email||'')} · ${c.kcal_objetivo||'—'} kcal E / ${c.kcal_descanso||'—'} kcal D</div>
+    </div>`).join('');
+
+  overlay.innerHTML = `
+    <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;width:100%;max-width:500px;max-height:70vh;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;">👤 Seleccionar cliente</div>
+      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch;">${lista||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No hay clientes con perfil</div>'}</div>
+      <button onclick="document.getElementById('_menuCocCliOverlay').remove()"
+        style="width:100%;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">
+        Cancelar
+      </button>
+    </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+window._menuCocSeleccionar = function(clienteEmail) {
+  document.getElementById('_menuCocCliOverlay')?.remove();
+  const perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail);
+  _menuCocClientePerfil = perfil || null;
+  const nombre = perfil ? (perfil.nombre || perfil.cliente_email || 'Cliente') : null;
+  const label = nombre ? `👤 ${nombre}` : 'Seleccionar cliente para ver macros objetivo';
+  const labelColor = nombre ? 'var(--text)' : 'var(--muted)';
+  ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = label; el.style.color = labelColor; el.style.fontWeight = nombre ? '600' : '400'; }
+  });
+  menuRenderGrid(); // re-renderizar con cabeceras de macro
+};
+
+// ── Calcula acumulado de un día desde _menuGrid ──
+function menuCalcDiaAcum(diaNum) {
+  let k=0,p=0,c=0,g=0;
+  MENU_FRANJAS.forEach((_,fi)=>{
+    const cell = _menuGrid[`d${diaNum}-f${fi}`];
+    if(cell){k+=cell.kcal||0;p+=cell.prot||0;c+=cell.ch||0;g+=cell.grasa||0;}
+  });
+  return {kcal:Math.round(k),prot:Math.round(p*10)/10,ch:Math.round(c*10)/10,grasa:Math.round(g*10)/10};
+}
+
+// ── Renderiza la cabecera de día con macros ──
+function menuRenderDiaHeader(diaIdx, diaNum) {
+  const perfil = _menuCocClientePerfil;
+  const acum = menuCalcDiaAcum(diaNum);
+
+  // Determinar si es día de entreno: dias_entreno es array de números (1=Lun..7=Dom)
+  // diaIdx: 0=Lun … 6=Dom → número de día: diaIdx+1
+  let esEntreno = true;
+  if (perfil && Array.isArray(perfil.dias_entreno) && perfil.dias_entreno.length > 0) {
+    esEntreno = perfil.dias_entreno.map(Number).includes(diaIdx + 1);
+  }
+
+  // Si modo_macros es 'igual', todos los días usan macros entreno
+  const modoIgual = perfil?.modo_macros === 'igual';
+  const usaEntreno = modoIgual || esEntreno;
+
+  // Macros objetivo
+  const obj = perfil ? {
+    kcal:  usaEntreno ? (perfil.kcal_objetivo||0) : (perfil.kcal_descanso||0),
+    prot:  usaEntreno ? (perfil.p_objetivo||0)    : (perfil.p_descanso||0),
+    ch:    usaEntreno ? (perfil.hc_objetivo||0)   : (perfil.hc_descanso||0),
+    grasa: usaEntreno ? (perfil.g_objetivo||0)    : (perfil.g_descanso||0),
+  } : null;
+
+  if (!perfil) return ''; // sin cliente: no mostramos cabecera extra
+
+  const badge = modoIgual
+    ? `<span class="mch-badge mch-badge-igual">Todos igual</span>`
+    : (esEntreno
+        ? `<span class="mch-badge mch-badge-entreno">🏋️ Entreno</span>`
+        : `<span class="mch-badge mch-badge-descanso">💤 Descanso</span>`);
+
+  // Barra de progreso
+  const pct = obj.kcal > 0 ? Math.min((acum.kcal / obj.kcal) * 100, 100) : 0;
+  const excedido = obj.kcal > 0 && acum.kcal > obj.kcal;
+  const barColor = excedido ? 'var(--yellow)' : (esEntreno ? 'var(--red)' : 'var(--blue)');
+
+  // Macros restantes
+  const restKcal = obj.kcal - acum.kcal;
+  const restP    = Math.round((obj.prot  - acum.prot)*10)/10;
+  const restCh   = Math.round((obj.ch   - acum.ch)*10)/10;
+  const restG    = Math.round((obj.grasa - acum.grasa)*10)/10;
+  const restColor = (restKcal < 0 || restP < 0 || restCh < 0 || restG < 0) ? 'var(--red)' : '#2a9d5c';
+
+  const objetivoStr = `${obj.kcal} kcal · P${obj.prot}g · CH${obj.ch}g · G${obj.grasa}g`;
+
+  return `
+    <div class="mch-wrap">
+      <div class="mch-row1">
+        ${badge}
+        <span class="mch-obj">${objetivoStr}</span>
+        <button class="mch-sugerir" title="Sugerir comidas (próximamente)">✨ Sugerir</button>
+      </div>
+      <div class="mch-bar-wrap">
+        <div class="mch-bar-fill" style="width:${pct.toFixed(1)}%;background:${barColor};"></div>
+      </div>
+      <div class="mch-rest" style="color:${restColor};">
+        ${restP >= 0 ? '+' : ''}${restP}g P · ${restCh >= 0 ? '+' : ''}${restCh}g CH · ${restG >= 0 ? '+' : ''}${restG}g G · ${restKcal >= 0 ? '+' : ''}${Math.round(restKcal)} kcal
+      </div>
+    </div>`;
+}
 
 // ── Helper: input nombre según viewport ──
 function menuGetNombreInput() {
@@ -9856,6 +10000,11 @@ function menuRenderGrid() {
       menuRenderGrid();
     });
 
+    // Cabecera de macros (Fase 2)
+    const macroHeader = document.createElement('div');
+    macroHeader.id = `mch-dia-${diaNum}`;
+    macroHeader.innerHTML = menuRenderDiaHeader(diaIdx, diaNum);
+
     const body = document.createElement('div');
     body.className = 'menu-dia-body';
     body.style.display = colapsado ? 'none' : 'flex';
@@ -9902,6 +10051,7 @@ function menuRenderGrid() {
     });
 
     card.appendChild(header);
+    card.appendChild(macroHeader);
     card.appendChild(body);
     container.appendChild(card);
   });
@@ -10288,6 +10438,19 @@ async function _guardarNuevoAlimento() {
 .menu-asig-nombre{font-size:13px;font-weight:600;color:var(--text);}
 .menu-asig-email{font-size:11px;color:var(--muted);margin-top:2px;}
 .menu-asig-cancel{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+
+/* ── FASE 2: Cabecera macros día semanario ── */
+.mch-wrap{padding:6px 10px 8px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;background:var(--s1);}
+.mch-row1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mch-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:0.3px;white-space:nowrap;}
+.mch-badge-entreno{background:rgba(192,57,43,0.12);color:var(--red);border:1px solid rgba(192,57,43,0.25);}
+.mch-badge-descanso{background:rgba(91,141,184,0.12);color:var(--blue);border:1px solid rgba(91,141,184,0.25);}
+.mch-badge-igual{background:rgba(120,100,60,0.10);color:#7a6a3a;border:1px solid rgba(120,100,60,0.2);}
+.mch-obj{font-size:10px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mch-sugerir{padding:3px 9px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:not-allowed;white-space:nowrap;opacity:0.6;}
+.mch-bar-wrap{height:4px;background:var(--s2);border-radius:4px;overflow:hidden;}
+.mch-bar-fill{height:100%;border-radius:4px;transition:width 0.3s ease;}
+.mch-rest{font-size:10px;font-weight:600;font-family:'Space Grotesk',sans-serif;letter-spacing:0.2px;}
 </style>
 
 </div><!-- /mainApp -->
