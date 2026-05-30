@@ -9756,6 +9756,9 @@ async function guardarComidaBib() {
     cerrarEditorBib();
     await new Promise(r => setTimeout(r, 300)); // pequeña espera para que Supabase commitee
     await cocCargarBiblioteca();
+    // Refrescar semanario si ingredientes del grid cambiaron
+    const gc = document.getElementById("menuGridContainer") || document.getElementById("menuGridContainerMobile");
+    if (gc && typeof menuRenderGrid === "function") menuRenderGrid();
   } catch(e) {
     console.error('guardarComidaBib error:', e.message);
     showToast('❌ ' + (e.message || 'Error al guardar').slice(0, 120));
@@ -9785,6 +9788,11 @@ async function guardarComidaBib() {
 .menu-celda-add-icon{width:26px;height:26px;border-radius:8px;background:var(--s2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
 .menu-celda-del{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s;}
 .menu-celda-del:active{color:var(--red);}
+.menu-celda-edit{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;}
+.menu-celda-edit:active{opacity:0.6;}
+.menu-celda-ings{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.menu-celda-ing-pill{font-size:10px;color:var(--muted);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;white-space:nowrap;}
+.menu-celda-ing-pill strong{color:var(--text);font-weight:600;}
 .menu-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
 .menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:75vh;display:flex;flex-direction:column;gap:12px;}
 .menu-selector-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);}
@@ -10077,11 +10085,44 @@ function menuRenderGrid() {
       content.className = 'menu-franja-content';
 
       if (cell) {
+        // Obtener ingredientes desde _cocBibComidas (datos vivos de biblioteca)
+        const bibItem = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
+        let ingArr = [];
+        if (bibItem) {
+          const rawIng = bibItem.ingredientes_json || bibItem.ingredientes;
+          if (Array.isArray(rawIng)) ingArr = rawIng;
+          else if (typeof rawIng === 'string') { try { ingArr = JSON.parse(rawIng); } catch(e){} }
+        }
+        // Construir HTML de ingredientes con gramos
+        const ingHtml = ingArr.length
+          ? `<div class="menu-celda-ings">${ingArr.map(i => {
+              const g = i.gramos || i.cantidad_g || '';
+              return `<span class="menu-celda-ing-pill">${escapeHtml(i.nombre||'')}${g?' <strong>'+g+'g</strong>':''}</span>`;
+            }).join('')}</div>`
+          : '';
+
         content.innerHTML = `
           <div class="menu-celda-asignada">
             <div class="menu-celda-nombre">${escapeHtml(cell.nombre)}</div>
             <div class="menu-celda-macros">${Math.round(cell.kcal)} kcal · P${cell.prot}g CH${cell.ch}g G${cell.grasa}g</div>
+            ${ingHtml}
           </div>`;
+
+        // Botón editar (lápiz) — abre modal biblioteca
+        const editBtn = document.createElement('button');
+        editBtn.className = 'menu-celda-edit';
+        editBtn.title = 'Editar comida';
+        editBtn.innerHTML = '✏️';
+        editBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
+          if (comidaBib) {
+            abrirEditorBiblioteca(comidaBib);
+          } else {
+            showToast('Comida no encontrada en biblioteca');
+          }
+        });
+
         const del = document.createElement('button');
         del.className = 'menu-celda-del';
         del.textContent = '✕';
@@ -10091,7 +10132,7 @@ function menuRenderGrid() {
           menuRenderGrid();
           menuActualizarTotales();
         });
-        row.appendChild(lbl); row.appendChild(content); row.appendChild(del);
+        row.appendChild(lbl); row.appendChild(content); row.appendChild(editBtn); row.appendChild(del);
       } else {
         content.innerHTML = `
           <div class="menu-celda-add">
