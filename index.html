@@ -7129,11 +7129,12 @@ function _renderMenuDia() {
     labelEl.textContent = esHoy ? `📅 ${nombre} · Hoy` : `📅 ${nombre}`;
   }
 
-  // Filtrar celdas según tipo_dia (nuevo: tipo_dia='entreno'|'descanso')
-  // Fallback legacy: si las celdas tienen campo .dia numérico, usarlo
-  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
+  // Filtrar celdas del día actual por key dia_N (nueva arquitectura)
+  // Fallback: celdas con campo .dia numérico (arquitectura anterior)
+  const diaKey = `dia_${diaNum}`;
+  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
   if (!celdasDia.length) {
-    // Fallback para menús guardados con columna .dia numérica (arquitectura anterior)
+    // Fallback legacy: columna .dia numérica
     celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
   }
 
@@ -10029,26 +10030,28 @@ async function guardarComidaBib() {
 // ══════════════════════════════════════════
 
 // Templates del menú: tipo_dia es la clave en _menuGrid y en menu_celdas
-function _menuGenerarTemplates(perfil) {
-  const LETRAS = ['A','B','C','D','E','F','G'];
-  if (!perfil) {
-    return [
-      ...LETRAS.slice(0,4).map(l=>({ key:'entreno_'+l.toLowerCase(), label:'Entreno '+l, tipo:'entreno' })),
-      ...LETRAS.slice(0,3).map(l=>({ key:'descanso_'+l.toLowerCase(), label:'Descanso '+l, tipo:'descanso' })),
-    ];
-  }
-  const modoIgual = perfil.modo_macros === 'igual';
-  if (modoIgual) {
-    return LETRAS.map(l=>({ key:'dia_'+l.toLowerCase(), label:'Dia '+l, tipo:'igual' }));
-  }
-  const nEntreno  = Array.isArray(perfil.dias_entreno) ? perfil.dias_entreno.length : 4;
-  const nDescanso = 7 - nEntreno;
-  return [
-    ...LETRAS.slice(0, nEntreno) .map(l=>({ key:'entreno_'+l.toLowerCase(),  label:'Entreno '+l,  tipo:'entreno'  })),
-    ...LETRAS.slice(0, nDescanso).map(l=>({ key:'descanso_'+l.toLowerCase(), label:'Descanso '+l, tipo:'descanso' })),
-  ];
+// 7 días fijos Lun-Dom. El tipo (entreno/descanso) se calcula dinámicamente
+// según el perfil del cliente seleccionado (dias_entreno).
+// Key usa número ISO: lun=1 … dom=7
+const MENU_TEMPLATES = [
+  { key: 'dia_1', label: 'Lunes',     diaISO: 1 },
+  { key: 'dia_2', label: 'Martes',    diaISO: 2 },
+  { key: 'dia_3', label: 'Miércoles', diaISO: 3 },
+  { key: 'dia_4', label: 'Jueves',    diaISO: 4 },
+  { key: 'dia_5', label: 'Viernes',   diaISO: 5 },
+  { key: 'dia_6', label: 'Sábado',    diaISO: 6 },
+  { key: 'dia_7', label: 'Domingo',   diaISO: 7 },
+];
+
+// Devuelve 'entreno' | 'descanso' | 'igual' para un template dado el perfil actual
+function _menuTplTipo(tpl, perfil) {
+  if (!perfil) return 'entreno'; // sin cliente: asumimos entreno
+  if (perfil.modo_macros === 'igual') return 'igual';
+  const dias = Array.isArray(perfil.dias_entreno) ? perfil.dias_entreno.map(Number) : [1,2,3,4,5];
+  // dias_entreno usa getDay() nativo (0=Dom,1=Lun…6=Sab); diaISO usa 1=Lun…7=Dom
+  const getdayVal = tpl.diaISO === 7 ? 0 : tpl.diaISO;
+  return dias.includes(getdayVal) ? 'entreno' : 'descanso';
 }
-let MENU_TEMPLATES = _menuGenerarTemplates(null);
 const MENU_FRANJAS = ['Desayuno','Almuerzo','Comida','Merienda','Cena'];
 
 let _menuGrid = {};
@@ -10106,9 +10109,8 @@ window._menuCocSeleccionar = function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
   const perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail);
   _menuCocClientePerfil = perfil || null;
-  // Recalcular templates según perfil del cliente
-  MENU_TEMPLATES = _menuGenerarTemplates(perfil || null);
-  _menuGrid = {}; // reset grid al cambiar cliente (templates distintos)
+  // Grid se resetea al cambiar cliente (los días son siempre los mismos, pero los badges cambian)
+  _menuGrid = {};
   _menuDiasColapsados = {};
   const nombre = perfil ? (perfil.nombre || perfil.cliente_email || 'Cliente') : null;
   const label = nombre ? `👤 ${nombre}` : 'Seleccionar cliente para ver macros objetivo';
@@ -10132,15 +10134,16 @@ function menuCalcDiaAcum(templateKey) {
 
 // ── Renderiza la cabecera de día con macros (Fase 2) ──
 function menuRenderDiaHeader(tpl) {
-  // tpl = objeto MENU_TEMPLATES[i] con { key, label, tipo }
+  // tpl = objeto MENU_TEMPLATES[i] con { key, label, diaISO }
   const perfil = _menuCocClientePerfil;
   if (!perfil) return ''; // sin cliente: silencioso
 
-  const acum = menuCalcDiaAcum(tpl.key);
+  const acum    = menuCalcDiaAcum(tpl.key);
+  const tipo    = _menuTplTipo(tpl, perfil);
+  const modoIgual   = tipo === 'igual';
+  const usaEntreno  = modoIgual || tipo === 'entreno';
 
-  const modoIgual  = perfil.modo_macros === 'igual';
-  const usaEntreno = modoIgual || tpl.tipo === 'entreno';
-  const tipoDia    = usaEntreno ? 'entreno' : 'descanso';
+  const tipoDia = usaEntreno ? 'entreno' : 'descanso';
 
   // Colores según tipo de día
   const accentColor  = tipoDia === 'entreno' ? 'var(--red)'  : 'var(--blue)';
@@ -10260,19 +10263,14 @@ function menuRenderGrid() {
   container.innerHTML = '';
 
   // Separador visual entre bloque entreno y descanso
-  let lastTipo = null;
+  let lastTipo = null; // legacy — ya no se usa con días fijos, se mantiene por compatibilidad
 
   MENU_TEMPLATES.forEach((tpl, tplIdx) => {
-    const { key, label, tipo } = tpl;
+    const { key, label } = tpl;
+    const tipo    = _menuTplTipo(tpl, _menuCocClientePerfil);
     const colapsado = _menuDiasColapsados[key] || false;
 
-    // Separador Entreno → Descanso
-    if (lastTipo === 'entreno' && tipo === 'descanso') {
-      const sep = document.createElement('div');
-      sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0 8px;opacity:0.5;';
-      container.appendChild(sep);
-    }
-    lastTipo = tipo;
+    // Sin separador Entreno→Descanso (ahora son días fijos)
 
     const card = document.createElement('div');
     card.className = 'menu-dia-card';
@@ -10571,7 +10569,6 @@ async function menuCargarExistente(menuId) {
       const perfilMenu = _menuCocClientes.find(c => c.cliente_email === menu.cliente_email);
       if (perfilMenu) {
         _menuCocClientePerfil = perfilMenu;
-        MENU_TEMPLATES = _menuGenerarTemplates(perfilMenu);
         _menuDiasColapsados = {};
         const nombreCli = perfilMenu.nombre || perfilMenu.cliente_email || 'Cliente';
         ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
@@ -10586,7 +10583,7 @@ async function menuCargarExistente(menuId) {
         const comida = _cocBibComidas.find(b=>b.id===c.comida_id);
         if (comida) {
           const fi = MENU_FRANJAS.indexOf(c.franja);
-          const key = c.tipo_dia || `entreno_a`; // fallback para menús legacy
+          const key = c.tipo_dia && c.tipo_dia.startsWith('dia_') ? c.tipo_dia : `dia_1`; // fallback legacy → Lunes
           if (fi>=0) _menuGrid[`${key}-f${fi}`] = {
             comida_id: comida.id, nombre: comida.nombre,
             kcal:  comida.kcal  ||0,
