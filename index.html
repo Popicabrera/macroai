@@ -7216,18 +7216,12 @@ function _renderMenuDia() {
       const baseGrasa = bib.grasa    || 0;
       const baseKcal  = bib.kcal     || 0;
 
-      // Si hay ingredientes con gramos y macros por 100g → ajustar gramos en descanso
+      // Usar siempre los gramos guardados — el menú ya fue creado con gramos correctos por tipo de día
       if (ingArr.length && ingArr.some(i => i.gramos)) {
         ingArr.forEach(ing => {
           if (!ing.gramos) return;
           const gramosOrig = ing.gramos;
-          const gramosAdj  = esEntreno
-            ? gramosOrig
-            : _menuAjustarGramos(gramosOrig, {
-                p_100:  ing.p_100  || 0,
-                hc_100: ing.hc_100 || 0,
-                g_100:  ing.g_100  || 0,
-              }, tipoDia, _menuPerfilMacros);
+          const gramosAdj  = gramosOrig;
 
           // Calcular kcal del ingrediente ajustado
           const factor = gramosAdj / 100;
@@ -10903,13 +10897,30 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
   document.body.appendChild(overlay);
 
   _menuSelectorCallback = (comida) => {
-    _menuGrid[`${templateKey}-f${fi}`] = {
+    const cellKey = `${templateKey}-f${fi}`;
+    const target  = _menuTargets[cellKey];
+    let kcal  = comida.kcal     || 0;
+    let prot  = comida.proteina || 0;
+    let ch    = comida.hc       || 0;
+    let grasa = comida.grasa    || 0;
+
+    // Si hay target de la IA → escalar macros proporcionalmente por kcal
+    if (target && target.kcal > 0 && kcal > 0) {
+      const factor = target.kcal / kcal;
+      kcal  = target.kcal;
+      prot  = Math.round(prot  * factor * 10) / 10;
+      ch    = Math.round(ch    * factor * 10) / 10;
+      grasa = Math.round(grasa * factor * 10) / 10;
+    }
+
+    _menuGrid[cellKey] = {
       comida_id: comida.id,
       nombre:    comida.nombre,
-      kcal:      comida.kcal  || 0,
-      prot:      Math.round((comida.proteina  ||0)*10)/10,
-      ch:        Math.round((comida.hc        ||0)*10)/10,
-      grasa:     Math.round((comida.grasa     ||0)*10)/10,
+      kcal:      Math.round(kcal),
+      prot:      Math.round(prot  * 10) / 10,
+      ch:        Math.round(ch    * 10) / 10,
+      grasa:     Math.round(grasa * 10) / 10,
+      _escalado: !!(target && target.kcal > 0 && (comida.kcal || 0) > 0),
     };
     cerrarMenuSelector();
     menuRenderGrid();
