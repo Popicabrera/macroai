@@ -9667,11 +9667,13 @@ async function eliminarComidaBib(id, nombre) {
 // ══════════════════════════════════════════
 
 let _cocEditorIngs = [];   // [{nombre, gramos, kcal_100, p_100, hc_100, g_100}]
+let _cocEditorCellKey = null; // cellKey del grid si se abre desde franja con target
 let _cocEditorId   = null; // null = nueva, string = editar
 
-function abrirEditorBiblioteca(comida) {
+function abrirEditorBiblioteca(comida, cellKey) {
   cerrarCtxBib();
   _cocEditorId = comida ? comida.id : null;
+  _cocEditorCellKey = cellKey || null;
   let _rawIngs = [];
   if (comida) {
     if (Array.isArray(comida.ingredientes)) {
@@ -9720,6 +9722,9 @@ function abrirEditorBiblioteca(comida) {
         <span class="bib-macro-pill grasa" id="bibtGrasa">G 0g</span>
       </div>
 
+      <!-- Banner target (se rellena dinámicamente tras render) -->
+      <div id="bibTargetBanner" style="display:none;"></div>
+
       <!-- Nuevo alimento -->
       <button onclick="abrirNuevoAlimentoDesdeModal()" style="width:100%;padding:11px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.35);border-radius:11px;color:var(--accent);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
         + Nuevo alimento
@@ -9740,6 +9745,7 @@ function abrirEditorBiblioteca(comida) {
   _cocEditorIngs.forEach((ing, idx) => bibRenderIngRow(idx));
   if (!_cocEditorIngs.length) bibAddIngRow(); // siempre al menos 1 fila vacía
   bibRecalcTotales();
+  bibRenderTargetBanner();
 }
 
 function cerrarEditorBib() {
@@ -9912,6 +9918,137 @@ function bibRecalcTotales() {
   if (tCh)    tCh.textContent    = 'CH ' + (Math.round(ch*10)/10) + 'g';
   if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(grasa*10)/10) + 'g';
 
+  bibRenderTargetBanner();
+}
+
+
+// ── BANNER TARGET + AJUSTE IA ─────────────────────────────────────────────────
+function bibRenderTargetBanner() {
+  const banner = document.getElementById('bibTargetBanner');
+  if (!banner) return;
+  if (!_cocEditorCellKey || !_menuTargets[_cocEditorCellKey]) {
+    banner.style.display = 'none';
+    return;
+  }
+  const t = _menuTargets[_cocEditorCellKey];
+
+  // Calcular totales actuales
+  let cKcal=0, cProt=0, cHc=0, cGrasa=0;
+  _cocEditorIngs.forEach(ing => {
+    const g = ing.gramos || 0;
+    if (g > 0) {
+      cKcal  += (ing.kcal_100||0) * g / 100;
+      cProt  += (ing.p_100||0)    * g / 100;
+      cHc    += (ing.hc_100||0)   * g / 100;
+      cGrasa += (ing.g_100||0)    * g / 100;
+    }
+  });
+
+  const dKcal  = Math.round(t.kcal  - cKcal);
+  const dProt  = Math.round((t.prot  - cProt)  * 10) / 10;
+  const dHc    = Math.round((t.hc    - cHc)    * 10) / 10;
+  const dGrasa = Math.round((t.grasa - cGrasa) * 10) / 10;
+
+  const sign = v => v > 0 ? '+' + v : v;
+  const col  = v => Math.abs(v) < 5 ? 'var(--green,#3a9d5c)' : 'var(--red)';
+  const colK = Math.abs(dKcal) < 30 ? 'var(--green,#3a9d5c)' : 'var(--red)';
+
+  banner.style.display = 'block';
+  banner.innerHTML =
+    '<div class="bib-target-banner">' +
+      '<div class="btb-title">🎯 Target de esta franja</div>' +
+      '<div class="btb-row">' +
+        '<div class="btb-col">' +
+          '<div class="btb-label">Target</div>' +
+          '<div class="btb-vals">' +
+            '<span class="btb-pill btb-kcal">' + t.kcal + ' kcal</span>' +
+            '<span class="btb-pill btb-prot">P ' + t.prot + 'g</span>' +
+            '<span class="btb-pill btb-hc">HC ' + t.hc + 'g</span>' +
+            '<span class="btb-pill btb-grasa">G ' + t.grasa + 'g</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="btb-col">' +
+          '<div class="btb-label">Diferencia</div>' +
+          '<div class="btb-vals">' +
+            '<span class="btb-pill" style="color:' + colK + ';border-color:' + colK + ';">' + sign(dKcal) + ' kcal</span>' +
+            '<span class="btb-pill" style="color:' + col(dProt) + ';border-color:' + col(dProt) + ';">' + sign(dProt) + 'g P</span>' +
+            '<span class="btb-pill" style="color:' + col(dHc) + ';border-color:' + col(dHc) + ';">' + sign(dHc) + 'g HC</span>' +
+            '<span class="btb-pill" style="color:' + col(dGrasa) + ';border-color:' + col(dGrasa) + ';">' + sign(dGrasa) + 'g G</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btb-btn" id="btbAjustarBtn" onclick="bibAjustarAlTarget()">⚡ Ajustar gramos al target</button>' +
+    '</div>';
+}
+
+async function bibAjustarAlTarget() {
+  if (!_cocEditorCellKey || !_menuTargets[_cocEditorCellKey]) return;
+  const t = _menuTargets[_cocEditorCellKey];
+
+  const ings = _cocEditorIngs.filter(i => i.nombre && i.kcal_100 > 0);
+  if (!ings.length) { showToast('Añade ingredientes primero'); return; }
+
+  const btn = document.getElementById('btbAjustarBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Calculando...'; }
+
+  const ingResumen = ings.map(i => ({
+    nombre: i.nombre,
+    gramos_actuales: i.gramos || 0,
+    kcal_100g: Math.round(i.kcal_100 || 0),
+    p_100g:    Math.round((i.p_100  || 0) * 10) / 10,
+    hc_100g:   Math.round((i.hc_100 || 0) * 10) / 10,
+    g_100g:    Math.round((i.g_100  || 0) * 10) / 10,
+  }));
+
+  const prompt = 'Eres nutricionista deportivo. Ajusta los gramos de estos ingredientes para que la comida resultante cuadre lo más posible con el target nutricional indicado.\n\n' +
+    'TARGET:\n' +
+    '- Calorías: ' + t.kcal + ' kcal\n' +
+    '- Proteínas: ' + t.prot + 'g\n' +
+    '- Carbohidratos: ' + t.hc + 'g\n' +
+    '- Grasas: ' + t.grasa + 'g\n\n' +
+    'INGREDIENTES (con sus valores nutricionales por 100g):\n' +
+    JSON.stringify(ingResumen) + '\n\n' +
+    'REGLAS:\n' +
+    '- Devuelve gramos ajustados para cada ingrediente (mínimo 10g, máximo 500g)\n' +
+    '- Prioriza cuadrar las calorías y proteínas primero\n' +
+    '- Los gramos deben ser números enteros\n' +
+    '- No añadas ni elimines ingredientes, solo ajusta los gramos de los existentes\n\n' +
+    'Devuelve ÚNICAMENTE un JSON array sin texto ni markdown:\n' +
+    '[{"nombre":"Avena (copos)","gramos":95},{"nombre":"Leche Desnatada UHT de Vaca","gramos":180}]';
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: 'Responde SIEMPRE con JSON puro, sin markdown, sin texto adicional.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const texto = data.content?.find(b => b.type === 'text')?.text || '';
+    const clean = texto.replace(/```json|```/g, '').trim();
+    const ajustados = JSON.parse(clean);
+
+    if (!Array.isArray(ajustados)) throw new Error('Respuesta inválida');
+
+    // Aplicar gramos ajustados a _cocEditorIngs
+    ajustados.forEach(({ nombre, gramos }) => {
+      const ing = _cocEditorIngs.find(i => i.nombre === nombre);
+      if (ing) ing.gramos = Math.round(gramos);
+    });
+
+    // Re-renderizar filas con nuevos gramos
+    const container = document.getElementById('bibIngRows');
+    if (container) container.innerHTML = '';
+    _cocEditorIngs.forEach((_, idx) => bibRenderIngRow(idx));
+    bibRecalcTotales();
+    showToast('✅ Gramos ajustados al target');
+  } catch(e) {
+    console.error('bibAjustarAlTarget error:', e);
+    showToast('❌ Error ajustando gramos');
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Ajustar gramos al target'; }
+  }
 }
 
 // ── GUARDAR ──
@@ -10601,7 +10738,7 @@ function menuRenderGrid() {
         editBtn.addEventListener('click', e => {
           e.stopPropagation();
           const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
-          if (comidaBib) abrirEditorBiblioteca(comidaBib);
+          if (comidaBib) abrirEditorBiblioteca(comidaBib, cellKey);
           else showToast('Comida no encontrada en biblioteca');
         });
 
@@ -11386,6 +11523,20 @@ async function _guardarNuevoAlimento() {
 .msd-fill-over{background:var(--red);}
 /* Botones franja prioritaria — más pequeños */
 .msd-prio-btn{padding:4px 10px;font-size:11px;opacity:.85;}
+/* Banner target en editor de comida */
+.bib-target-banner{background:rgba(192,57,43,0.05);border:1px solid rgba(192,57,43,0.2);border-radius:12px;padding:12px 14px;margin-bottom:14px;}
+.btb-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+.btb-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.btb-col{flex:1;min-width:140px;}
+.btb-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:5px;}
+.btb-vals{display:flex;flex-wrap:wrap;gap:4px;}
+.btb-pill{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid;background:transparent;}
+.btb-kcal{color:var(--red);border-color:var(--red);}
+.btb-prot{color:var(--blue);border-color:var(--blue);}
+.btb-hc{color:var(--yellow);border-color:var(--yellow);}
+.btb-grasa{color:#3a9d5c;border-color:#3a9d5c;}
+.btb-btn{width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;}
+.btb-btn:disabled{opacity:0.6;cursor:not-allowed;}
 </style>
 
 </div><!-- /mainApp -->
