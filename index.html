@@ -2339,7 +2339,7 @@ function showView(id){
   if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
-  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuDiaActual=0;cargarMiMenu();}
+  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();}
   if(id==='viewCocina'){
     cocCargarBiblioteca();
     if(window.innerWidth>=900){
@@ -6981,6 +6981,53 @@ let _menuDiaActual = 0;  // se inicializa en menuIrHoy()
 let _menuActivoCache = null;       // row de menus_macroai
 let _menuCeldasCache = null;       // array de menu_celdas
 let _menuBibCache = null;          // map comida_id → row biblioteca_comidas
+let _menuPerfilMacros = null;      // { hc_objetivo, g_objetivo, hc_descanso, g_descanso }
+let _menuTipoDiaOverride = {};     // { diaNum: 'entreno'|'descanso' } — override manual del cliente
+
+// Persiste/carga los overrides en localStorage
+function _menuLoadOverrides() {
+  try { return JSON.parse(localStorage.getItem('macroai_menu_overrides') || '{}'); } catch(e) { return {}; }
+}
+function _menuSaveOverrides(obj) {
+  try { localStorage.setItem('macroai_menu_overrides', JSON.stringify(obj)); } catch(e) {} 
+}
+
+// Calcula el tipo de día para un día de semana (1=Lun..7=Dom), con posible override manual
+function _menuTipoDia(diaNum) {
+  if (_menuTipoDiaOverride[diaNum]) return _menuTipoDiaOverride[diaNum];
+  // ISO: getDay() devuelve 0=Dom, convertido a 1=Lun..7=Dom
+  // WEEK_DAYS usa getDay() nativo (0=Dom, 1=Lun..6=Sab)
+  // Convertir diaNum ISO → getDay(): Lun=1→1, Mar=2→2, ..., Sab=6→6, Dom=7→0
+  const getdayVal = diaNum === 7 ? 0 : diaNum;
+  return WEEK_DAYS.includes(getdayVal) ? 'entreno' : 'descanso';
+}
+
+// Ajusta los gramos de un ingrediente según el tipo de día usando la fórmula de ratios
+// ing: { nombre, cantidad_g, proteina_100g, hc_100g, grasa_100g }
+// perfil: { hc_objetivo, g_objetivo, hc_descanso, g_descanso }
+function _menuAjustarGramos(gramos, ing, tipoDia, perfil) {
+  if (tipoDia === 'entreno' || !perfil || !gramos) return gramos;
+  const hcObj  = perfil.hc_objetivo  || 1;
+  const gObj   = perfil.g_objetivo   || 1;
+  const hcDesc = perfil.hc_descanso  || hcObj;
+  const gDesc  = perfil.g_descanso   || gObj;
+  const ratio_ch    = hcDesc / hcObj;
+  const ratio_grasa = gDesc  / gObj;
+  // Clasificar el ingrediente por macro predominante (kcal)
+  const p100  = ing.proteina_100g || 0;
+  const hc100 = ing.hc_100g      || 0;
+  const g100  = ing.grasa_100g   || 0;
+  const kcal_prot  = p100  * 4;
+  const kcal_carbo = hc100 * 4;
+  const kcal_grasa = g100  * 9;
+  const maxKcal = Math.max(kcal_prot, kcal_carbo, kcal_grasa);
+  if (maxKcal === 0) return gramos; // sin datos → sin ajuste
+  let ratio = 1;
+  if (maxKcal === kcal_prot)  ratio = 1;              // proteína: sin tocar
+  else if (maxKcal === kcal_carbo) ratio = ratio_ch;  // carbohidrato: ratio HC
+  else ratio = ratio_grasa;                           // grasa: ratio grasa
+  return Math.round(gramos * ratio);
+}
 
 const _MENU_DIAS_NOMBRES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 // Iconos y clases reutilizados del sistema anterior
@@ -7021,6 +7068,9 @@ async function cargarMiMenu() {
   // Inicializar día si no está establecido
   if (!_menuDiaActual) _menuDiaActual = _menuDiaHoy();
 
+  // Cargar overrides manuales de tipo de día
+  _menuTipoDiaOverride = _menuLoadOverrides();
+
   const comidasEl = document.getElementById('menuComidas');
   comidasEl.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--muted);"><div class="auth-spinner" style="margin:0 auto 12px;"></div><div style="font-size:13px;">Cargando menú...</div></div>`;
   _resetMenuMacroPanel();
@@ -7034,14 +7084,21 @@ async function cargarMiMenu() {
     }
     if (!_menuActivoCache) { comidasEl.innerHTML = _menuVacioHtml(); return; }
 
-    // 2. Celdas del menú (todas, no solo las del día — las filtramos al renderizar)
+    // 2. Perfil macros del cliente (para cálculo de ratios entreno/descanso)
+    if (!_menuPerfilMacros) {
+      const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&limit=1&select=hc_objetivo,g_objetivo,hc_descanso,g_descanso`);
+      const rows = await res.json();
+      _menuPerfilMacros = (Array.isArray(rows) && rows.length) ? rows[0] : {};
+    }
+
+    // 3. Celdas del menú (todas, no solo las del día — las filtramos al renderizar)
     if (!_menuCeldasCache) {
       const res = await supaFetch(`/rest/v1/menu_celdas?menu_id=eq.${_menuActivoCache.id}&select=*`);
       const rows = await res.json();
       _menuCeldasCache = Array.isArray(rows) ? rows : [];
     }
 
-    // 3. Biblioteca de comidas (necesaria para resolver nombres/macros)
+    // 4. Biblioteca de comidas (necesaria para resolver nombres/macros)
     if (!_menuBibCache) {
       const res = await supaFetch(`/rest/v1/biblioteca_comidas?select=id,nombre,kcal,proteina,hc,grasa,ingredientes&order=nombre.asc`);
       const rows = await res.json();
@@ -7060,8 +7117,10 @@ async function cargarMiMenu() {
 function _renderMenuDia() {
   if (!_menuActivoCache || !_menuCeldasCache || !_menuBibCache) return;
 
-  const diaNum = _menuDiaActual;
-  const esHoy  = diaNum === _menuDiaHoy();
+  const diaNum  = _menuDiaActual;
+  const esHoy   = diaNum === _menuDiaHoy();
+  const tipoDia = _menuTipoDia(diaNum);   // 'entreno' o 'descanso' (con posible override)
+  const esEntreno = tipoDia === 'entreno';
 
   // Actualizar etiqueta de día
   const labelEl = document.getElementById('menuFechaLabel');
@@ -7070,10 +7129,15 @@ function _renderMenuDia() {
     labelEl.textContent = esHoy ? `📅 ${nombre} · Hoy` : `📅 ${nombre}`;
   }
 
-  // Filtrar celdas de este día
-  const celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
+  // Filtrar celdas según tipo_dia (nuevo: tipo_dia='entreno'|'descanso')
+  // Fallback legacy: si las celdas tienen campo .dia numérico, usarlo
+  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
+  if (!celdasDia.length) {
+    // Fallback para menús guardados con columna .dia numérica (arquitectura anterior)
+    celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
+  }
 
-  // Agrupar por franja (respetando el orden de MENU_FRANJAS)
+  // Agrupar por franja
   const porFranja = {};
   celdasDia.forEach(c => {
     if (!porFranja[c.franja]) porFranja[c.franja] = [];
@@ -7082,9 +7146,25 @@ function _renderMenuDia() {
 
   const franjasDia = MENU_FRANJAS.filter(f => porFranja[f]);
 
+  // --- TOGGLE ENTRENO / DESCANSO ---
+  const toggleHtml = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">
+        ${esHoy ? 'HOY' : _MENU_DIAS_NOMBRES[diaNum-1].toUpperCase()}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;color:var(--muted);">Tipo de día:</span>
+        <button onclick="menuToggleTipoDia(${diaNum})"
+          style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1.5px solid ${esEntreno ? 'rgba(192,57,43,0.4)' : 'rgba(91,141,184,0.4)'};background:${esEntreno ? 'rgba(192,57,43,0.08)' : 'rgba(91,141,184,0.08)'};font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:${esEntreno ? 'var(--accent)' : 'var(--blue)'};cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.15s;">
+          ${esEntreno ? '🏋️ Entreno' : '💤 Descanso'}
+          ${_menuTipoDiaOverride[diaNum] ? '<span style="font-size:9px;opacity:0.6;">*</span>' : ''}
+        </button>
+      </div>
+    </div>`;
+
   if (!franjasDia.length) {
-    document.getElementById('menuComidas').innerHTML = `
-      <div style="text-align:center;padding:50px 20px;color:var(--muted);">
+    document.getElementById('menuComidas').innerHTML = toggleHtml + `
+      <div style="text-align:center;padding:40px 20px;color:var(--muted);">
         <div style="font-size:36px;margin-bottom:12px;">🥗</div>
         <div style="font-size:14px;line-height:1.7;">Sin comidas para este día.<br>
         <span style="font-size:12px;color:var(--muted2);">Consulta con tu entrenador.</span></div>
@@ -7093,11 +7173,10 @@ function _renderMenuDia() {
     return;
   }
 
-  // Calcular totales del día para el panel de macros
   let totalKcal=0, totalProt=0, totalHc=0, totalGrasa=0;
   const doneState = _menuLoadDone(diaNum);
 
-  let html = '';
+  let html = toggleHtml;
   franjasDia.forEach((franja, idx) => {
     const celdas = porFranja[franja];
     const meta   = _MENU_FRANJA_META[franja] || { emoji:'🍽️', clase:'mc-ic-com' };
@@ -7110,34 +7189,79 @@ function _renderMenuDia() {
       const bib = _menuBibCache[celda.comida_id];
       if (!bib) return;
 
-      // La celda puede tener ingredientes propios (jsonb) o heredarlos de la biblioteca
+      // Ingredientes: pueden venir de la celda (jsonb) o de la biblioteca
       const ingredientes = celda.ingredientes || bib.ingredientes || [];
-      const ingArr = Array.isArray(ingredientes) ? ingredientes : (typeof ingredientes === 'string' ? (() => { try { return JSON.parse(ingredientes); } catch(e) { return []; } })() : []);
+      const ingArr = Array.isArray(ingredientes) ? ingredientes
+        : (typeof ingredientes === 'string' ? (() => { try { return JSON.parse(ingredientes); } catch(e) { return []; } })() : []);
 
-      // Sumar macros del plato completo (campos directos de biblioteca_comidas)
-      const cKcal  = Math.round(bib.kcal   || 0);
-      const cProt  = Math.round((bib.proteina || 0) * 10) / 10;
-      const cHc    = Math.round((bib.hc      || 0) * 10) / 10;
-      const cGrasa = Math.round((bib.grasa   || 0) * 10) / 10;
+      // Macros base del plato (por 100g si tiene ingredientes, o directos si no)
+      const baseProt  = bib.proteina || 0;
+      const baseHc    = bib.hc       || 0;
+      const baseGrasa = bib.grasa    || 0;
+      const baseKcal  = bib.kcal     || 0;
 
-      franjaKcal  += cKcal;
-      franjaProt  += cProt;
-      franjaHc    += cHc;
-      franjaGrasa += cGrasa;
+      // Si hay ingredientes con cantidad_g y macros por 100g → ajustar gramos en descanso
+      if (ingArr.length && ingArr.some(i => i.cantidad_g)) {
+        ingArr.forEach(ing => {
+          if (!ing.cantidad_g) return;
+          const gramosOrig = ing.cantidad_g;
+          const gramosAdj  = esEntreno
+            ? gramosOrig
+            : _menuAjustarGramos(gramosOrig, {
+                proteina_100g: ing.proteina_100g || 0,
+                hc_100g:       ing.hc_100g       || 0,
+                grasa_100g:    ing.grasa_100g     || 0,
+              }, tipoDia, _menuPerfilMacros);
 
-      // Detalle: nombre del plato como encabezado + ingredientes si los hay
-      ingredientesHtml += `<div class="mc-alimento-row" style="background:var(--s1);border-radius:10px;margin-bottom:4px;">
-        <div style="flex:1;min-width:0;">
-          <div class="mc-alimento-nombre" style="font-weight:600;">${escapeHtml(bib.nombre)}</div>
-          ${ingArr.length ? `<div class="mc-alimento-macros" style="margin-top:3px;">` +
-            ingArr.map(i => `<span style="display:inline-block;margin-right:8px;font-size:10px;color:var(--muted);">${escapeHtml(i.nombre||'')}${i.cantidad_g ? ' '+i.cantidad_g+'g' : ''}</span>`).join('') +
-            `</div>` : ''}
-        </div>
-        <div class="mc-alimento-right">
-          <div class="mc-alimento-gramos" style="font-size:11px;color:var(--muted);">${cProt>0?'P'+cProt+'g':''}</div>
-          <div class="mc-alimento-kcal">${cKcal} kcal</div>
-        </div>
-      </div>`;
+          // Calcular kcal del ingrediente ajustado
+          const factor = gramosAdj / 100;
+          const iKcal  = Math.round(((ing.proteina_100g||0)*4 + (ing.hc_100g||0)*4 + (ing.grasa_100g||0)*9) * factor);
+          const iProt  = Math.round((ing.proteina_100g||0) * factor * 10) / 10;
+          const iHc    = Math.round((ing.hc_100g||0)       * factor * 10) / 10;
+          const iGrasa = Math.round((ing.grasa_100g||0)    * factor * 10) / 10;
+
+          franjaKcal  += iKcal;
+          franjaProt  += iProt;
+          franjaHc    += iHc;
+          franjaGrasa += iGrasa;
+
+          const ajustado = !esEntreno && gramosAdj !== gramosOrig;
+          ingredientesHtml += `<div class="mc-alimento-row">
+            <div style="flex:1;min-width:0;">
+              <div class="mc-alimento-nombre">${escapeHtml(ing.nombre||'')}</div>
+              ${iProt > 0 ? `<div class="mc-alimento-macros">HC${iHc}g · P${iProt}g · G${iGrasa}g</div>` : ''}
+            </div>
+            <div class="mc-alimento-right">
+              <div class="mc-alimento-gramos">${ajustado
+                ? `<span style="text-decoration:line-through;opacity:0.45;">${gramosOrig}g</span> <span style="color:var(--blue);">${gramosAdj}g</span>`
+                : `${gramosAdj}g`}</div>
+              <div class="mc-alimento-kcal">${iKcal} kcal</div>
+            </div>
+          </div>`;
+        });
+      } else {
+        // Sin desglose por ingrediente → usar macros directos del plato
+        const cKcal  = Math.round(baseKcal);
+        const cProt  = Math.round(baseProt  * 10) / 10;
+        const cHc    = Math.round(baseHc    * 10) / 10;
+        const cGrasa = Math.round(baseGrasa * 10) / 10;
+        franjaKcal  += cKcal;
+        franjaProt  += cProt;
+        franjaHc    += cHc;
+        franjaGrasa += cGrasa;
+        ingredientesHtml += `<div class="mc-alimento-row" style="background:var(--s1);border-radius:10px;margin-bottom:4px;">
+          <div style="flex:1;min-width:0;">
+            <div class="mc-alimento-nombre" style="font-weight:600;">${escapeHtml(bib.nombre)}</div>
+            ${ingArr.length ? `<div class="mc-alimento-macros" style="margin-top:3px;">` +
+              ingArr.map(i => `<span style="display:inline-block;margin-right:8px;font-size:10px;color:var(--muted);">${escapeHtml(i.nombre||'')}${i.cantidad_g ? ' '+i.cantidad_g+'g' : ''}</span>`).join('') +
+              `</div>` : ''}
+          </div>
+          <div class="mc-alimento-right">
+            <div class="mc-alimento-gramos" style="font-size:11px;color:var(--muted);">${cProt>0?'P'+cProt+'g':''}</div>
+            <div class="mc-alimento-kcal">${cKcal} kcal</div>
+          </div>
+        </div>`;
+      }
     });
 
     totalKcal  += franjaKcal;
@@ -7169,15 +7293,33 @@ function _renderMenuDia() {
 
   document.getElementById('menuComidas').innerHTML = html;
 
-  // Badge tipo día (hoy vs otro)
+  // Badge tipo día
   const dotEl = document.getElementById('menuPillDot');
   const labelTipoEl = document.getElementById('menuTipoLabel');
   if (dotEl && labelTipoEl) {
-    dotEl.className = 'pdot' + (esHoy ? '' : ' rest');
-    labelTipoEl.textContent = esHoy ? 'Tu menú de hoy' : _MENU_DIAS_NOMBRES[diaNum - 1];
+    dotEl.className = 'pdot' + (esEntreno ? '' : ' rest');
+    labelTipoEl.textContent = esEntreno
+      ? (esHoy ? '🏋️ Día de entreno' : '🏋️ Entreno')
+      : (esHoy ? '💤 Día de descanso' : '💤 Descanso');
   }
 
   _updateMenuMacroPanel(totalKcal, totalProt, totalHc, totalGrasa);
+}
+
+// Toggle manual del tipo de día — persiste el override en localStorage
+function menuToggleTipoDia(diaNum) {
+  const actual   = _menuTipoDia(diaNum);
+  const nuevo    = actual === 'entreno' ? 'descanso' : 'entreno';
+  // Si el nuevo tipo coincide con el automático, eliminar el override
+  const getdayVal = diaNum === 7 ? 0 : diaNum;
+  const automatico = WEEK_DAYS.includes(getdayVal) ? 'entreno' : 'descanso';
+  if (nuevo === automatico) {
+    delete _menuTipoDiaOverride[diaNum];
+  } else {
+    _menuTipoDiaOverride[diaNum] = nuevo;
+  }
+  _menuSaveOverrides(_menuTipoDiaOverride);
+  _renderMenuDia();
 }
 
 function mcToggleDoneMenu(diaNum, franja, el) {
