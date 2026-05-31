@@ -9035,6 +9035,10 @@ async function guardarDiasEntreno() {
   } catch(e) {
     showToast('✅ Días guardados localmente');
   }
+  // Resetear caché del menú para que recargue con los nuevos días
+  _menuPerfilMacros = null;
+  _menuTipoDiaOverride = {};
+  _menuSaveOverrides({});
 }
 
 // ══ ADMIN: toggle Modo Menú / Macros ══
