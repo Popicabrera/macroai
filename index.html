@@ -10394,12 +10394,11 @@ Devuelve ÚNICAMENTE un JSON array sin texto ni markdown:
 ]`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
+        system: 'Eres nutricionista deportivo experto. Responde SIEMPRE con JSON puro, sin markdown, sin texto adicional.',
         messages: [{ role: 'user', content: prompt }]
       })
     });
