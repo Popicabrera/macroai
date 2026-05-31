@@ -10296,10 +10296,17 @@ function menuSugerirDia(key, tipo) {
   const vacias = MENU_FRANJAS.filter((_,fi) => !_menuGrid[`${key}-f${fi}`]);
   _msdFranjasActivas = new Set(vacias.length ? vacias.slice(0,3) : MENU_FRANJAS.slice(0,3));
 
-  // Generar botones de franjas como string HTML (evita template literal anidado)
+  // Franjas activas: multi-select toggle
   const _msdFranjasHtml = MENU_FRANJAS.map((f, fi) => {
     const ocup = !!_menuGrid[key + '-f' + fi];
-    return '<button class="msd-franja-btn" data-franja="' + f + '" onclick="msdTogglePrio(this)">' + f + (ocup ? ' ✏️' : '') + '</button>';
+    const act  = _msdFranjasActivas.has(f);
+    return '<button class="msd-franja-btn' + (act ? ' active' : '') + '" data-franja="' + f + '" onclick="msdToggleFranja(this)">' + f + (ocup ? ' ✏️' : '') + '</button>';
+  }).join('');
+
+  // Franja prioritaria: selección única
+  const _msdFranjasPrioHtml = MENU_FRANJAS.map(f => {
+    const act = _msdFranjasPrio === f;
+    return '<button class="msd-franja-btn msd-prio-btn' + (act ? ' active' : '') + '" data-franja="' + f + '" onclick="msdTogglePrio(this)">' + f + '</button>';
   }).join('');
 
   const overlay = document.createElement('div');
@@ -10316,9 +10323,14 @@ function menuSugerirDia(key, tipo) {
         <button class="msd-nc-btn" data-n="5" onclick="msdSetN(this,5)">5</button>
       </div>
 
-      <div class="msd-section-label" style="margin-top:14px;">Franja prioritaria <span style="color:var(--muted);font-weight:400;">(opcional)</span></div>
+      <div class="msd-section-label" style="margin-top:14px;">Franjas a calcular</div>
       <div class="msd-franjas" id="msdFranjasWrap">
         ${_msdFranjasHtml}
+      </div>
+
+      <div class="msd-section-label" style="margin-top:14px;">Franja prioritaria <span style="color:var(--muted);font-weight:400;">(opcional — mayor proteína aquí)</span></div>
+      <div class="msd-franjas" id="msdFranjasPrioWrap">
+        ${_msdFranjasPrioHtml}
       </div>
 
       <button class="msd-gen" id="msdGenBtn" onclick="msdGenerar()">🤖 Calcular targets</button>
@@ -10332,6 +10344,22 @@ function msdSetN(btn, n) {
   _msdNComidas = n;
   document.querySelectorAll('.msd-nc-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // Pre-seleccionar las N franjas más comunes
+  const defaults3 = ['Desayuno','Comida','Cena'];
+  const defaults4 = ['Desayuno','Comida','Merienda','Cena'];
+  const defaults5 = ['Desayuno','Almuerzo','Comida','Merienda','Cena'];
+  const map = {3:defaults3, 4:defaults4, 5:defaults5};
+  _msdFranjasActivas = new Set(map[n] || defaults3);
+  // Actualizar botones de franja en el DOM
+  document.querySelectorAll('.msd-franja-btn:not(.msd-prio-btn)').forEach(b => {
+    b.classList.toggle('active', _msdFranjasActivas.has(b.dataset.franja));
+  });
+}
+
+function msdToggleFranja(btn) {
+  const f = btn.dataset.franja;
+  if (_msdFranjasActivas.has(f)) { _msdFranjasActivas.delete(f); btn.classList.remove('active'); }
+  else { _msdFranjasActivas.add(f); btn.classList.add('active'); }
 }
 
 function msdTogglePrio(btn) {
@@ -10363,7 +10391,8 @@ async function msdGenerar() {
     grasa: esEntreno ? (_drumVals.gE||65)      : (_drumVals.gD||60),
   };
 
-  const franjas = MENU_FRANJAS.slice(0, _msdNComidas);
+  const franjas = MENU_FRANJAS.filter(f => _msdFranjasActivas.has(f));
+  if (!franjas.length) { showToast('Elige al menos una franja'); btn.disabled=false; btn.textContent='🤖 Calcular targets'; return; }
 
   const prioCopy = _msdFranjasPrio && franjas.includes(_msdFranjasPrio)
     ? `\nFRANJA PRIORITARIA: "${_msdFranjasPrio}" — asigna aquí el mayor bloque de proteína y calorías.`
@@ -11355,6 +11384,8 @@ async function _guardarNuevoAlimento() {
 .msd-sum-track{height:4px;border-radius:4px;background:var(--border);overflow:hidden;}
 .msd-sum-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .3s;}
 .msd-fill-over{background:var(--red);}
+/* Botones franja prioritaria — más pequeños */
+.msd-prio-btn{padding:4px 10px;font-size:11px;opacity:.85;}
 </style>
 
 </div><!-- /mainApp -->
