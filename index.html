@@ -10124,6 +10124,7 @@ window._menuCocSeleccionar = function(clienteEmail) {
     if (el) { el.textContent = label; el.style.color = labelColor; el.style.fontWeight = nombre ? '600' : '400'; }
   });
   menuRenderGrid();
+  menuActualizarTextoBtnGuardar();
 };
 
 // ── Calcula acumulado de un día desde _menuGrid ──
@@ -10490,26 +10491,56 @@ async function menuGuardarMenuCompleto() {
   });
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
 
-  const btn = document.querySelector('[onclick="menuGuardarMenuCompleto()"]');
-  if (btn) { btn.textContent='Guardando...'; btn.disabled=true; }
+  const clientePerfil = _menuCocClientePerfil;
+  const clienteEmail  = clientePerfil?.cliente_email || null;
+  const clienteNombre = clientePerfil ? (clientePerfil.nombre || clienteEmail) : null;
+
+  const btns = document.querySelectorAll('[onclick="menuGuardarMenuCompleto()"]');
+  btns.forEach(b => { b.textContent = clienteEmail ? 'Guardando y asignando...' : 'Guardando...'; b.disabled = true; });
 
   try {
     if (_menuId) {
       await supaAdmin(`/rest/v1/menus_macroai?id=eq.${_menuId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
       await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${_menuId}`,{method:'DELETE'});
     } else {
-      const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,cliente_email:_menuCocClientePerfil?.cliente_email||null})});
+      const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,cliente_email:clienteEmail})});
       const rows = await res.json();
       if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú');
       _menuId = rows[0].id;
     }
     await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
-    showToast('✅ Menú guardado');
+
+    // ── Guardar inteligente: si hay cliente seleccionado, asignar automáticamente ──
+    if (clienteEmail) {
+      // Desactivar cualquier menú activo anterior de este cliente
+      await supaAdmin(
+        `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&activo=eq.true&id=neq.${_menuId}`,
+        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: false }) }
+      );
+      // Activar y asignar este menú al cliente
+      await supaAdmin(
+        `/rest/v1/menus_macroai?id=eq.${_menuId}`,
+        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, activo: true }) }
+      );
+      showToast(`✅ Menú guardado y asignado a ${clienteNombre}`);
+    } else {
+      showToast('✅ Menú guardado');
+    }
   } catch(e) {
     showToast('❌ Error al guardar el menú'); console.error(e);
   } finally {
-    if (btn) { btn.textContent='💾 Guardar'; btn.disabled=false; }
+    menuActualizarTextoBtnGuardar();
   }
+}
+
+// Actualiza el texto del botón Guardar según si hay cliente seleccionado o no
+function menuActualizarTextoBtnGuardar() {
+  const tieneCliente = !!_menuCocClientePerfil?.cliente_email;
+  const label = tieneCliente ? '💾 Guardar y asignar' : '💾 Guardar';
+  document.querySelectorAll('[onclick="menuGuardarMenuCompleto()"]').forEach(b => {
+    b.textContent = label;
+    b.disabled = false;
+  });
 }
 
 async function menuMostrarExistentes() {
