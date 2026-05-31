@@ -10465,7 +10465,9 @@ function menuSugerirDia(key, tipo) {
         ${_msdFranjasHtml}
       </div>
 
-      <div class="msd-section-label" style="margin-top:14px;">Franja prioritaria <span style="color:var(--muted);font-weight:400;">(opcional — mayor proteína aquí)</span></div>
+      <hr class="msd-divider">
+
+      <div class="msd-section-label">Franja prioritaria <span style="font-size:10px;color:#bbb;font-weight:400;text-transform:none;letter-spacing:0;">(opcional — aquí irá más proteína)</span></div>
       <div class="msd-franjas" id="msdFranjasPrioWrap">
         ${_msdFranjasPrioHtml}
       </div>
@@ -11478,21 +11480,32 @@ async function _guardarNuevoAlimento() {
 .mch-sugerir:hover{background:var(--accent);color:#fff;border-color:rgba(192,57,43,0.4);}
 .mch-sugerir:disabled{opacity:0.5;cursor:not-allowed;}
 /* Modal sugerir día */
-#menuSugerirOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10200;display:flex;align-items:flex-end;justify-content:center;}
-#menuSugerirSheet{background:var(--card);border-radius:18px 18px 0 0;padding:22px 20px 32px;width:100%;max-width:480px;box-shadow:0 -4px 24px rgba(0,0,0,0.18);}
-.msd-title{font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--fg);margin-bottom:4px;}
-.msd-sub{font-size:12px;color:var(--muted);margin-bottom:16px;}
-.msd-franjas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
-.msd-franja-btn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--s2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
-.msd-franja-btn.active{background:var(--accent);color:#fff;border-color:rgba(192,57,43,0.4);}
-.msd-gen{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
-.msd-gen:disabled{opacity:0.6;cursor:not-allowed;}
-.msd-cancel{width:100%;padding:10px;background:transparent;color:var(--muted);border:none;font-size:13px;cursor:pointer;margin-top:6px;}
+/* ── Modal Sugerir — overlay y sheet ── */
+#menuSugerirOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:10200;display:flex;align-items:center;justify-content:center;padding:16px;}
+#menuSugerirSheet{background:#fff;border-radius:16px;padding:22px 20px 20px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.28);border:1.5px solid #e5e5e5;}
+.msd-title{font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:#111;margin-bottom:3px;}
+.msd-sub{font-size:12px;color:#888;margin-bottom:18px;line-height:1.4;}
+/* Sección labels */
+.msd-section-label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+/* Botones nº comidas — grid 3 columnas */
+.msd-ncomidas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
+.msd-nc-btn{padding:10px 0;border-radius:10px;border:2px solid #e0e0e0;background:#fafafa;color:#666;font-size:16px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;}
+.msd-nc-btn.active{background:rgba(192,57,43,0.08);color:#c0392b;border-color:#c0392b;border-width:2px;}
+/* Píldoras franjas a calcular */
+.msd-franjas{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+.msd-franja-btn{padding:6px 13px;border-radius:20px;border:1.5px solid #ddd;background:#f5f5f5;color:#888;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.msd-franja-btn.active{background:rgba(192,57,43,0.10);color:#c0392b;border-color:#c0392b;}
+/* Píldoras franja prioritaria — más pequeñas */
+.msd-prio-btn{padding:4px 10px;font-size:11px;background:#f5f5f5;color:#aaa;border-color:#e0e0e0;}
+.msd-prio-btn.active{background:rgba(192,57,43,0.10);color:#c0392b;border-color:#c0392b;}
+/* Separador entre secciones */
+.msd-divider{border:none;border-top:1px solid #f0f0f0;margin:14px 0;}
+/* Botones acción */
+.msd-gen{width:100%;padding:13px;background:#c0392b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;letter-spacing:.01em;}
+.msd-gen:disabled{opacity:0.5;cursor:not-allowed;}
+.msd-cancel{width:100%;padding:10px;background:transparent;color:#aaa;border:none;font-size:13px;cursor:pointer;margin-top:4px;}
 /* Sugerir — selector nº comidas */
-.msd-section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
-.msd-ncomidas{display:flex;gap:8px;margin-bottom:4px;}
-.msd-nc-btn{flex:1;padding:8px 0;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;}
-.msd-nc-btn.active{background:var(--accent);color:#fff;border-color:rgba(192,57,43,0.3);}
+
 /* Píldoras target (punteadas) */
 .menu-celda-target{padding:6px 2px;display:flex;flex-direction:column;gap:4px;cursor:pointer;}
 .menu-celda-target:hover .menu-celda-target-pills{opacity:.8;}
@@ -11522,7 +11535,7 @@ async function _guardarNuevoAlimento() {
 .msd-sum-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .3s;}
 .msd-fill-over{background:var(--red);}
 /* Botones franja prioritaria — más pequeños */
-.msd-prio-btn{padding:4px 10px;font-size:11px;opacity:.85;}
+
 /* Banner target en editor de comida */
 .bib-target-banner{background:rgba(192,57,43,0.05);border:1px solid rgba(192,57,43,0.2);border-radius:12px;padding:12px 14px;margin-bottom:14px;}
 .btb-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
