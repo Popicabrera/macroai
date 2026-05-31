@@ -2339,7 +2339,7 @@ function showView(id){
   if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
-  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();}
+  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();}
   if(id==='viewCocina'){
     cocCargarBiblioteca();
     if(window.innerWidth>=900){
@@ -6982,6 +6982,7 @@ let _menuActivoCache = null;       // row de menus_macroai
 let _menuCeldasCache = null;       // array de menu_celdas
 let _menuBibCache = null;          // map comida_id → row biblioteca_comidas
 let _menuPerfilMacros = null;      // { hc_objetivo, g_objetivo, hc_descanso, g_descanso }
+let _menuPendienteCache = null;    // row de menus_macroai con pendiente=true
 let _menuTipoDiaOverride = {};     // { diaNum: 'entreno'|'descanso' } — override manual del cliente
 
 // Persiste/carga los overrides en localStorage
@@ -7076,11 +7077,16 @@ async function cargarMiMenu() {
   _resetMenuMacroPanel();
 
   try {
-    // 1. Menú activo del cliente
-    if (!_menuActivoCache) {
-      const res = await supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&activo=eq.true&order=created_at.desc&limit=1&select=id,nombre`);
-      const rows = await res.json();
-      _menuActivoCache = (Array.isArray(rows) && rows.length) ? rows[0] : null;
+    // 1. Menú activo + menú pendiente del cliente (en paralelo)
+    if (!_menuActivoCache || _menuPendienteCache === null) {
+      const [resActivo, resPendiente] = await Promise.all([
+        supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&activo=eq.true&order=created_at.desc&limit=1&select=id,nombre`),
+        supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&pendiente=eq.true&order=created_at.desc&limit=1&select=id,nombre`)
+      ]);
+      const rowsActivo    = await resActivo.json();
+      const rowsPendiente = await resPendiente.json();
+      _menuActivoCache    = (Array.isArray(rowsActivo)    && rowsActivo.length)    ? rowsActivo[0]    : null;
+      _menuPendienteCache = (Array.isArray(rowsPendiente) && rowsPendiente.length) ? rowsPendiente[0] : false;
     }
     if (!_menuActivoCache) { comidasEl.innerHTML = _menuVacioHtml(); return; }
 
@@ -7177,7 +7183,16 @@ function _renderMenuDia() {
   let totalKcal=0, totalProt=0, totalHc=0, totalGrasa=0;
   const doneState = _menuLoadDone(diaNum);
 
-  let html = toggleHtml;
+  // Banner próximo menú (solo si hay uno pendiente)
+  const bannerPendiente = _menuPendienteCache
+    ? `<div onclick="menuVerProximo()" style="display:flex;align-items:center;gap:10px;background:rgba(239,159,39,0.12);border:1px solid rgba(239,159,39,0.5);border-radius:14px;padding:12px 14px;margin:8px 12px 4px;cursor:pointer;">
+        <span style="font-size:18px;flex-shrink:0;">🔔</span>
+        <div style="flex:1;font-size:12px;color:var(--text);line-height:1.5;">Tu próximo menú está listo.<br><span style="color:var(--muted);font-size:11px;">Actívalo cuando quieras empezar.</span></div>
+        <button style="padding:7px 13px;background:rgba(239,159,39,0.25);border:1px solid rgba(239,159,39,0.5);border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#854F0B;cursor:pointer;white-space:nowrap;">Ver</button>
+      </div>`
+    : '';
+
+  let html = toggleHtml + bannerPendiente;
   franjasDia.forEach((franja, idx) => {
     const celdas = porFranja[franja];
     const meta   = _MENU_FRANJA_META[franja] || { emoji:'🍽️', clase:'mc-ic-com' };
@@ -10510,19 +10525,19 @@ async function menuGuardarMenuCompleto() {
     }
     await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
 
-    // ── Guardar inteligente: si hay cliente seleccionado, asignar automáticamente ──
+    // ── Guardar inteligente: si hay cliente, guardar como pendiente (el cliente lo activa cuando quiera) ──
     if (clienteEmail) {
-      // Desactivar cualquier menú activo anterior de este cliente
+      // Quitar flag pendiente de cualquier menú pendiente anterior de este cliente
       await supaAdmin(
-        `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&activo=eq.true&id=neq.${_menuId}`,
-        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: false }) }
+        `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${_menuId}`,
+        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
       );
-      // Activar y asignar este menú al cliente
+      // Marcar este menú como pendiente para el cliente
       await supaAdmin(
         `/rest/v1/menus_macroai?id=eq.${_menuId}`,
-        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, activo: true }) }
+        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
       );
-      showToast(`✅ Menú guardado y asignado a ${clienteNombre}`);
+      showToast(`✅ Menú listo para ${clienteNombre} — lo activará cuando quiera`);
     } else {
       showToast('✅ Menú guardado');
     }
@@ -10541,6 +10556,148 @@ function menuActualizarTextoBtnGuardar() {
     b.textContent = label;
     b.disabled = false;
   });
+}
+
+// ── PRÓXIMO MENÚ: previsualización y activación ──
+
+async function menuVerProximo() {
+  if (!_menuPendienteCache) return;
+  const menuId = _menuPendienteCache.id;
+
+  // Obtener celdas + biblioteca
+  showToast('⏳ Cargando previsualización...');
+  try {
+    const [resC, resB] = await Promise.all([
+      supaFetch(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=*`),
+      supaFetch(`/rest/v1/biblioteca_comidas?select=id,nombre,kcal,proteina,hc,grasa,ingredientes&order=nombre.asc`)
+    ]);
+    const celdas = await resC.json();
+    const bibRows = await resB.json();
+    const bib = {};
+    if (Array.isArray(bibRows)) bibRows.forEach(r => { bib[r.id] = r; });
+
+    // Construir HTML de franjas agrupadas por template (entreno / descanso)
+    const templates = [
+      { key: 'entreno',  label: 'Día de entreno',  color: 'rgba(192,57,43,0.15)', border: 'rgba(192,57,43,0.35)', textColor: 'var(--accent)' },
+      { key: 'descanso', label: 'Día de descanso', color: 'rgba(91,141,184,0.12)', border: 'rgba(91,141,184,0.35)', textColor: 'var(--blue)' }
+    ];
+
+    let bodyHtml = '';
+    templates.forEach(tpl => {
+      const celdasTpl = Array.isArray(celdas) ? celdas.filter(c => c.tipo_dia === tpl.key) : [];
+      if (!celdasTpl.length) return;
+
+      // Agrupar por franja
+      const porFranja = {};
+      celdasTpl.forEach(c => {
+        if (!porFranja[c.franja]) porFranja[c.franja] = [];
+        porFranja[c.franja].push(c);
+      });
+
+      bodyHtml += `<div style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;background:${tpl.color};border:1px solid ${tpl.border};font-size:10px;font-weight:700;color:${tpl.textColor};margin:10px 14px 6px;letter-spacing:0.4px;text-transform:uppercase;">${tpl.label}</div>`;
+
+      Object.entries(porFranja).forEach(([franja, fCeldas]) => {
+        let franjaKcal = 0;
+        let ingHtml = '';
+        fCeldas.forEach(celda => {
+          const b = bib[celda.comida_id];
+          if (!b) return;
+          const ings = Array.isArray(b.ingredientes) ? b.ingredientes
+            : (typeof b.ingredientes === 'string' ? (() => { try { return JSON.parse(b.ingredientes); } catch(e) { return []; } })() : []);
+          if (ings.length && ings.some(i => i.gramos)) {
+            ings.forEach(ing => {
+              const f = (ing.gramos||0)/100;
+              const iKcal = Math.round(((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9)*f);
+              const iP = Math.round((ing.p_100||0)*f*10)/10;
+              const iC = Math.round((ing.hc_100||0)*f*10)/10;
+              const iG = Math.round((ing.g_100||0)*f*10)/10;
+              franjaKcal += iKcal;
+              ingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:0.5px solid var(--border);">
+                <div>
+                  <div style="font-size:13px;color:var(--text);font-weight:500;">${escapeHtml(ing.nombre||'')}</div>
+                  <div style="display:flex;gap:4px;margin-top:3px;">
+                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(192,57,43,0.1);color:var(--accent);">${iP}g P</span>
+                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(186,117,23,0.12);color:#854F0B;">${iC}g C</span>
+                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(55,138,221,0.12);color:var(--blue);">${iG}g G</span>
+                  </div>
+                </div>
+                <div style="font-size:12px;color:var(--muted);margin-left:8px;flex-shrink:0;">${ing.gramos}g</div>
+              </div>`;
+            });
+          } else {
+            franjaKcal += Math.round(b.kcal||0);
+            ingHtml += `<div style="padding:6px 0;border-top:0.5px solid var(--border);">
+              <div style="font-size:13px;color:var(--text);font-weight:500;">${escapeHtml(b.nombre)}</div>
+            </div>`;
+          }
+        });
+
+        bodyHtml += `<div style="background:var(--s1);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin:0 12px 8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;">
+            <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">${escapeHtml(franja)}</span>
+            <span style="font-size:11px;color:var(--muted);">${Math.round(franjaKcal)} kcal</span>
+          </div>
+          <div style="padding:0 14px 10px;">${ingHtml}</div>
+        </div>`;
+      });
+    });
+
+    // Overlay
+    const ov = document.createElement('div');
+    ov.id = '_proximoMenuOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9500;display:flex;flex-direction:column;justify-content:flex-end;';
+
+    ov.innerHTML = `
+      <div style="background:var(--bg);border-radius:20px 20px 0 0;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
+          <button onclick="document.getElementById('_proximoMenuOv').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:none;font-size:18px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:700;color:var(--text);">${escapeHtml(_menuPendienteCache.nombre||'Próximo menú')}</div>
+            <div style="font-size:11px;color:var(--muted);">Preparado por tu entrenador</div>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(186,117,23,0.12);color:#854F0B;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;">⏳ Pendiente</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:16px;">
+          ${bodyHtml}
+        </div>
+        <div style="padding:12px 14px 24px;border-top:0.5px solid var(--border);flex-shrink:0;">
+          <button onclick="menuActivarProximo()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:14px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">▶ Activar este menú ahora</button>
+          <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">El menú actual se desactivará automáticamente</div>
+        </div>
+      </div>`;
+
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  } catch(e) {
+    showToast('❌ Error cargando previsualización'); console.error(e);
+  }
+}
+
+async function menuActivarProximo() {
+  if (!_menuPendienteCache) return;
+  const nuevoId = _menuPendienteCache.id;
+  const btn = document.querySelector('#_proximoMenuOv button[onclick="menuActivarProximo()"]');
+  if (btn) { btn.textContent = 'Activando...'; btn.disabled = true; }
+  try {
+    // 1. Desactivar menú activo actual
+    if (_menuActivoCache) {
+      await supaFetch(`/rest/v1/menus_macroai?id=eq.${_menuActivoCache.id}`,
+        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: false }) });
+    }
+    // 2. Activar el nuevo y quitar pendiente
+    await supaFetch(`/rest/v1/menus_macroai?id=eq.${nuevoId}`,
+      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: true, pendiente: false }) });
+
+    showToast('✅ ¡Nuevo menú activado!');
+    document.getElementById('_proximoMenuOv')?.remove();
+
+    // Resetear caché y recargar
+    _menuActivoCache = null; _menuCeldasCache = null; _menuPendienteCache = null;
+    cargarMiMenu();
+  } catch(e) {
+    showToast('❌ Error al activar el menú'); console.error(e);
+    if (btn) { btn.textContent = '▶ Activar este menú ahora'; btn.disabled = false; }
+  }
 }
 
 async function menuMostrarExistentes() {
