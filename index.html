@@ -10278,108 +10278,120 @@ function menuIniciarGrid() {
 }
 
 // ─── SUGERIR REPARTO DÍA CON IA ────────────────────────────────────────────
+let _menuTargets = {};
 let _msdKey = null;
 let _msdTipo = null;
-let _msdFranjasActivas = new Set(['Desayuno','Comida','Cena']); // default 3 comidas
+let _msdNComidas = 3;
+let _msdFranjasPrio = null;
+let _msdFranjasActivas = new Set(['Desayuno','Comida','Cena']);
 
+// ── Abrir modal ──────────────────────────────────────────────────────────────
 function menuSugerirDia(key, tipo) {
   if (!_menuCocClientePerfil) { showToast('Selecciona un cliente primero'); return; }
-  if (!_cocBibComidas || !_cocBibComidas.length) { showToast('La biblioteca está vacía'); return; }
   _msdKey  = key;
   _msdTipo = tipo;
+  _msdNComidas = 3;
+  _msdFranjasPrio = null;
 
-  // Calcular franjas activas por defecto: vacías que sean D/C/Ce
-  const _defaultFranjas = MENU_FRANJAS.filter(f => {
-    const fi = MENU_FRANJAS.indexOf(f);
-    return !_menuGrid[`${key}-f${fi}`] && ['Desayuno','Comida','Cena'].includes(f);
-  });
-  _msdFranjasActivas = new Set(_defaultFranjas.length ? _defaultFranjas
-    : MENU_FRANJAS.filter((_,fi) => !_menuGrid[`${key}-f${fi}`]));
+  const vacias = MENU_FRANJAS.filter((_,fi) => !_menuGrid[`${key}-f${fi}`]);
+  _msdFranjasActivas = new Set(vacias.length ? vacias.slice(0,3) : MENU_FRANJAS.slice(0,3));
+
+  // Generar botones de franjas como string HTML (evita template literal anidado)
+  const _msdFranjasHtml = MENU_FRANJAS.map((f, fi) => {
+    const ocup = !!_menuGrid[key + '-f' + fi];
+    return '<button class="msd-franja-btn" data-franja="' + f + '" onclick="msdTogglePrio(this)">' + f + (ocup ? ' ✏️' : '') + '</button>';
+  }).join('');
 
   const overlay = document.createElement('div');
   overlay.id = 'menuSugerirOverlay';
   overlay.innerHTML = `
     <div id="menuSugerirSheet">
       <div class="msd-title">✨ Sugerir reparto de macros</div>
-      <div class="msd-sub">Elige las franjas a rellenar. La IA asignará comidas de tu biblioteca.</div>
-      <div class="msd-franjas" id="msdFranjasWrap">
-        ${MENU_FRANJAS.map((f,fi)=>{
-          const act = _msdFranjasActivas.has(f);
-          const ocup = !!_menuGrid[`${key}-f${fi}`];
-          return `<button class="msd-franja-btn${act?' active':''}" data-franja="${f}" onclick="msdToggleFranja(this)">${f}${ocup?' ✏️':''}</button>`;
-        }).join('')}
+      <div class="msd-sub">La IA calculará cuántos macros asignar a cada franja, sin asignar comidas concretas.</div>
+
+      <div class="msd-section-label">Nº de comidas</div>
+      <div class="msd-ncomidas" id="msdNComidas">
+        <button class="msd-nc-btn active" data-n="3" onclick="msdSetN(this,3)">3</button>
+        <button class="msd-nc-btn" data-n="4" onclick="msdSetN(this,4)">4</button>
+        <button class="msd-nc-btn" data-n="5" onclick="msdSetN(this,5)">5</button>
       </div>
-      <button class="msd-gen" id="msdGenBtn" onclick="msdGenerar()">🤖 Generar reparto</button>
+
+      <div class="msd-section-label" style="margin-top:14px;">Franja prioritaria <span style="color:var(--muted);font-weight:400;">(opcional)</span></div>
+      <div class="msd-franjas" id="msdFranjasWrap">
+        ${_msdFranjasHtml}
+      </div>
+
+      <button class="msd-gen" id="msdGenBtn" onclick="msdGenerar()">🤖 Calcular targets</button>
       <button class="msd-cancel" onclick="msdCerrar()">Cancelar</button>
     </div>`;
   overlay.addEventListener('click', e => { if(e.target===overlay) msdCerrar(); });
   document.body.appendChild(overlay);
 }
 
-function msdToggleFranja(btn) {
+function msdSetN(btn, n) {
+  _msdNComidas = n;
+  document.querySelectorAll('.msd-nc-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function msdTogglePrio(btn) {
   const f = btn.dataset.franja;
-  if (_msdFranjasActivas.has(f)) _msdFranjasActivas.delete(f);
-  else _msdFranjasActivas.add(f);
-  btn.classList.toggle('active', _msdFranjasActivas.has(f));
+  document.querySelectorAll('.msd-franja-btn').forEach(b => b.classList.remove('active'));
+  if (_msdFranjasPrio === f) {
+    _msdFranjasPrio = null;
+  } else {
+    _msdFranjasPrio = f;
+    btn.classList.add('active');
+  }
 }
 
 function msdCerrar() {
   document.getElementById('menuSugerirOverlay')?.remove();
 }
 
+// ── Generar targets ───────────────────────────────────────────────────────────
 async function msdGenerar() {
-  if (!_msdFranjasActivas.size) { showToast('Elige al menos una franja'); return; }
   const btn = document.getElementById('msdGenBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Calculando...';
 
-  const perfil = _menuCocClientePerfil;
   const esEntreno = _msdTipo === 'entreno' || _msdTipo === 'igual';
-  const macros = {
-    kcal: esEntreno ? (_drumVals.kcalE||2200) : (_drumVals.kcalD||1900),
-    prot: esEntreno ? (_drumVals.pE||160)      : (_drumVals.pD||150),
-    hc:   esEntreno ? (_drumVals.hcE||220)     : (_drumVals.hcD||170),
-    grasa:esEntreno ? (_drumVals.gE||65)       : (_drumVals.gD||60),
+  const macrosDia = {
+    kcal:  esEntreno ? (_drumVals.kcalE||2200) : (_drumVals.kcalD||1900),
+    prot:  esEntreno ? (_drumVals.pE||160)     : (_drumVals.pD||150),
+    hc:    esEntreno ? (_drumVals.hcE||220)    : (_drumVals.hcD||170),
+    grasa: esEntreno ? (_drumVals.gE||65)      : (_drumVals.gD||60),
   };
 
-  const franjas = MENU_FRANJAS.filter(f => _msdFranjasActivas.has(f));
+  const franjas = MENU_FRANJAS.slice(0, _msdNComidas);
 
-  // Preparar lista resumida de comidas (id, nombre, macros)
-  const bibResumen = _cocBibComidas.map(c=>({
-    id: c.id,
-    nombre: c.nombre,
-    kcal: Math.round(c.kcal||0),
-    prot: Math.round((c.proteina||0)*10)/10,
-    hc:   Math.round((c.hc||0)*10)/10,
-    grasa:Math.round((c.grasa||0)*10)/10
-  }));
+  const prioCopy = _msdFranjasPrio && franjas.includes(_msdFranjasPrio)
+    ? `\nFRANJA PRIORITARIA: "${_msdFranjasPrio}" — asigna aquí el mayor bloque de proteína y calorías.`
+    : '';
 
-  const prompt = `Eres un nutricionista deportivo. Tienes una biblioteca de comidas preparadas y debes elegir la más adecuada para cada franja horaria de un día ${_msdTipo} de un atleta.
+  const prompt = `Eres nutricionista deportivo. Distribuye matemáticamente los macros de un día entre las franjas horarias indicadas.
 
-OBJETIVO DEL DÍA:
-- Calorías: ${macros.kcal} kcal
-- Proteínas: ${macros.prot}g
-- Carbohidratos: ${macros.hc}g
-- Grasas: ${macros.grasa}g
+OBJETIVO DEL DÍA (día de ${_msdTipo}):
+- Calorías: ${macrosDia.kcal} kcal
+- Proteínas: ${macrosDia.prot}g
+- Carbohidratos: ${macrosDia.hc}g
+- Grasas: ${macrosDia.grasa}g
+${prioCopy}
 
-FRANJAS A RELLENAR: ${franjas.join(', ')}
+FRANJAS (en orden): ${franjas.join(', ')}
 
-BIBLIOTECA DE COMIDAS (elige SOLO de esta lista, usando el id exacto):
-${JSON.stringify(bibResumen)}
+REGLAS:
+- Distribuye el 100% de los macros entre las franjas
+- Respeta la lógica del momento del día (desayuno más HC, cena menos HC)
+- La suma de kcal debe ser exactamente ${macrosDia.kcal}
+- Cada valor debe ser número entero o con 1 decimal máximo
+- NO asignes comidas, SOLO distribuye macros numéricos
 
-Devuelve ÚNICAMENTE un JSON array, sin texto adicional, sin markdown, sin explicaciones:
+Devuelve ÚNICAMENTE un JSON array sin texto ni markdown:
 [
-  {"franja":"Desayuno","comida_id":123},
-  {"franja":"Comida","comida_id":456},
+  {"franja":"Desayuno","kcal":450,"prot":30,"hc":55,"grasa":12},
   ...
-]
-
-Reglas:
-- Elige la combinación que más se aproxime al objetivo total de macros del día
-- Asigna comidas coherentes con cada momento del día (el desayuno debe ser un desayuno, la cena una cena, etc.)
-- Cada comida solo puede aparecer una vez
-- Usa SOLO ids que existen en la biblioteca
-- No incluyas ninguna franja que no esté en la lista de FRANJAS A RELLENAR`;
+]`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -10392,39 +10404,74 @@ Reglas:
       })
     });
     const data = await res.json();
-    const texto = data.content?.find(b=>b.type==='text')?.text || '';
-    const clean = texto.replace(/```json|```/g,'').trim();
-    const asignaciones = JSON.parse(clean);
+    const texto = data.content?.find(b => b.type === 'text')?.text || '';
+    const clean = texto.replace(/```json|```/g, '').trim();
+    const targets = JSON.parse(clean);
 
-    if (!Array.isArray(asignaciones) || !asignaciones.length) throw new Error('Respuesta vacía');
+    if (!Array.isArray(targets) || !targets.length) throw new Error('Respuesta vacía');
 
-    let asignados = 0;
-    asignaciones.forEach(({ franja, comida_id }) => {
+    targets.forEach(({ franja, kcal, prot, hc, grasa }) => {
       const fi = MENU_FRANJAS.indexOf(franja);
-      const comida = _cocBibComidas.find(c => String(c.id) === String(comida_id));
-      if (fi < 0 || !comida) return;
-      _menuGrid[`${_msdKey}-f${fi}`] = {
-        comida_id: comida.id,
-        nombre:    comida.nombre,
-        kcal:      comida.kcal  || 0,
-        prot:      Math.round((comida.proteina||0)*10)/10,
-        ch:        Math.round((comida.hc||0)*10)/10,
-        grasa:     Math.round((comida.grasa||0)*10)/10,
+      if (fi < 0) return;
+      _menuTargets[`${_msdKey}-f${fi}`] = {
+        kcal:  Math.round(kcal  || 0),
+        prot:  Math.round((prot  || 0) * 10) / 10,
+        hc:    Math.round((hc   || 0) * 10) / 10,
+        grasa: Math.round((grasa|| 0) * 10) / 10,
       };
-      asignados++;
     });
 
     msdCerrar();
     menuRenderGrid();
     menuActualizarTotales();
-    showToast(`✅ ${asignados} comidas asignadas`);
+    showToast(`✅ Targets calculados para ${targets.length} franjas`);
   } catch(e) {
     console.error('msdGenerar error:', e);
     btn.disabled = false;
-    btn.textContent = '🤖 Generar reparto';
-    showToast('❌ Error generando sugerencia');
+    btn.textContent = '🤖 Calcular targets';
+    showToast('❌ Error calculando reparto');
   }
 }
+
+// ── Mini-panel inline para editar target ─────────────────────────────────────
+function msdAbrirEditorTarget(cellKey) {
+  document.querySelectorAll('.msd-target-editor').forEach(el => el.remove());
+  const t = _menuTargets[cellKey] || { kcal: 0, prot: 0, hc: 0, grasa: 0 };
+  const wrap = document.createElement('div');
+  wrap.className = 'msd-target-editor';
+  wrap.dataset.cellkey = cellKey;
+  wrap.innerHTML = `
+    <div class="msd-te-row"><label>kcal</label><input type="number" id="msdTe_kcal" value="${t.kcal}" min="0"></div>
+    <div class="msd-te-row"><label>Prot</label><input type="number" id="msdTe_prot" value="${t.prot}" min="0" step="0.1"></div>
+    <div class="msd-te-row"><label>HC</label><input type="number" id="msdTe_hc" value="${t.hc}" min="0" step="0.1"></div>
+    <div class="msd-te-row"><label>Grasas</label><input type="number" id="msdTe_grasa" value="${t.grasa}" min="0" step="0.1"></div>
+    <div class="msd-te-btns">
+      <button onclick="msdGuardarTarget('${cellKey}')">✓ Guardar</button>
+      <button onclick="msdBorrarTarget('${cellKey}')">✕ Borrar</button>
+    </div>`;
+  return wrap;
+}
+
+function msdGuardarTarget(cellKey) {
+  const g = id => parseFloat(document.getElementById(id)?.value) || 0;
+  _menuTargets[cellKey] = {
+    kcal:  Math.round(g('msdTe_kcal')),
+    prot:  Math.round(g('msdTe_prot') * 10) / 10,
+    hc:    Math.round(g('msdTe_hc')   * 10) / 10,
+    grasa: Math.round(g('msdTe_grasa')* 10) / 10,
+  };
+  document.querySelectorAll('.msd-target-editor').forEach(el => el.remove());
+  menuRenderGrid();
+  menuActualizarTotales();
+}
+
+function msdBorrarTarget(cellKey) {
+  delete _menuTargets[cellKey];
+  document.querySelectorAll('.msd-target-editor').forEach(el => el.remove());
+  menuRenderGrid();
+  menuActualizarTotales();
+}
+
 
 function menuRenderGrid() {
   const container = menuGetGridContainer();
@@ -10541,13 +10588,59 @@ function menuRenderGrid() {
         });
         row.appendChild(lbl); row.appendChild(content); row.appendChild(editBtn); row.appendChild(del);
       } else {
-        content.innerHTML = `
-          <div class="menu-celda-add">
-            <div class="menu-celda-add-icon">＋</div>
-            <span>Añadir comida</span>
-          </div>`;
-        content.addEventListener('click', () => menuAbrirSelector(key, fi, franja, label));
-        row.appendChild(lbl); row.appendChild(content);
+        const target = _menuTargets[cellKey];
+        if (target) {
+          // Celda vacía con target → píldoras punteadas
+          content.innerHTML = `
+            <div class="menu-celda-target">
+              <div class="menu-celda-target-pills">
+                <span class="mct-pill mct-kcal">${target.kcal} kcal</span>
+                <span class="mct-pill mct-prot">P ${target.prot}g</span>
+                <span class="mct-pill mct-hc">HC ${target.hc}g</span>
+                <span class="mct-pill mct-grasa">G ${target.grasa}g</span>
+              </div>
+            </div>`;
+
+          // Botón ✏️ para editar el target inline
+          const editTargetBtn = document.createElement('button');
+          editTargetBtn.className = 'menu-celda-edit';
+          editTargetBtn.title = 'Editar target';
+          editTargetBtn.innerHTML = '✏️';
+          editTargetBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            // Toggle: si ya hay editor abierto para esta celda, ciérralo
+            const existing = content.querySelector('.msd-target-editor');
+            if (existing) { existing.remove(); return; }
+            document.querySelectorAll('.msd-target-editor').forEach(el => el.remove());
+            const editor = msdAbrirEditorTarget(cellKey);
+            content.appendChild(editor);
+          });
+
+          // Botón ✕ para borrar target
+          const delTargetBtn = document.createElement('button');
+          delTargetBtn.className = 'menu-celda-del';
+          delTargetBtn.textContent = '✕';
+          delTargetBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            delete _menuTargets[cellKey];
+            menuRenderGrid();
+            menuActualizarTotales();
+          });
+
+          // Click en content → abrir selector de comida
+          content.querySelector('.menu-celda-target').addEventListener('click', () => menuAbrirSelector(key, fi, franja, label));
+
+          row.appendChild(lbl); row.appendChild(content); row.appendChild(editTargetBtn); row.appendChild(delTargetBtn);
+        } else {
+          // Celda vacía sin target
+          content.innerHTML = `
+            <div class="menu-celda-add">
+              <div class="menu-celda-add-icon">＋</div>
+              <span>Añadir comida</span>
+            </div>`;
+          content.addEventListener('click', () => menuAbrirSelector(key, fi, franja, label));
+          row.appendChild(lbl); row.appendChild(content);
+        }
       }
       body.appendChild(row);
     });
@@ -10555,6 +10648,50 @@ function menuRenderGrid() {
     card.appendChild(header);
     card.appendChild(macroHeader);
     card.appendChild(body);
+
+    // ── Barra resumen targets vs objetivo del día ──────────────────────────────
+    const esEnt = tipo === 'entreno' || tipo === 'igual';
+    const objKcal = esEnt ? (_drumVals.kcalE||2200) : (_drumVals.kcalD||1900);
+    const objProt = esEnt ? (_drumVals.pE||160)     : (_drumVals.pD||150);
+    const objHc   = esEnt ? (_drumVals.hcE||220)    : (_drumVals.hcD||170);
+    const objGrasa= esEnt ? (_drumVals.gE||65)      : (_drumVals.gD||60);
+
+    let sumKcal=0, sumProt=0, sumHc=0, sumGrasa=0;
+    MENU_FRANJAS.forEach((_,fi) => {
+      const ck = `${key}-f${fi}`;
+      const gc = _menuGrid[ck];
+      if (gc) {
+        sumKcal  += gc.kcal  || 0;
+        sumProt  += gc.prot  || 0;
+        sumHc    += gc.ch    || 0;
+        sumGrasa += gc.grasa || 0;
+      } else if (_menuTargets[ck]) {
+        const t = _menuTargets[ck];
+        sumKcal  += t.kcal  || 0;
+        sumProt  += t.prot  || 0;
+        sumHc    += t.hc    || 0;
+        sumGrasa += t.grasa || 0;
+      }
+    });
+
+    if (sumKcal > 0) {
+      const over = sumKcal > objKcal + 50;
+      const pctFill = Math.min(Math.round(sumKcal / objKcal * 100), 100);
+      const sumBar = document.createElement('div');
+      sumBar.className = 'msd-sum-bar' + (over ? ' msd-sum-over' : '');
+      sumBar.innerHTML = `
+        <div class="msd-sum-pills">
+          <span class="msd-sum-pill msd-sum-kcal${over?' msd-sum-red':''}">${Math.round(sumKcal)} / ${objKcal} kcal${over?' ⚠️':''}</span>
+          <span class="msd-sum-pill">P ${Math.round(sumProt*10)/10}/${objProt}g</span>
+          <span class="msd-sum-pill">HC ${Math.round(sumHc*10)/10}/${objHc}g</span>
+          <span class="msd-sum-pill">G ${Math.round(sumGrasa*10)/10}/${objGrasa}g</span>
+        </div>
+        <div class="msd-sum-track">
+          <div class="msd-sum-fill${over?' msd-fill-over':''}" style="width:${pctFill}%"></div>
+        </div>`;
+      card.appendChild(sumBar);
+    }
+
     container.appendChild(card);
   });
 }
@@ -11186,6 +11323,39 @@ async function _guardarNuevoAlimento() {
 .msd-gen{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
 .msd-gen:disabled{opacity:0.6;cursor:not-allowed;}
 .msd-cancel{width:100%;padding:10px;background:transparent;color:var(--muted);border:none;font-size:13px;cursor:pointer;margin-top:6px;}
+/* Sugerir — selector nº comidas */
+.msd-section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+.msd-ncomidas{display:flex;gap:8px;margin-bottom:4px;}
+.msd-nc-btn{flex:1;padding:8px 0;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;}
+.msd-nc-btn.active{background:var(--accent);color:#fff;border-color:rgba(192,57,43,0.3);}
+/* Píldoras target (punteadas) */
+.menu-celda-target{padding:6px 2px;display:flex;flex-direction:column;gap:4px;cursor:pointer;}
+.menu-celda-target:hover .menu-celda-target-pills{opacity:.8;}
+.menu-celda-target-pills{display:flex;flex-wrap:wrap;gap:5px;}
+.mct-pill{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px dashed;background:transparent;}
+.mct-kcal{color:var(--red);border-color:var(--red);}
+.mct-prot{color:var(--blue);border-color:var(--blue);}
+.mct-hc{color:var(--yellow);border-color:var(--yellow);}
+.mct-grasa{color:#3a9d5c;border-color:#3a9d5c;}
+/* Editor inline target */
+.msd-target-editor{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.msd-te-row{display:flex;align-items:center;gap:4px;}
+.msd-te-row label{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;}
+.msd-te-row input{width:60px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;}
+.msd-te-btns{display:flex;gap:6px;width:100%;}
+.msd-te-btns button{flex:1;padding:6px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;}
+.msd-te-btns button:first-child{background:var(--accent);color:#fff;}
+.msd-te-btns button:last-child{background:var(--s2);color:var(--muted);border:1px solid var(--border);}
+/* Barra resumen día */
+.msd-sum-bar{margin:6px 8px 10px;padding:8px 10px;border-radius:10px;background:var(--s2);border:1px solid var(--border);}
+.msd-sum-bar.msd-sum-over{border-color:rgba(192,57,43,0.4);background:rgba(192,57,43,0.06);}
+.msd-sum-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.msd-sum-pill{font-size:11px;font-weight:600;color:var(--muted);}
+.msd-sum-kcal{color:var(--fg);}
+.msd-sum-red{color:var(--red) !important;}
+.msd-sum-track{height:4px;border-radius:4px;background:var(--border);overflow:hidden;}
+.msd-sum-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .3s;}
+.msd-fill-over{background:var(--red);}
 </style>
 
 </div><!-- /mainApp -->
