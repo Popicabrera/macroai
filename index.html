@@ -10277,6 +10277,155 @@ function menuIniciarGrid() {
   menuActualizarTotales();
 }
 
+// ─── SUGERIR REPARTO DÍA CON IA ────────────────────────────────────────────
+let _msdKey = null;
+let _msdTipo = null;
+let _msdFranjasActivas = new Set(['Desayuno','Comida','Cena']); // default 3 comidas
+
+function menuSugerirDia(key, tipo) {
+  if (!_menuCocClientePerfil) { showToast('Selecciona un cliente primero'); return; }
+  if (!_cocBibComidas || !_cocBibComidas.length) { showToast('La biblioteca está vacía'); return; }
+  _msdKey  = key;
+  _msdTipo = tipo;
+
+  // Calcular franjas activas por defecto: vacías que sean D/C/Ce
+  const _defaultFranjas = MENU_FRANJAS.filter(f => {
+    const fi = MENU_FRANJAS.indexOf(f);
+    return !_menuGrid[`${key}-f${fi}`] && ['Desayuno','Comida','Cena'].includes(f);
+  });
+  _msdFranjasActivas = new Set(_defaultFranjas.length ? _defaultFranjas
+    : MENU_FRANJAS.filter((_,fi) => !_menuGrid[`${key}-f${fi}`]));
+
+  const overlay = document.createElement('div');
+  overlay.id = 'menuSugerirOverlay';
+  overlay.innerHTML = `
+    <div id="menuSugerirSheet">
+      <div class="msd-title">✨ Sugerir reparto de macros</div>
+      <div class="msd-sub">Elige las franjas a rellenar. La IA asignará comidas de tu biblioteca.</div>
+      <div class="msd-franjas" id="msdFranjasWrap">
+        ${MENU_FRANJAS.map((f,fi)=>{
+          const act = _msdFranjasActivas.has(f);
+          const ocup = !!_menuGrid[`${key}-f${fi}`];
+          return `<button class="msd-franja-btn${act?' active':''}" data-franja="${f}" onclick="msdToggleFranja(this)">${f}${ocup?' ✏️':''}</button>`;
+        }).join('')}
+      </div>
+      <button class="msd-gen" id="msdGenBtn" onclick="msdGenerar()">🤖 Generar reparto</button>
+      <button class="msd-cancel" onclick="msdCerrar()">Cancelar</button>
+    </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) msdCerrar(); });
+  document.body.appendChild(overlay);
+}
+
+function msdToggleFranja(btn) {
+  const f = btn.dataset.franja;
+  if (_msdFranjasActivas.has(f)) _msdFranjasActivas.delete(f);
+  else _msdFranjasActivas.add(f);
+  btn.classList.toggle('active', _msdFranjasActivas.has(f));
+}
+
+function msdCerrar() {
+  document.getElementById('menuSugerirOverlay')?.remove();
+}
+
+async function msdGenerar() {
+  if (!_msdFranjasActivas.size) { showToast('Elige al menos una franja'); return; }
+  const btn = document.getElementById('msdGenBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Calculando...';
+
+  const perfil = _menuCocClientePerfil;
+  const esEntreno = _msdTipo === 'entreno' || _msdTipo === 'igual';
+  const macros = {
+    kcal: esEntreno ? (_drumVals.kcalE||2200) : (_drumVals.kcalD||1900),
+    prot: esEntreno ? (_drumVals.pE||160)      : (_drumVals.pD||150),
+    hc:   esEntreno ? (_drumVals.hcE||220)     : (_drumVals.hcD||170),
+    grasa:esEntreno ? (_drumVals.gE||65)       : (_drumVals.gD||60),
+  };
+
+  const franjas = MENU_FRANJAS.filter(f => _msdFranjasActivas.has(f));
+
+  // Preparar lista resumida de comidas (id, nombre, macros)
+  const bibResumen = _cocBibComidas.map(c=>({
+    id: c.id,
+    nombre: c.nombre,
+    kcal: Math.round(c.kcal||0),
+    prot: Math.round((c.proteina||0)*10)/10,
+    hc:   Math.round((c.hc||0)*10)/10,
+    grasa:Math.round((c.grasa||0)*10)/10
+  }));
+
+  const prompt = `Eres un nutricionista deportivo. Tienes una biblioteca de comidas preparadas y debes elegir la más adecuada para cada franja horaria de un día ${_msdTipo} de un atleta.
+
+OBJETIVO DEL DÍA:
+- Calorías: ${macros.kcal} kcal
+- Proteínas: ${macros.prot}g
+- Carbohidratos: ${macros.hc}g
+- Grasas: ${macros.grasa}g
+
+FRANJAS A RELLENAR: ${franjas.join(', ')}
+
+BIBLIOTECA DE COMIDAS (elige SOLO de esta lista, usando el id exacto):
+${JSON.stringify(bibResumen)}
+
+Devuelve ÚNICAMENTE un JSON array, sin texto adicional, sin markdown, sin explicaciones:
+[
+  {"franja":"Desayuno","comida_id":123},
+  {"franja":"Comida","comida_id":456},
+  ...
+]
+
+Reglas:
+- Elige la combinación que más se aproxime al objetivo total de macros del día
+- Asigna comidas coherentes con cada momento del día (el desayuno debe ser un desayuno, la cena una cena, etc.)
+- Cada comida solo puede aparecer una vez
+- Usa SOLO ids que existen en la biblioteca
+- No incluyas ninguna franja que no esté en la lista de FRANJAS A RELLENAR`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const texto = data.content?.find(b=>b.type==='text')?.text || '';
+    const clean = texto.replace(/```json|```/g,'').trim();
+    const asignaciones = JSON.parse(clean);
+
+    if (!Array.isArray(asignaciones) || !asignaciones.length) throw new Error('Respuesta vacía');
+
+    let asignados = 0;
+    asignaciones.forEach(({ franja, comida_id }) => {
+      const fi = MENU_FRANJAS.indexOf(franja);
+      const comida = _cocBibComidas.find(c => String(c.id) === String(comida_id));
+      if (fi < 0 || !comida) return;
+      _menuGrid[`${_msdKey}-f${fi}`] = {
+        comida_id: comida.id,
+        nombre:    comida.nombre,
+        kcal:      comida.kcal  || 0,
+        prot:      Math.round((comida.proteina||0)*10)/10,
+        ch:        Math.round((comida.hc||0)*10)/10,
+        grasa:     Math.round((comida.grasa||0)*10)/10,
+      };
+      asignados++;
+    });
+
+    msdCerrar();
+    menuRenderGrid();
+    menuActualizarTotales();
+    showToast(`✅ ${asignados} comidas asignadas`);
+  } catch(e) {
+    console.error('msdGenerar error:', e);
+    btn.disabled = false;
+    btn.textContent = '🤖 Generar reparto';
+    showToast('❌ Error generando sugerencia');
+  }
+}
+
 function menuRenderGrid() {
   const container = menuGetGridContainer();
   if (!container) return;
@@ -10310,7 +10459,7 @@ function menuRenderGrid() {
       <span class="menu-dia-label">${label}</span>
       <div style="display:flex;align-items:center;gap:6px;">
         ${badgeHtml}
-        <button class="mch-sugerir" title="Sugerir comidas (próximamente)" style="opacity:${perfil?'0.45':'0.25'};">✨ Sugerir</button>
+        <button class="mch-sugerir" title="Sugerir reparto de macros con IA" style="opacity:${perfil?'1':'0.4'};" onclick="event.stopPropagation();menuSugerirDia('${key}','${tipo}')">✨ Sugerir</button>
         <span style="color:var(--muted);font-size:13px;margin-left:2px;">${colapsado ? '▸' : '▾'}</span>
       </div>`;
     header.addEventListener('click', () => {
@@ -11023,7 +11172,20 @@ async function _guardarNuevoAlimento() {
 .mch-badge-descanso{background:rgba(91,141,184,0.12);color:var(--blue);border:1px solid rgba(91,141,184,0.25);}
 .mch-badge-igual{background:rgba(120,100,60,0.10);color:#7a6a3a;border:1px solid rgba(120,100,60,0.2);}
 /* Botón Sugerir (inactivo) */
-.mch-sugerir{padding:3px 9px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:not-allowed;white-space:nowrap;}
+.mch-sugerir{padding:3px 9px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}
+.mch-sugerir:hover{background:var(--accent);color:#fff;border-color:rgba(192,57,43,0.4);}
+.mch-sugerir:disabled{opacity:0.5;cursor:not-allowed;}
+/* Modal sugerir día */
+#menuSugerirOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10200;display:flex;align-items:flex-end;justify-content:center;}
+#menuSugerirSheet{background:var(--card);border-radius:18px 18px 0 0;padding:22px 20px 32px;width:100%;max-width:480px;box-shadow:0 -4px 24px rgba(0,0,0,0.18);}
+.msd-title{font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--fg);margin-bottom:4px;}
+.msd-sub{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.msd-franjas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.msd-franja-btn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--s2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.msd-franja-btn.active{background:var(--accent);color:#fff;border-color:rgba(192,57,43,0.4);}
+.msd-gen{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
+.msd-gen:disabled{opacity:0.6;cursor:not-allowed;}
+.msd-cancel{width:100%;padding:10px;background:transparent;color:var(--muted);border:none;font-size:13px;cursor:pointer;margin-top:6px;}
 </style>
 
 </div><!-- /mainApp -->
