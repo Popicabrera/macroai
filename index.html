@@ -5387,7 +5387,7 @@ async function cargarDiarioPorFecha(fecha) {
           ch: r.ch_objetivo || S.ch,
           grasa: r.grasa_objetivo || S.grasa,
           tipoDia: r.tipo_dia || 'entreno',
-          comidas: r.comidas || []
+          comidas: (r.comidas || []).map(c => ({...c, ch: c.ch != null ? c.ch : (c.hc != null ? c.hc : 0)}))
         };
       }
     }
@@ -5406,7 +5406,7 @@ async function cargarDiarioPorFecha(fecha) {
           ch: d.chObj || S.ch,
           grasa: d.grasaObj || S.grasa,
           tipoDia: d.tipoDia || 'entreno',
-          comidas: d.comidas || []
+          comidas: (d.comidas || []).map(c => ({...c, ch: c.ch != null ? c.ch : (c.hc != null ? c.hc : 0)}))
         };
       }
     } catch(e) {}
@@ -5782,7 +5782,7 @@ function _diarioRenderFuturo(fecha) {
   let comidasFuturo = [];
   try {
     const d = JSON.parse(localStorage.getItem('macroai_dia_' + fecha) || 'null');
-    if (d && d.comidas) comidasFuturo = d.comidas;
+    if (d && d.comidas) comidasFuturo = d.comidas.map(c => ({...c, ch: c.ch != null ? c.ch : (c.hc != null ? c.hc : 0)}));
   } catch(e) {}
 
   container.innerHTML = '';
