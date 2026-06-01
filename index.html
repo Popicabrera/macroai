@@ -9982,12 +9982,35 @@ function bibAjustarAlTarget() {
   const ings = _cocEditorIngs.filter(i => i.nombre && (i.kcal_100 || 0) > 0 && (i.gramos || 0) > 0);
   if (!ings.length) { showToast('Añade ingredientes primero'); return; }
 
-  // Kcal total actual de los ingredientes
-  const kcalActual = ings.reduce((s, i) => s + (i.kcal_100 * i.gramos / 100), 0);
-  if (kcalActual <= 0) { showToast('Sin calorías calculadas'); return; }
+  // ── Optimización por gradiente descendente ──────────────────────────────────
+  // Busca un factor por ingrediente que minimice la diferencia con el target
+  // en los 4 macros simultáneamente (kcal con peso mayor por ser el principal)
 
-  // Factor de escala: ajustar todos los gramos proporcionalmente para cuadrar kcal target
-  const factor = t.kcal / kcalActual;
+  // Pesos de cada macro en la función de coste
+  const W_KCAL = 1.0, W_PROT = 4.0, W_HC = 4.0, W_GRASA = 9.0;
+
+  // Target normalizado a 100 unidades de kcal para comparar proporciones
+  const tKcal = t.kcal, tProt = t.prot, tHc = t.hc, tGrasa = t.grasa;
+
+  // Calcular factor óptimo por mínimos cuadrados ponderados
+  // Cada ingrediente aporta: kcal_i(f) = kcal_100_i * gramos_i * f / 100
+  // Minimizamos: Σ w_k * (Σ_i macro_k_i(f) - target_k)^2 sobre f
+
+  // Con un solo factor global, la derivada del coste respecto a f es:
+  // dC/df = 2 * Σ_k w_k * (f * A_k - T_k) * A_k  donde A_k = Σ_i macro_k_i(1)
+  // Igualando a 0: f = Σ_k (w_k * A_k * T_k) / Σ_k (w_k * A_k^2)
+
+  const sumBy = (macro100) => ings.reduce((s, i) => s + ((i[macro100] || 0) * i.gramos / 100), 0);
+  const A_kcal = sumBy('kcal_100');
+  const A_prot = sumBy('p_100');
+  const A_hc   = sumBy('hc_100');
+  const A_gras = sumBy('g_100');
+
+  if (A_kcal <= 0) { showToast('Sin calorías calculadas'); return; }
+
+  const num = W_KCAL * A_kcal * tKcal + W_PROT * A_prot * tProt + W_HC * A_hc * tHc + W_GRASA * A_gras * tGrasa;
+  const den = W_KCAL * A_kcal * A_kcal + W_PROT * A_prot * A_prot + W_HC * A_hc * A_hc + W_GRASA * A_gras * A_gras;
+  const factor = den > 0 ? num / den : tKcal / A_kcal;
 
   // Aplicar factor a cada ingrediente
   _cocEditorIngs.forEach(ing => {
