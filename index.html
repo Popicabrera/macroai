@@ -10975,8 +10975,25 @@ function menuActualizarTotales() {
 
 let _menuSelectorCallback = null;
 
+// Mapa franja → tipos biblioteca para filtrado del selector
+const _FRANJA_TIPOS = {
+  'Desayuno':  ['desayuno_dulce','desayuno_salado'],
+  'Almuerzo':  ['almuerzo'],
+  'Comida':    ['comida'],
+  'Merienda':  ['merienda'],
+  'Cena':      ['cena'],
+};
+let _menuSelectorBase = []; // lista pre-filtrada por franja para el selector activo
+
 function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
   cerrarMenuSelector();
+
+  // Pre-filtrar por tipo de franja
+  const tipos = _FRANJA_TIPOS[franjaLabel];
+  _menuSelectorBase = tipos
+    ? (_cocBibComidas || []).filter(c => tipos.includes(c.tipo))
+    : (_cocBibComidas || []);
+
   const overlay = document.createElement('div');
   overlay.className = 'menu-selector-overlay';
   overlay.id = 'menuSelectorOverlay';
@@ -10985,6 +11002,7 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
   sheet.innerHTML = `
     <div class="menu-selector-title">📅 ${templateLabel} · ${franjaLabel}</div>
     <input class="menu-selector-search" placeholder="🔍  Buscar en biblioteca..." oninput="menuFiltrarSelector(this.value)">
+    <div style="text-align:right;margin-bottom:6px;"><button onclick="menuSelectorVerTodo(this)" style="font-size:11px;color:#888;background:none;border:none;cursor:pointer;padding:0;">Ver todo</button></div>
     <div class="menu-selector-list" id="menuSelectorList"></div>
     <button class="menu-selector-cancel" onclick="cerrarMenuSelector()">Cancelar</button>`;
   overlay.appendChild(sheet);
@@ -11046,12 +11064,20 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
     menuRenderGrid();
     menuActualizarTotales();
   };
-  menuRenderSelectorList(_cocBibComidas);
+  menuRenderSelectorList(_menuSelectorBase);
+}
+
+function menuSelectorVerTodo(btn) {
+  _menuSelectorBase = _cocBibComidas || [];
+  btn.style.display = 'none';
+  const input = document.querySelector('.menu-selector-search');
+  const q = input ? input.value : '';
+  menuFiltrarSelector(q);
 }
 
 function menuFiltrarSelector(q) {
-  const lista = !q||!q.trim() ? _cocBibComidas
-    : _cocBibComidas.filter(c=>(c.nombre||'').toLowerCase().includes(q.toLowerCase()));
+  const lista = !q||!q.trim() ? _menuSelectorBase
+    : _menuSelectorBase.filter(c=>(c.nombre||'').toLowerCase().includes(q.toLowerCase()));
   menuRenderSelectorList(lista);
 }
 
@@ -11075,6 +11101,7 @@ function cerrarMenuSelector() {
   const ov = document.getElementById('menuSelectorOverlay');
   if (ov) ov.remove();
   _menuSelectorCallback = null;
+  _menuSelectorBase = [];
 }
 
 async function menuGuardarMenuCompleto() {
