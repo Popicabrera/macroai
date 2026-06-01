@@ -10405,6 +10405,7 @@ let _msdTipo = null;
 let _msdNComidas = 3;
 let _msdFranjasPrio = null;
 let _msdFranjasActivas = new Set(['Desayuno','Comida','Cena']);
+let _msdModo = 'targets'; // 'targets' | 'biblioteca'
 
 // ── Abrir modal ──────────────────────────────────────────────────────────────
 function menuSugerirDia(key, tipo) {
@@ -10413,6 +10414,7 @@ function menuSugerirDia(key, tipo) {
   _msdTipo = tipo;
   _msdNComidas = 3;
   _msdFranjasPrio = null;
+  _msdModo = 'targets';
 
   const vacias = MENU_FRANJAS.filter((_,fi) => !_menuGrid[`${key}-f${fi}`]);
   _msdFranjasActivas = new Set(vacias.length ? vacias.slice(0,3) : MENU_FRANJAS.slice(0,3));
@@ -10434,8 +10436,13 @@ function menuSugerirDia(key, tipo) {
   overlay.id = 'menuSugerirOverlay';
   overlay.innerHTML = `
     <div id="menuSugerirSheet">
-      <div class="msd-title">✨ Sugerir reparto de macros</div>
-      <div class="msd-sub">La IA calculará cuántos macros asignar a cada franja, sin asignar comidas concretas.</div>
+      <div class="msd-title">✨ Sugerir con IA</div>
+
+      <div class="msd-modo-toggle">
+        <button class="msd-modo-btn active" id="msdModoTargets" onclick="msdSetModo('targets')">Solo targets</button>
+        <button class="msd-modo-btn" id="msdModoBiblioteca" onclick="msdSetModo('biblioteca')">Asignar comidas</button>
+      </div>
+      <div class="msd-sub" id="msdSubtitle">La IA calculará cuántos macros asignar a cada franja, sin asignar comidas concretas.</div>
 
       <div class="msd-section-label">Nº de comidas</div>
       <div class="msd-ncomidas" id="msdNComidas">
@@ -10461,6 +10468,18 @@ function menuSugerirDia(key, tipo) {
     </div>`;
   overlay.addEventListener('click', e => { if(e.target===overlay) msdCerrar(); });
   document.body.appendChild(overlay);
+}
+
+function msdSetModo(modo) {
+  _msdModo = modo;
+  document.getElementById('msdModoTargets')?.classList.toggle('active', modo === 'targets');
+  document.getElementById('msdModoBiblioteca')?.classList.toggle('active', modo === 'biblioteca');
+  const sub = document.getElementById('msdSubtitle');
+  const btn = document.getElementById('msdGenBtn');
+  if (sub) sub.textContent = modo === 'biblioteca'
+    ? 'La IA elegirá la comida más compatible de la biblioteca y la asignará a cada franja automáticamente.'
+    : 'La IA calculará cuántos macros asignar a cada franja, sin asignar comidas concretas.';
+  if (btn) btn.textContent = modo === 'biblioteca' ? '🍽️ Asignar comidas automáticamente' : '🤖 Calcular targets';
 }
 
 function msdSetN(btn, n) {
@@ -10572,16 +10591,102 @@ Devuelve ÚNICAMENTE un JSON array sin texto ni markdown:
       };
     });
 
-    msdCerrar();
-    menuRenderGrid();
-    menuActualizarTotales();
-    showToast(`✅ Targets calculados para ${targets.length} franjas`);
+    if (_msdModo === 'biblioteca') {
+      btn.textContent = '⏳ Eligiendo comidas...';
+      await msdAsignarComidas(targets);
+    } else {
+      msdCerrar();
+      menuRenderGrid();
+      menuActualizarTotales();
+      showToast(`✅ Targets calculados para ${targets.length} franjas`);
+    }
   } catch(e) {
     console.error('msdGenerar error:', e);
     btn.disabled = false;
-    btn.textContent = '🤖 Calcular targets';
+    btn.textContent = _msdModo === 'biblioteca' ? '🍽️ Asignar comidas automáticamente' : '🤖 Calcular targets';
     showToast('❌ Error calculando reparto');
   }
+}
+
+// ── Modo Biblioteca: elegir comida por franja y asignar al grid ───────────────
+async function msdAsignarComidas(targets) {
+  // Mapa franja → tipo biblioteca
+  const franjaTipo = {
+    'Desayuno':  ['desayuno_dulce','desayuno_salado'],
+    'Almuerzo':  ['almuerzo'],
+    'Comida':    ['comida'],
+    'Merienda':  ['merienda'],
+    'Cena':      ['cena'],
+  };
+
+  const asignados = [];
+
+  for (const t of targets) {
+    const { franja, kcal, prot, hc, grasa } = t;
+    const fi = MENU_FRANJAS.indexOf(franja);
+    if (fi < 0) continue;
+    const cellKey = `${_msdKey}-f${fi}`;
+
+    // Filtrar comidas de biblioteca por tipo de franja
+    const tipos = franjaTipo[franja] || [];
+    const candidatas = (_cocBibComidas || []).filter(c => tipos.includes(c.tipo));
+    if (!candidatas.length) continue;
+
+    // Elegir la más compatible: menor distancia de ratio P/HC/G al target
+    const totalTarget = (prot*4 + hc*4 + grasa*9) || 1;
+    const rP = (prot*4) / totalTarget;
+    const rH = (hc*4)   / totalTarget;
+    const rG = (grasa*9)/ totalTarget;
+
+    let mejor = null, menorDist = Infinity;
+    candidatas.forEach(c => {
+      const totalC = ((c.proteina||0)*4 + (c.hc||0)*4 + (c.grasa||0)*9) || 1;
+      const dP = ((c.proteina||0)*4/totalC) - rP;
+      const dH = ((c.hc||0)*4/totalC)       - rH;
+      const dG = ((c.grasa||0)*9/totalC)     - rG;
+      const dist = dP*dP*4 + dH*dH*2 + dG*dG*3; // pesos: prot > grasa > hc
+      if (dist < menorDist) { menorDist = dist; mejor = c; }
+    });
+
+    if (!mejor) continue;
+
+    // Escalar con mínimos cuadrados ponderados (igual que _menuSelectorCallback)
+    const W_KCAL=1.0, W_PROT=4.0, W_HC=4.0, W_GRASA=9.0;
+    const ings = Array.isArray(mejor.ingredientes)
+      ? mejor.ingredientes.filter(i => (i.kcal_100||0)>0 && (i.gramos||0)>0) : [];
+
+    let factor = 1;
+    if (ings.length > 0) {
+      const sumBy = f => ings.reduce((s,i) => s + ((i[f]||0)*i.gramos/100), 0);
+      const Ak=sumBy('kcal_100'), Ap=sumBy('p_100'), Ah=sumBy('hc_100'), Ag=sumBy('g_100');
+      const num = W_KCAL*Ak*kcal + W_PROT*Ap*prot + W_HC*Ah*hc + W_GRASA*Ag*grasa;
+      const den = W_KCAL*Ak*Ak   + W_PROT*Ap*Ap   + W_HC*Ah*Ah + W_GRASA*Ag*Ag;
+      factor = den > 0 ? num/den : kcal/(Ak||1);
+    } else {
+      const Ak=mejor.kcal||0, Ap=mejor.proteina||0, Ah=mejor.hc||0, Ag=mejor.grasa||0;
+      const num = W_KCAL*Ak*kcal + W_PROT*Ap*prot + W_HC*Ah*hc + W_GRASA*Ag*grasa;
+      const den = W_KCAL*Ak*Ak   + W_PROT*Ap*Ap   + W_HC*Ah*Ah + W_GRASA*Ag*Ag;
+      factor = den > 0 ? num/den : kcal/(Ak||1);
+    }
+
+    _menuGrid[cellKey] = {
+      comida_id: mejor.id,
+      nombre:    mejor.nombre,
+      kcal:      Math.round((mejor.kcal||0) * factor),
+      prot:      Math.round((mejor.proteina||0) * factor * 10) / 10,
+      ch:        Math.round((mejor.hc||0)       * factor * 10) / 10,
+      grasa:     Math.round((mejor.grasa||0)    * factor * 10) / 10,
+      _escalado: true,
+    };
+    asignados.push(franja);
+  }
+
+  msdCerrar();
+  menuRenderGrid();
+  menuActualizarTotales();
+  showToast(asignados.length
+    ? `✅ Comidas asignadas: ${asignados.join(', ')}`
+    : '⚠️ No se encontraron comidas compatibles');
 }
 
 // ── Mini-panel inline para editar target ─────────────────────────────────────
@@ -11510,6 +11615,9 @@ async function _guardarNuevoAlimento() {
 #menuSugerirOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:10200;display:flex;align-items:center;justify-content:center;padding:16px;}
 #menuSugerirSheet{background:#fff;border-radius:16px;padding:22px 20px 20px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.28);border:1.5px solid #e5e5e5;}
 .msd-title{font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:#111;margin-bottom:3px;}
+.msd-modo-toggle{display:flex;background:#f0f0f0;border-radius:10px;padding:3px;margin-bottom:10px;gap:3px;}
+.msd-modo-btn{flex:1;border:none;padding:8px 0;border-radius:8px;font-size:13px;cursor:pointer;background:transparent;color:#888;font-weight:400;}
+.msd-modo-btn.active{background:#fff;color:#111;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
 .msd-sub{font-size:12px;color:#888;margin-bottom:18px;line-height:1.4;}
 /* Sección labels */
 .msd-section-label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
