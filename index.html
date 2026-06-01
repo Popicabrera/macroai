@@ -10143,11 +10143,22 @@ async function guardarComidaBib() {
 .menu-celda-ing-pill{font-size:10px;color:var(--muted);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;white-space:nowrap;}
 .menu-celda-ing-pill strong{color:var(--text);font-weight:600;}
 .menu-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
-.menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:75vh;display:flex;flex-direction:column;gap:12px;}
+.menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:80vh;display:flex;flex-direction:column;gap:10px;}
 .menu-selector-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);}
-.menu-selector-search{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif;}
-.menu-selector-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;}
-.menu-selector-item{background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 14px;cursor:pointer;transition:background .15s;}
+.menu-selector-search{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif;box-sizing:border-box;}
+.menu-selector-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:4px;}
+/* Acordeón categoría */
+.msc-cat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--s1);border:1px solid var(--border);border-radius:12px;cursor:pointer;user-select:none;transition:background .15s;}
+.msc-cat-header:active{background:var(--s2);}
+.msc-cat-icon{font-size:20px;flex-shrink:0;}
+.msc-cat-name{flex:1;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+.msc-cat-count{font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;}
+.msc-cat-arrow{font-size:12px;color:var(--muted);transition:transform .2s;}
+.msc-cat-arrow.open{transform:rotate(180deg);}
+.msc-cat-body{display:none;flex-direction:column;gap:4px;padding:4px 0 4px 8px;}
+.msc-cat-body.open{display:flex;}
+/* Item dentro de categoría */
+.menu-selector-item{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:background .15s;}
 .menu-selector-item:active{background:var(--s2);}
 .menu-selector-item-nombre{font-size:13px;font-weight:600;color:var(--text);}
 .menu-selector-item-macros{font-size:11px;color:var(--muted);margin-top:2px;}
@@ -11002,7 +11013,6 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
   sheet.innerHTML = `
     <div class="menu-selector-title">📅 ${templateLabel} · ${franjaLabel}</div>
     <input class="menu-selector-search" placeholder="🔍  Buscar en biblioteca..." oninput="menuFiltrarSelector(this.value)">
-    <div style="text-align:right;margin-bottom:6px;"><button onclick="menuSelectorVerTodo(this)" style="font-size:11px;color:#888;background:none;border:none;cursor:pointer;padding:0;">Ver todo</button></div>
     <div class="menu-selector-list" id="menuSelectorList"></div>
     <button class="menu-selector-cancel" onclick="cerrarMenuSelector()">Cancelar</button>`;
   overlay.appendChild(sheet);
@@ -11064,37 +11074,95 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
     menuRenderGrid();
     menuActualizarTotales();
   };
-  menuRenderSelectorList(_menuSelectorBase);
+  menuRenderSelectorList();
 }
 
-function menuSelectorVerTodo(btn) {
-  _menuSelectorBase = _cocBibComidas || [];
-  btn.style.display = 'none';
-  const input = document.querySelector('.menu-selector-search');
-  const q = input ? input.value : '';
-  menuFiltrarSelector(q);
-}
+// Configuración de categorías del selector
+const _MSC_CATS = [
+  { tipo: 'desayuno_salado', label: 'Desayuno salado', icon: '🍳' },
+  { tipo: 'desayuno_dulce',  label: 'Desayuno dulce',  icon: '🥐' },
+  { tipo: 'almuerzo',        label: 'Almuerzo',         icon: '🥗' },
+  { tipo: 'comida',          label: 'Comida',           icon: '🍽️' },
+  { tipo: 'merienda',        label: 'Merienda',         icon: '🍎' },
+  { tipo: 'cena',            label: 'Cena',             icon: '🌙' },
+];
 
 function menuFiltrarSelector(q) {
-  const lista = !q||!q.trim() ? _menuSelectorBase
-    : _menuSelectorBase.filter(c=>(c.nombre||'').toLowerCase().includes(q.toLowerCase()));
-  menuRenderSelectorList(lista);
+  menuRenderSelectorList(q ? q.trim() : '');
 }
 
-function menuRenderSelectorList(comidas) {
+function menuRenderSelectorList(q) {
   const ul = document.getElementById('menuSelectorList');
   if (!ul) return;
-  if (!comidas.length) { ul.innerHTML='<div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px;">Sin resultados</div>'; return; }
+  const todas = _cocBibComidas || [];
+  const qLow = (q||'').toLowerCase();
+
+  // Si hay búsqueda → lista plana filtrada
+  if (qLow) {
+    const filtradas = todas.filter(c=>(c.nombre||'').toLowerCase().includes(qLow));
+    if (!filtradas.length) { ul.innerHTML='<div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px;">Sin resultados</div>'; return; }
+    ul.innerHTML = '';
+    filtradas.forEach(c => { ul.appendChild(_mscCrearItem(c)); });
+    return;
+  }
+
+  // Sin búsqueda → acordeón por categoría
   ul.innerHTML = '';
-  comidas.forEach(c => {
-    const item = document.createElement('div');
-    item.className = 'menu-selector-item';
-    item.innerHTML = `
-      <div class="menu-selector-item-nombre">${escapeHtml(c.nombre||'')}</div>
-      <div class="menu-selector-item-macros">${Math.round(c.kcal||0)} kcal · P${Math.round((c.proteina||0)*10)/10}g CH${Math.round((c.hc||0)*10)/10}g G${Math.round((c.grasa||0)*10)/10}g</div>`;
-    item.addEventListener('click', ()=>{ if(_menuSelectorCallback) _menuSelectorCallback(c); });
-    ul.appendChild(item);
+  const tiposActivos = new Set(_menuSelectorBase.map(c=>c.tipo));
+
+  _MSC_CATS.forEach(cat => {
+    const comidas = todas.filter(c => c.tipo === cat.tipo);
+    if (!comidas.length) return;
+    const isOpen = tiposActivos.has(cat.tipo);
+
+    const header = document.createElement('div');
+    header.className = 'msc-cat-header';
+    header.innerHTML = `
+      <span class="msc-cat-icon">${cat.icon}</span>
+      <span class="msc-cat-name">${cat.label}</span>
+      <span class="msc-cat-count">${comidas.length}</span>
+      <span class="msc-cat-arrow${isOpen?' open':''}">▼</span>`;
+
+    const body = document.createElement('div');
+    body.className = 'msc-cat-body' + (isOpen ? ' open' : '');
+    comidas.forEach(c => body.appendChild(_mscCrearItem(c)));
+
+    header.addEventListener('click', () => {
+      const arrow = header.querySelector('.msc-cat-arrow');
+      const opened = body.classList.toggle('open');
+      arrow.classList.toggle('open', opened);
+    });
+
+    ul.appendChild(header);
+    ul.appendChild(body);
   });
+
+  const tiposConocidos = new Set(_MSC_CATS.map(c=>c.tipo));
+  const otros = todas.filter(c => !tiposConocidos.has(c.tipo));
+  if (otros.length) {
+    const header = document.createElement('div');
+    header.className = 'msc-cat-header';
+    header.innerHTML = `<span class="msc-cat-icon">📦</span><span class="msc-cat-name">Otros</span><span class="msc-cat-count">${otros.length}</span><span class="msc-cat-arrow">▼</span>`;
+    const body = document.createElement('div');
+    body.className = 'msc-cat-body';
+    otros.forEach(c => body.appendChild(_mscCrearItem(c)));
+    header.addEventListener('click', () => {
+      body.classList.toggle('open');
+      header.querySelector('.msc-cat-arrow').classList.toggle('open');
+    });
+    ul.appendChild(header);
+    ul.appendChild(body);
+  }
+}
+
+function _mscCrearItem(c) {
+  const item = document.createElement('div');
+  item.className = 'menu-selector-item';
+  item.innerHTML = `
+    <div class="menu-selector-item-nombre">${escapeHtml(c.nombre||'')}</div>
+    <div class="menu-selector-item-macros">${Math.round(c.kcal||0)} kcal · P${Math.round((c.proteina||0)*10)/10}g CH${Math.round((c.hc||0)*10)/10}g G${Math.round((c.grasa||0)*10)/10}g</div>`;
+  item.addEventListener('click', ()=>{ if(_menuSelectorCallback) _menuSelectorCallback(c); });
+  return item;
 }
 
 function cerrarMenuSelector() {
