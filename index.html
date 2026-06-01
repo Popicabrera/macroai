@@ -9975,76 +9975,33 @@ function bibRenderTargetBanner() {
     '</div>';
 }
 
-async function bibAjustarAlTarget() {
+function bibAjustarAlTarget() {
   if (!_cocEditorCellKey || !_menuTargets[_cocEditorCellKey]) return;
   const t = _menuTargets[_cocEditorCellKey];
 
-  const ings = _cocEditorIngs.filter(i => i.nombre && i.kcal_100 > 0);
+  const ings = _cocEditorIngs.filter(i => i.nombre && (i.kcal_100 || 0) > 0 && (i.gramos || 0) > 0);
   if (!ings.length) { showToast('Añade ingredientes primero'); return; }
 
-  const btn = document.getElementById('btbAjustarBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Calculando...'; }
+  // Kcal total actual de los ingredientes
+  const kcalActual = ings.reduce((s, i) => s + (i.kcal_100 * i.gramos / 100), 0);
+  if (kcalActual <= 0) { showToast('Sin calorías calculadas'); return; }
 
-  const ingResumen = ings.map(i => ({
-    nombre: i.nombre,
-    gramos_actuales: i.gramos || 0,
-    kcal_100g: Math.round(i.kcal_100 || 0),
-    p_100g:    Math.round((i.p_100  || 0) * 10) / 10,
-    hc_100g:   Math.round((i.hc_100 || 0) * 10) / 10,
-    g_100g:    Math.round((i.g_100  || 0) * 10) / 10,
-  }));
+  // Factor de escala: ajustar todos los gramos proporcionalmente para cuadrar kcal target
+  const factor = t.kcal / kcalActual;
 
-  const prompt = 'Eres nutricionista deportivo. Ajusta los gramos de estos ingredientes para que la comida resultante cuadre lo más posible con el target nutricional indicado.\n\n' +
-    'TARGET:\n' +
-    '- Calorías: ' + t.kcal + ' kcal\n' +
-    '- Proteínas: ' + t.prot + 'g\n' +
-    '- Carbohidratos: ' + t.hc + 'g\n' +
-    '- Grasas: ' + t.grasa + 'g\n\n' +
-    'INGREDIENTES (con sus valores nutricionales por 100g):\n' +
-    JSON.stringify(ingResumen) + '\n\n' +
-    'REGLAS:\n' +
-    '- Devuelve gramos ajustados para cada ingrediente (mínimo 10g, máximo 500g)\n' +
-    '- Prioriza cuadrar las calorías y proteínas primero\n' +
-    '- Los gramos deben ser números enteros\n' +
-    '- No añadas ni elimines ingredientes, solo ajusta los gramos de los existentes\n\n' +
-    'Devuelve ÚNICAMENTE un JSON array sin texto ni markdown:\n' +
-    '[{"nombre":"Avena (copos)","gramos":95},{"nombre":"Leche Desnatada UHT de Vaca","gramos":180}]';
+  // Aplicar factor a cada ingrediente
+  _cocEditorIngs.forEach(ing => {
+    if (!ing.gramos || !ing.kcal_100) return;
+    ing.gramos = Math.max(5, Math.round(ing.gramos * factor));
+  });
 
-  try {
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: 'Responde SIEMPRE con JSON puro, sin markdown, sin texto adicional.',
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await res.json();
-    const texto = data.content?.find(b => b.type === 'text')?.text || '';
-    const clean = texto.replace(/```json|```/g, '').trim();
-    const ajustados = JSON.parse(clean);
-
-    if (!Array.isArray(ajustados)) throw new Error('Respuesta inválida');
-
-    // Aplicar gramos ajustados a _cocEditorIngs
-    ajustados.forEach(({ nombre, gramos }) => {
-      const ing = _cocEditorIngs.find(i => i.nombre === nombre);
-      if (ing) ing.gramos = Math.round(gramos);
-    });
-
-    // Re-renderizar filas con nuevos gramos
-    const container = document.getElementById('bibIngRows');
-    if (container) container.innerHTML = '';
-    _cocEditorIngs.forEach((_, idx) => bibRenderIngRow(idx));
-    bibRecalcTotales();
-    showToast('✅ Gramos ajustados al target');
-  } catch(e) {
-    console.error('bibAjustarAlTarget error:', e);
-    showToast('❌ Error ajustando gramos');
-    if (btn) { btn.disabled = false; btn.textContent = '⚡ Ajustar gramos al target'; }
-  }
+  // Re-renderizar y recalcular
+  const container = document.getElementById('bibIngRows');
+  if (container) container.innerHTML = '';
+  _cocEditorIngs.forEach((_, idx) => bibRenderIngRow(idx));
+  bibRecalcTotales();
+  showToast('✅ Gramos ajustados al target');
 }
-
 // ── GUARDAR ──
 async function guardarComidaBib() {
   const nombre = (document.getElementById('bibEdNombre')?.value || '').trim();
