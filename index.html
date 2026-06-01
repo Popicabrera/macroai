@@ -9699,6 +9699,9 @@ function abrirEditorBiblioteca(comida, cellKey) {
         ).join('')}
       </select>
 
+      <!-- Banner target sticky: Target / Actual / Diferencia -->
+      <div id="bibTargetBanner" style="display:none;margin-bottom:12px;"></div>
+
       <!-- Ingredientes -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div class="bib-field-label" style="margin-bottom:0;">Ingredientes</div>
@@ -9706,18 +9709,6 @@ function abrirEditorBiblioteca(comida, cellKey) {
       </div>
 
       <div id="bibIngRows" style="margin-bottom:12px;"></div>
-
-      <!-- Totales en tiempo real -->
-      <div class="bib-totales" id="bibEdTotales">
-        <span class="bib-tot-label">Total:</span>
-        <span class="bib-macro-pill kcal" id="bibtKcal">0 kcal</span>
-        <span class="bib-macro-pill prot" id="bibtProt">P 0g</span>
-        <span class="bib-macro-pill ch"   id="bibtCh">CH 0g</span>
-        <span class="bib-macro-pill grasa" id="bibtGrasa">G 0g</span>
-      </div>
-
-      <!-- Banner target (se rellena dinámicamente tras render) -->
-      <div id="bibTargetBanner" style="display:none;"></div>
 
       <!-- Nuevo alimento -->
       <button onclick="abrirNuevoAlimentoDesdeModal()" style="width:100%;padding:11px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.35);border-radius:11px;color:var(--accent);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
@@ -9903,15 +9894,6 @@ function bibRecalcTotales() {
     }
   });
 
-  const tKcal  = document.getElementById('bibtKcal');
-  const tProt  = document.getElementById('bibtProt');
-  const tCh    = document.getElementById('bibtCh');
-  const tGrasa = document.getElementById('bibtGrasa');
-  if (tKcal)  tKcal.textContent  = Math.round(kcal) + ' kcal';
-  if (tProt)  tProt.textContent  = 'P ' + (Math.round(prot*10)/10) + 'g';
-  if (tCh)    tCh.textContent    = 'CH ' + (Math.round(ch*10)/10) + 'g';
-  if (tGrasa) tGrasa.textContent = 'G ' + (Math.round(grasa*10)/10) + 'g';
-
   bibRenderTargetBanner();
 }
 
@@ -9938,40 +9920,44 @@ function bibRenderTargetBanner() {
     }
   });
 
+  const rKcal  = Math.round(cKcal);
+  const rProt  = Math.round(cProt  * 10) / 10;
+  const rHc    = Math.round(cHc    * 10) / 10;
+  const rGrasa = Math.round(cGrasa * 10) / 10;
+
   const dKcal  = Math.round(t.kcal  - cKcal);
   const dProt  = Math.round((t.prot  - cProt)  * 10) / 10;
   const dHc    = Math.round((t.hc    - cHc)    * 10) / 10;
   const dGrasa = Math.round((t.grasa - cGrasa) * 10) / 10;
 
-  const sign = v => v > 0 ? '+' + v : v;
-  const col  = v => Math.abs(v) < 5 ? 'var(--green,#3a9d5c)' : 'var(--red)';
-  const colK = Math.abs(dKcal) < 30 ? 'var(--green,#3a9d5c)' : 'var(--red)';
+  const sign = v => v > 0 ? '+' + v : String(v);
+  // diferencia: verde = cuadrado, ámbar = falta, rojo = sobra
+  const colD  = v => v > 5  ? '#BA7517' : v < -5  ? '#A32D2D' : '#0F6E56';
+  const colDK = v => v > 30 ? '#BA7517' : v < -30 ? '#A32D2D' : '#0F6E56';
+
+  // actual: color semántico fijo por macro
+  const C_KCAL = '#A32D2D'; const C_PROT = '#0F6E56'; const C_HC = '#BA7517'; const C_GRASA = '#185FA5';
 
   banner.style.display = 'block';
   banner.innerHTML =
-    '<div class="bib-target-banner">' +
-      '<div class="btb-title">🎯 Target de esta franja</div>' +
-      '<div class="btb-row">' +
-        '<div class="btb-col">' +
-          '<div class="btb-label">Target</div>' +
-          '<div class="btb-vals">' +
-            '<span class="btb-pill btb-kcal">' + t.kcal + ' kcal</span>' +
-            '<span class="btb-pill btb-prot">P ' + t.prot + 'g</span>' +
-            '<span class="btb-pill btb-hc">HC ' + t.hc + 'g</span>' +
-            '<span class="btb-pill btb-grasa">G ' + t.grasa + 'g</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="btb-col">' +
-          '<div class="btb-label">Diferencia</div>' +
-          '<div class="btb-vals">' +
-            '<span class="btb-pill" style="color:' + colK + ';border-color:' + colK + ';">' + sign(dKcal) + ' kcal</span>' +
-            '<span class="btb-pill" style="color:' + col(dProt) + ';border-color:' + col(dProt) + ';">' + sign(dProt) + 'g P</span>' +
-            '<span class="btb-pill" style="color:' + col(dHc) + ';border-color:' + col(dHc) + ';">' + sign(dHc) + 'g HC</span>' +
-            '<span class="btb-pill" style="color:' + col(dGrasa) + ';border-color:' + col(dGrasa) + ';">' + sign(dGrasa) + 'g G</span>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-
+    '<div class="btb-grid">' +
+      '<div class="btb-row-label">Target</div>' +
+      '<div class="btb-cell" style="color:' + C_KCAL  + ';">' + t.kcal  + ' kcal</div>' +
+      '<div class="btb-cell" style="color:' + C_PROT  + ';">P '  + t.prot  + 'g</div>' +
+      '<div class="btb-cell" style="color:' + C_HC    + ';">HC ' + t.hc    + 'g</div>' +
+      '<div class="btb-cell" style="color:' + C_GRASA + ';">G '  + t.grasa + 'g</div>' +
+      '<div class="btb-sep"></div>' +
+      '<div class="btb-row-label">Actual</div>' +
+      '<div class="btb-cell" style="color:' + C_KCAL  + ';">' + rKcal  + ' kcal</div>' +
+      '<div class="btb-cell" style="color:' + C_PROT  + ';">P '  + rProt  + 'g</div>' +
+      '<div class="btb-cell" style="color:' + C_HC    + ';">HC ' + rHc    + 'g</div>' +
+      '<div class="btb-cell" style="color:' + C_GRASA + ';">G '  + rGrasa + 'g</div>' +
+      '<div class="btb-sep"></div>' +
+      '<div class="btb-row-label">Dif.</div>' +
+      '<div class="btb-cell" style="color:' + colDK(dKcal)  + ';">' + sign(dKcal)  + ' kcal</div>' +
+      '<div class="btb-cell" style="color:' + colD(dProt)   + ';">' + sign(dProt)  + 'g P</div>' +
+      '<div class="btb-cell" style="color:' + colD(dHc)     + ';">' + sign(dHc)    + 'g HC</div>' +
+      '<div class="btb-cell" style="color:' + colD(dGrasa)  + ';">' + sign(dGrasa) + 'g G</div>' +
     '</div>';
 }
 
@@ -11731,17 +11717,10 @@ async function _guardarNuevoAlimento() {
 /* Botones franja prioritaria — más pequeños */
 
 /* Banner target en editor de comida */
-.bib-target-banner{background:rgba(192,57,43,0.05);border:1px solid rgba(192,57,43,0.2);border-radius:12px;padding:12px 14px;margin-bottom:14px;}
-.btb-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
-.btb-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
-.btb-col{flex:1;min-width:140px;}
-.btb-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:5px;}
-.btb-vals{display:flex;flex-wrap:wrap;gap:4px;}
-.btb-pill{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid;background:transparent;}
-.btb-kcal{color:var(--red);border-color:var(--red);}
-.btb-prot{color:var(--blue);border-color:var(--blue);}
-.btb-hc{color:var(--yellow);border-color:var(--yellow);}
-.btb-grasa{color:#3a9d5c;border-color:#3a9d5c;}
+.btb-grid{background:rgba(192,57,43,0.04);border:1px solid rgba(192,57,43,0.18);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:40px repeat(4,1fr);gap:0;align-items:center;}
+.btb-row-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:5px 0;}
+.btb-cell{font-size:13px;font-weight:600;text-align:center;padding:5px 2px;}
+.btb-sep{grid-column:1/-1;height:1px;background:rgba(192,57,43,0.12);margin:2px 0;}
 .btb-btn{width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;}
 .btb-btn:disabled{opacity:0.6;cursor:not-allowed;}
 </style>
