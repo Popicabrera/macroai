@@ -10294,9 +10294,19 @@ function menuRenderDiaHeader(tpl) {
   const restP    = Math.round((obj.prot  - acum.prot)*10)/10;
   const restG    = Math.round((obj.grasa - acum.grasa)*10)/10;
 
-  const negativo     = restKcal < 0;
+  // Exceso de kcal por macros desbordados (CH×4 + P×4 + G×9), siempre negativo
+  const excesoCh   = restCh   < 0 ? Math.abs(restCh)   * 4 : 0;
+  const excesoP    = restP    < 0 ? Math.abs(restP)    * 4 : 0;
+  const excesoG    = restG    < 0 ? Math.abs(restG)    * 9 : 0;
+  const excesoPorMacros = Math.round(excesoCh + excesoP + excesoG);
+
+  const negativo     = restKcal < 0 || excesoPorMacros > 0;
   const kcalColor    = negativo ? accentDark : accentColor;
-  const kcalDisplay  = negativo ? `−${Math.abs(restKcal)}` : `${restKcal}`;
+  const kcalDisplay  = restKcal < 0
+    ? `−${Math.abs(restKcal)}`
+    : excesoPorMacros > 0
+      ? `−${excesoPorMacros}`
+      : `${restKcal}`;
 
   // Colores macros individuales (rojo oscuro si negativo, color habitual si ok)
   const RED_DARK = '#a02020';
