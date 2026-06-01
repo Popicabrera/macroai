@@ -9971,7 +9971,7 @@ function bibRenderTargetBanner() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<button class="btb-btn" id="btbAjustarBtn" onclick="bibAjustarAlTarget()">⚡ Ajustar gramos al target</button>' +
+
     '</div>';
 }
 
@@ -11027,40 +11027,6 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
     let ch    = comida.hc       || 0;
     let grasa = comida.grasa    || 0;
 
-    // Si hay target de la IA → mínimos cuadrados ponderados (igual que ⚡Ajustar)
-    if (target && target.kcal > 0 && kcal > 0) {
-      const W_KCAL = 1.0, W_PROT = 4.0, W_HC = 4.0, W_GRASA = 9.0;
-
-      // Intentar usar ingredientes para escalar más precisamente
-      const ings = Array.isArray(comida.ingredientes)
-        ? comida.ingredientes.filter(i => (i.kcal_100 || 0) > 0 && (i.gramos || 0) > 0)
-        : [];
-
-      let factor;
-      if (ings.length > 0) {
-        // Mismo algoritmo que bibAjustarAlTarget: factor global sobre ingredientes
-        const sumBy = (f) => ings.reduce((s, i) => s + ((i[f] || 0) * i.gramos / 100), 0);
-        const A_kcal = sumBy('kcal_100');
-        const A_prot = sumBy('p_100');
-        const A_hc   = sumBy('hc_100');
-        const A_gras = sumBy('g_100');
-        const num = W_KCAL*A_kcal*target.kcal + W_PROT*A_prot*target.prot + W_HC*A_hc*target.hc + W_GRASA*A_gras*target.grasa;
-        const den = W_KCAL*A_kcal*A_kcal     + W_PROT*A_prot*A_prot     + W_HC*A_hc*A_hc     + W_GRASA*A_gras*A_gras;
-        factor = den > 0 ? num / den : target.kcal / A_kcal;
-      } else {
-        // Sin ingredientes: mínimos cuadrados sobre macros totales de la comida
-        const A_kcal = kcal, A_prot = prot, A_hc = ch, A_gras = grasa;
-        const num = W_KCAL*A_kcal*target.kcal + W_PROT*A_prot*target.prot + W_HC*A_hc*target.hc + W_GRASA*A_gras*target.grasa;
-        const den = W_KCAL*A_kcal*A_kcal     + W_PROT*A_prot*A_prot     + W_HC*A_hc*A_hc     + W_GRASA*A_gras*A_gras;
-        factor = den > 0 ? num / den : target.kcal / kcal;
-      }
-
-      kcal  = Math.round(kcal  * factor);
-      prot  = Math.round(prot  * factor * 10) / 10;
-      ch    = Math.round(ch    * factor * 10) / 10;
-      grasa = Math.round(grasa * factor * 10) / 10;
-    }
-
     _menuGrid[cellKey] = {
       comida_id: comida.id,
       nombre:    comida.nombre,
@@ -11068,7 +11034,6 @@ function menuAbrirSelector(templateKey, fi, franjaLabel, templateLabel) {
       prot:      Math.round(prot  * 10) / 10,
       ch:        Math.round(ch    * 10) / 10,
       grasa:     Math.round(grasa * 10) / 10,
-      _escalado: !!(target && target.kcal > 0 && (comida.kcal || 0) > 0),
     };
     cerrarMenuSelector();
     menuRenderGrid();
