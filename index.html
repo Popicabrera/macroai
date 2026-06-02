@@ -11448,7 +11448,14 @@ async function menuCargarExistente(menuId) {
         const comida = _cocBibComidas.find(b=>b.id===c.comida_id);
         if (comida) {
           const fi = MENU_FRANJAS.indexOf(c.franja);
-          const key = c.tipo_dia && c.tipo_dia.startsWith('dia_') ? c.tipo_dia : `dia_1`; // fallback legacy → Lunes
+          let key;
+          if (c.tipo_dia && c.tipo_dia.startsWith('dia_')) {
+            key = c.tipo_dia; // formato legacy
+          } else {
+            // Formato nuevo: 'entreno' o 'descanso' → primer template con ese tipo
+            const tplMatch = MENU_TEMPLATES.find(t => _menuTplTipo(t, _menuCocClientePerfil) === c.tipo_dia);
+            key = tplMatch ? tplMatch.key : 'dia_1';
+          }
 
           // Si la celda tiene ingredientes ajustados, recalcular macros desde ellos
           let kcal=comida.kcal||0, prot=comida.proteina||0, ch=comida.hc||0, grasa=comida.grasa||0;
