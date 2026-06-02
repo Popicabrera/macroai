@@ -11196,7 +11196,7 @@ async function menuGuardarMenuCompleto() {
       if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú');
       _menuId = rows[0].id;
     }
-    await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
+    await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
 
     // ── Guardar inteligente: si hay cliente, guardar como pendiente (el cliente lo activa cuando quiera) ──
     if (clienteEmail) {
