@@ -7103,11 +7103,15 @@ async function cargarMiMenu() {
       return;
     }
 
-    // 2. Perfil macros del cliente (para cálculo de ratios entreno/descanso)
+    // 2. Perfil macros del cliente (para cálculo de ratios entreno/descanso + días de entreno)
     if (!_menuPerfilMacros) {
-      const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&limit=1&select=hc_objetivo,g_objetivo,hc_descanso,g_descanso`);
+      const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&limit=1&select=hc_objetivo,g_objetivo,hc_descanso,g_descanso,dias_entreno`);
       const rows = await res.json();
       _menuPerfilMacros = (Array.isArray(rows) && rows.length) ? rows[0] : {};
+      // Sincronizar WEEK_DAYS con dias_entreno del perfil para que _menuTipoDia sea correcto
+      if (_menuPerfilMacros.dias_entreno && Array.isArray(_menuPerfilMacros.dias_entreno) && _menuPerfilMacros.dias_entreno.length) {
+        WEEK_DAYS = _menuPerfilMacros.dias_entreno.map(d => parseInt(d));
+      }
     }
 
     // 3. Celdas del menú (todas, no solo las del día — las filtramos al renderizar)
@@ -7148,13 +7152,16 @@ function _renderMenuDia() {
     labelEl.textContent = esHoy ? `📅 ${nombre} · Hoy` : `📅 ${nombre}`;
   }
 
-  // Filtrar celdas del día actual por key dia_N (nueva arquitectura)
-  // Fallback: celdas con campo .dia numérico (arquitectura anterior)
-  const diaKey = `dia_${diaNum}`;
-  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
+  // Filtrar celdas del día actual por template (entreno/descanso) — arquitectura actual
+  // tipoDia ya está calculado arriba via _menuTipoDia(diaNum)
+  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
   if (!celdasDia.length) {
-    // Fallback legacy: columna .dia numérica
-    celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
+    // Fallback legacy: celdas con key dia_N o columna .dia numérica
+    const diaKey = `dia_${diaNum}`;
+    celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
+    if (!celdasDia.length) {
+      celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
+    }
   }
 
   // Agrupar por franja
