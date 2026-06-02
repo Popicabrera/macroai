@@ -11170,9 +11170,11 @@ async function menuGuardarMenuCompleto() {
 
   const celdas = [];
   MENU_TEMPLATES.forEach(tpl => {
+    const tipoDiaReal = _menuTplTipo(tpl, _menuCocClientePerfil);
+    const tipoDiaGuardar = (tipoDiaReal === 'igual') ? 'entreno' : tipoDiaReal;
     MENU_FRANJAS.forEach((franja,fi)=>{
       const cell = _menuGrid[`${tpl.key}-f${fi}`];
-      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null });
+      if (cell) celdas.push({ tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null });
     });
   });
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
