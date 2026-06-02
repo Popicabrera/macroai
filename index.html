@@ -10094,9 +10094,23 @@ async function guardarComidaBib() {
     cerrarEditorBib();
     await new Promise(r => setTimeout(r, 300)); // pequeña espera para que Supabase commitee
     await cocCargarBiblioteca();
-    // Refrescar semanario si ingredientes del grid cambiaron
-    const gc = document.getElementById("menuGridContainer") || document.getElementById("menuGridContainerMobile");
-    if (gc && typeof menuRenderGrid === "function") menuRenderGrid();
+    // Si se abrió desde una celda del grid, actualizar esa celda con los macros recalculados
+    if (_cocEditorCellKey && typeof _menuGrid !== 'undefined') {
+      _menuGrid[_cocEditorCellKey] = {
+        ...(typeof _menuGrid[_cocEditorCellKey] === 'object' ? _menuGrid[_cocEditorCellKey] : {}),
+        kcal:  kcal_total,
+        prot:  prot_total,
+        ch:    ch_total,
+        grasa: grasa_total,
+        ingredientes: ingredientes,
+      };
+      if (typeof menuRenderGrid === 'function') menuRenderGrid();
+      if (typeof menuActualizarTotales === 'function') menuActualizarTotales();
+    } else {
+      // Refrescar semanario si ingredientes del grid cambiaron
+      const gc = document.getElementById("menuGridContainer") || document.getElementById("menuGridContainerMobile");
+      if (gc && typeof menuRenderGrid === "function") menuRenderGrid();
+    }
   } catch(e) {
     console.error('guardarComidaBib error:', e.message);
     showToast('❌ ' + (e.message || 'Error al guardar').slice(0, 120));
@@ -10796,7 +10810,10 @@ function menuRenderGrid() {
       if (cell) {
         const bibItem = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
         let ingArr = [];
-        if (bibItem) {
+        // Primero usar ingredientes guardados en la celda (ajustados manualmente)
+        if (Array.isArray(cell.ingredientes) && cell.ingredientes.length) {
+          ingArr = cell.ingredientes;
+        } else if (bibItem) {
           const rawIng = bibItem.ingredientes_json || bibItem.ingredientes;
           if (Array.isArray(rawIng)) ingArr = rawIng;
           else if (typeof rawIng === 'string') { try { ingArr = JSON.parse(rawIng); } catch(e){} }
@@ -11135,7 +11152,7 @@ async function menuGuardarMenuCompleto() {
   MENU_TEMPLATES.forEach(tpl => {
     MENU_FRANJAS.forEach((franja,fi)=>{
       const cell = _menuGrid[`${tpl.key}-f${fi}`];
-      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: null });
+      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null });
     });
   });
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
@@ -11410,12 +11427,34 @@ async function menuCargarExistente(menuId) {
         if (comida) {
           const fi = MENU_FRANJAS.indexOf(c.franja);
           const key = c.tipo_dia && c.tipo_dia.startsWith('dia_') ? c.tipo_dia : `dia_1`; // fallback legacy → Lunes
+
+          // Si la celda tiene ingredientes ajustados, recalcular macros desde ellos
+          let kcal=comida.kcal||0, prot=comida.proteina||0, ch=comida.hc||0, grasa=comida.grasa||0;
+          let ingArr = null;
+          const rawIng = c.ingredientes;
+          if (Array.isArray(rawIng) && rawIng.length) {
+            ingArr = rawIng;
+          } else if (typeof rawIng === 'string') {
+            try { const p = JSON.parse(rawIng); if (Array.isArray(p) && p.length) ingArr = p; } catch(e){}
+          }
+          if (ingArr) {
+            kcal=0; prot=0; ch=0; grasa=0;
+            ingArr.forEach(i => {
+              const g = i.gramos||0;
+              kcal  += (i.kcal_100||0)*g/100;
+              prot  += (i.p_100   ||0)*g/100;
+              ch    += (i.hc_100  ||0)*g/100;
+              grasa += (i.g_100   ||0)*g/100;
+            });
+          }
+
           if (fi>=0) _menuGrid[`${key}-f${fi}`] = {
             comida_id: comida.id, nombre: comida.nombre,
-            kcal:  comida.kcal  ||0,
-            prot:  Math.round((comida.proteina  ||0)*10)/10,
-            ch:    Math.round((comida.hc        ||0)*10)/10,
-            grasa: Math.round((comida.grasa     ||0)*10)/10,
+            kcal:  Math.round(kcal),
+            prot:  Math.round(prot*10)/10,
+            ch:    Math.round(ch*10)/10,
+            grasa: Math.round(grasa*10)/10,
+            ingredientes: ingArr || undefined,
           };
         }
       });
