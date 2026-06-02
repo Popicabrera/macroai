@@ -11394,16 +11394,14 @@ async function menuMostrarExistentes() {
     listDiv.innerHTML='';
     rows.forEach((m,idx)=>{
       const item=document.createElement('div');
-      item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:10px 14px;gap:8px;';
+      item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:10px 14px;gap:8px;cursor:pointer;';
       item.innerHTML=`
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.nombre||'Sin nombre')}</div>
-          <div style="font-size:11px;color:var(--muted);">${m.activo?'● Activo':'Inactivo'}</div>
+          <div style="font-size:11px;color:var(--muted);">${m.activo?'● Activo':'Inactivo'}${m.cliente_email?' · '+m.cliente_email:''}</div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="menuCargarExistente('${m.id}')" style="padding:7px 12px;background:var(--s2);border:1px solid var(--border);border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--text);cursor:pointer;">Cargar</button>
-          <button onclick="menuAbrirAsignacion('${m.id}',${idx})" style="padding:7px 12px;background:var(--accent);border:none;border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#fff;cursor:pointer;">Asignar</button>
-        </div>`;
+        <span style="font-size:18px;color:var(--muted);">›</span>`;
+      item.onclick = () => menuAbrirOpciones(m.id, idx);
       listDiv.appendChild(item);
     });
     listDiv.style.cssText='display:flex;flex-direction:column;gap:6px;';
@@ -11412,6 +11410,68 @@ async function menuMostrarExistentes() {
     showToast('Error al cargar menús');
     btnVer.textContent='📋 Ver / cargar menús guardados';
   }
+}
+
+function menuAbrirOpciones(menuId, idx) {
+  const m = _menuListCache[idx];
+  if (!m) return;
+  const ov = document.createElement('div');
+  ov.id = 'menuOpcionesOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:20px 16px 32px;display:flex;flex-direction:column;gap:8px;">
+      <div style="text-align:center;margin-bottom:4px;">
+        <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 12px;"></div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.nombre||'Sin nombre')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${m.activo?'● Activo':'Inactivo'}${m.cliente_email?' · '+m.cliente_email:''}</div>
+      </div>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuCargarExistente('${menuId}')" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">📂 Cargar en editor</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuEditarNombre('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">✏️ Editar nombre</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuAbrirAsignacion('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">👤 Asignar a cliente</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuConfirmarBorrar('${menuId}','${escapeHtml(m.nombre||'Sin nombre')}')" style="width:100%;padding:13px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--accent);cursor:pointer;text-align:left;">🗑️ Borrar menú</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove()" style="width:100%;padding:11px;background:transparent;border:none;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+}
+
+function menuEditarNombre(menuId, idx) {
+  const m = _menuListCache[idx];
+  const nuevoNombre = prompt('Nuevo nombre del menú:', m?.nombre||'');
+  if (!nuevoNombre || !nuevoNombre.trim()) return;
+  supaAdmin(`/rest/v1/menus_macroai?id=eq.${menuId}`, {
+    method: 'PATCH', headers: {'Prefer':'return=minimal'},
+    body: JSON.stringify({ nombre: nuevoNombre.trim() })
+  }).then(() => { showToast('✅ Nombre actualizado'); menuMostrarExistentes(); menuMostrarExistentes(); })
+    .catch(() => showToast('❌ Error al renombrar'));
+}
+
+function menuConfirmarBorrar(menuId, nombre) {
+  const ov = document.createElement('div');
+  ov.id = 'menuBorrarOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9001;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:16px;width:100%;max-width:340px;padding:24px 20px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">¿Borrar "${nombre}"?</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Se eliminarán también todas sus comidas. Esta acción no se puede deshacer.</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('menuBorrarOverlay').remove()" style="flex:1;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;">Cancelar</button>
+        <button onclick="menuEjecutarBorrar('${menuId}')" style="flex:1;padding:11px;background:var(--accent);border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Borrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
+async function menuEjecutarBorrar(menuId) {
+  document.getElementById('menuBorrarOverlay')?.remove();
+  try {
+    await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}`, { method: 'DELETE' });
+    await supaAdmin(`/rest/v1/menus_macroai?id=eq.${menuId}`, { method: 'DELETE' });
+    if (_menuId === menuId) { _menuId = null; _menuGrid = {}; menuRenderGrid(); }
+    showToast('✅ Menú eliminado');
+    menuMostrarExistentes(); menuMostrarExistentes();
+  } catch(e) { showToast('❌ Error al borrar'); }
 }
 
 async function menuCargarExistente(menuId) {
