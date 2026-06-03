@@ -10270,12 +10270,13 @@ async function menuCocAbrirSelectorCliente() {
   document.body.appendChild(overlay);
 }
 
-window._menuCocSeleccionar = function(clienteEmail) {
+window._menuCocSeleccionar = async function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
   const perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail);
   _menuCocClientePerfil = perfil || null;
-  // Grid se resetea al cambiar cliente (los días son siempre los mismos, pero los badges cambian)
+  // Grid se resetea al cambiar cliente
   _menuGrid = {};
+  _menuId = null;
   _menuDiasColapsados = {};
   const nombre = perfil ? (perfil.nombre || perfil.cliente_email || 'Cliente') : null;
   const label = nombre ? `👤 ${nombre}` : 'Seleccionar cliente para ver macros objetivo';
@@ -10286,6 +10287,29 @@ window._menuCocSeleccionar = function(clienteEmail) {
   });
   menuRenderGrid();
   menuActualizarTextoBtnGuardar();
+
+  // Buscar menú activo o pendiente del cliente y cargarlo automáticamente
+  if (clienteEmail) {
+    try {
+      const res = await supaAdmin(
+        `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&or=(activo.eq.true,pendiente.eq.true)&order=created_at.desc&limit=1&select=id,nombre,activo,pendiente`
+      );
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows[0]) {
+        const m = rows[0];
+        const estado = m.activo ? '✅ activo' : '🔔 pendiente';
+        showToast(`📂 Cargando menú ${estado}: ${m.nombre}`);
+        await menuCargarExistente(m.id);
+      } else {
+        // Sin menú asignado: limpiar input nombre
+        const ni = menuGetNombreInput();
+        if (ni) ni.value = '';
+      }
+    } catch(e) {
+      console.error('Error buscando menú del cliente:', e);
+    }
+    menuActualizarTextoBtnGuardar();
+  }
 };
 
 // ── Calcula acumulado de un día desde _menuGrid ──
@@ -11223,14 +11247,74 @@ async function menuGuardarMenuCompleto() {
   }
 }
 
-// Actualiza el texto del botón Guardar según si hay cliente seleccionado o no
+// Actualiza el texto del botón Guardar y muestra/oculta botón desasignar
 function menuActualizarTextoBtnGuardar() {
   const tieneCliente = !!_menuCocClientePerfil?.cliente_email;
+  const tieneMenuAsignado = tieneCliente && !!_menuId;
   const label = tieneCliente ? '💾 Guardar y asignar' : '💾 Guardar';
   document.querySelectorAll('[onclick="menuGuardarMenuCompleto()"]').forEach(b => {
     b.textContent = label;
     b.disabled = false;
   });
+  // Botón desasignar: visible solo si hay menú de cliente cargado
+  ['menuBtnDesasignar','menuBtnDesasignarMobile'].forEach(id => {
+    let btn = document.getElementById(id);
+    if (tieneMenuAsignado) {
+      if (!btn) {
+        const sourceId = id === 'menuBtnDesasignar' ? 'menuNombreInput' : 'menuNombreInputMobile';
+        const ref = document.getElementById(sourceId);
+        if (!ref) return;
+        const container = ref.parentElement;
+        btn = document.createElement('button');
+        btn.id = id;
+        btn.title = 'Eliminar menú asignado a este cliente';
+        btn.onclick = menuDesasignarMenuCliente;
+        btn.style.cssText = 'padding:9px 11px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:11px;font-size:14px;cursor:pointer;color:var(--accent);flex-shrink:0;';
+        btn.textContent = '\uD83D\uDDD1\uFE0F';
+        container.appendChild(btn);
+      }
+      btn.style.display = '';
+    } else {
+      if (btn) btn.style.display = 'none';
+    }
+  });
+}
+
+async function menuDesasignarMenuCliente() {
+  if (!_menuId || !_menuCocClientePerfil?.cliente_email) return;
+  const nombreMenu = menuGetNombreInput()?.value || 'este menú';
+  const nombreCliente = _menuCocClientePerfil.nombre || _menuCocClientePerfil.cliente_email;
+  const menuIdActual = _menuId;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = '<div style="background:var(--bg);border-radius:18px;padding:24px;max-width:340px;width:100%;font-family:Space Grotesk,sans-serif;">'
+    + '<div style="font-size:28px;text-align:center;margin-bottom:12px;">🗑️</div>'
+    + '<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:8px;">Eliminar menú asignado</div>'
+    + '<div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;line-height:1.5;">Se eliminará <strong style=\"color:var(--text)\">' + escapeHtml(nombreMenu) + '</strong> de <strong style=\"color:var(--text)\">' + escapeHtml(nombreCliente) + '</strong>.<br>Esta acción no se puede deshacer.</div>'
+    + '<div style="display:flex;gap:10px;">'
+    + '<button onclick="this.closest(\'[data-desasignar]\').remove()" style="flex:1;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">Cancelar</button>'
+    + '<button id="_btnConfirmarDesasignar" style="flex:1;padding:11px;background:var(--accent);border:none;border-radius:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Eliminar</button>'
+    + '</div></div>';
+  overlay.setAttribute('data-desasignar','1');
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('_btnConfirmarDesasignar').onclick = async () => {
+    overlay.remove();
+    try {
+      await supaAdmin('/rest/v1/menu_celdas?menu_id=eq.' + menuIdActual, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+      await supaAdmin('/rest/v1/menus_macroai?id=eq.' + menuIdActual, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+      _menuId = null;
+      _menuGrid = {};
+      const ni = menuGetNombreInput();
+      if (ni) ni.value = '';
+      menuRenderGrid();
+      menuActualizarTextoBtnGuardar();
+      showToast('✅ Menú eliminado');
+    } catch(e) {
+      showToast('❌ Error al eliminar el menú');
+      console.error(e);
+    }
+  };
 }
 
 // ── PRÓXIMO MENÚ: previsualización y activación ──
