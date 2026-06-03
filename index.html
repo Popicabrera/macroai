@@ -11192,15 +11192,17 @@ async function menuGuardarMenuCompleto() {
   const nombre = (menuGetNombreInput()?.value||'').trim();
   if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
 
-  const celdas = [];
+  // Construir celdas deduplicadas por tipo_dia+franja (el menú es un template, no 7 días independientes)
+  const celdasMap = {};
   MENU_TEMPLATES.forEach(tpl => {
     const tipoDiaReal = _menuTplTipo(tpl, _menuCocClientePerfil);
     const tipoDiaGuardar = (tipoDiaReal === 'igual') ? 'entreno' : tipoDiaReal;
     MENU_FRANJAS.forEach((franja,fi)=>{
       const cell = _menuGrid[`${tpl.key}-f${fi}`];
-      if (cell) celdas.push({ tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null });
+      if (cell) celdasMap[tipoDiaGuardar + '|' + franja] = { tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null };
     });
   });
+  const celdas = Object.values(celdasMap);
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
 
   const clientePerfil = _menuCocClientePerfil;
