@@ -6821,7 +6821,7 @@ async function handleFotoProducto(e) {
   </div>
 
   <!-- COMIDAS -->
-  <div class="main-scroll-area" id="menuComidas">
+  <div class="main-scroll-area mc-list" id="menuComidas">
     <div style="text-align:center;padding:40px 0;color:var(--muted);">
       <div class="auth-spinner" style="margin:0 auto 12px;"></div>
       <div style="font-size:13px;">Cargando menú...</div>
@@ -6887,29 +6887,34 @@ async function handleFotoProducto(e) {
 }
 
 /* ── MENÚ CLIENTE ESTILOS ── */
-.mc-comida-sec{border-bottom:1px solid var(--border);}
-.mc-comida-sec:last-child{border-bottom:none;}
-.mc-comida-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-.mc-comida-hdr-left{display:flex;align-items:center;gap:10px;}
-.mc-comida-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.mc-list{display:flex;flex-direction:column;gap:8px;padding:10px 10px 16px;}
+.mc-comida-sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.mc-comida-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 12px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;gap:10px;}
+.mc-comida-hdr-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.mc-comida-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .mc-ic-des{background:rgba(255,211,61,0.18);}
 .mc-ic-alm{background:rgba(50,180,100,0.12);}
 .mc-ic-com{background:rgba(232,168,56,0.15);}
 .mc-ic-mer{background:rgba(220,80,130,0.1);}
 .mc-ic-cen{background:rgba(91,141,184,0.12);}
-.mc-comida-titulo{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
-.mc-comida-sub{font-size:10px;color:var(--muted);margin-top:2px;}
-.mc-comida-right{display:flex;align-items:center;gap:8px;}
-.mc-comida-kcal{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
-.mc-check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--s2);flex-shrink:0;cursor:pointer;transition:all 0.2s;}
+.mc-comida-titulo{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+.mc-comida-sub{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mc-comida-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.mc-comida-kcal{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);}
+.mc-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--s2);flex-shrink:0;cursor:pointer;transition:all 0.2s;}
 .mc-check.done{background:var(--accent);border-color:var(--accent);color:#f5f0e8;}
-.mc-alimento-row{display:flex;align-items:center;justify-content:space-between;padding:5px 14px 5px 58px;}
-.mc-alimento-row:last-child{padding-bottom:10px;}
-.mc-alimento-nombre{font-size:13px;color:var(--text);}
+/* Ingredientes */
+.mc-ing-body{border-top:1px solid var(--border);padding:4px 0 6px;}
+.mc-alimento-row{display:flex;align-items:center;padding:7px 12px 7px 14px;gap:8px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.mc-alimento-row:last-child{border-bottom:none;}
+.mc-alimento-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0.4;flex-shrink:0;}
+.mc-alimento-nombre{flex:1;font-size:13px;font-weight:500;color:var(--text);min-width:0;}
 .mc-alimento-macros{font-size:10px;color:var(--muted);margin-top:1px;}
-.mc-alimento-right{text-align:right;flex-shrink:0;}
-.mc-alimento-gramos{font-size:11px;color:var(--muted);}
-.mc-alimento-kcal{font-size:13px;font-weight:700;color:var(--accent);font-family:'Space Grotesk',sans-serif;}
+.mc-alimento-right{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:1px;}
+.mc-alimento-gramos{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+.mc-alimento-kcal{font-size:10px;color:var(--muted);}
+/* Expandir hint */
+.mc-expand-hint{text-align:center;padding:5px 0 2px;font-size:10px;color:var(--muted2);letter-spacing:0.3px;}
 
 /* ── ADMIN MENÚ ESTILOS ── */
 .am-section{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;}
@@ -7175,7 +7180,7 @@ function _renderMenuDia() {
 
   // --- TOGGLE ENTRENO / DESCANSO ---
   const toggleHtml = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px 6px;">
       <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">
         ${esHoy ? 'HOY' : _MENU_DIAS_NOMBRES[diaNum-1].toUpperCase()}
       </div>
@@ -7257,13 +7262,14 @@ function _renderMenuDia() {
 
           const ajustado = !esEntreno && gramosAdj !== gramosOrig;
           ingredientesHtml += `<div class="mc-alimento-row">
+            <div class="mc-alimento-dot"></div>
             <div style="flex:1;min-width:0;">
               <div class="mc-alimento-nombre">${escapeHtml(ing.nombre||'')}</div>
-              ${iProt > 0 ? `<div class="mc-alimento-macros">CH${iHc}g · P${iProt}g · G${iGrasa}g</div>` : ''}
+              ${iProt > 0 ? `<div class="mc-alimento-macros">P${iProt}g · HC${iHc}g · G${iGrasa}g</div>` : ''}
             </div>
             <div class="mc-alimento-right">
               <div class="mc-alimento-gramos">${ajustado
-                ? `<span style="text-decoration:line-through;opacity:0.45;">${gramosOrig}g</span> <span style="color:var(--blue);">${gramosAdj}g</span>`
+                ? `<span style="text-decoration:line-through;opacity:0.4;font-size:11px;">${gramosOrig}g</span> <span style="color:var(--blue);">${gramosAdj}g</span>`
                 : `${gramosAdj}g`}</div>
               <div class="mc-alimento-kcal">${iKcal} kcal</div>
             </div>
@@ -7279,15 +7285,16 @@ function _renderMenuDia() {
         franjaProt  += cProt;
         franjaHc    += cHc;
         franjaGrasa += cGrasa;
-        ingredientesHtml += `<div class="mc-alimento-row" style="background:var(--s1);border-radius:10px;margin-bottom:4px;">
+        ingredientesHtml += `<div class="mc-alimento-row">
+          <div class="mc-alimento-dot"></div>
           <div style="flex:1;min-width:0;">
             <div class="mc-alimento-nombre" style="font-weight:600;">${escapeHtml(bib.nombre)}</div>
-            ${ingArr.length ? `<div class="mc-alimento-macros" style="margin-top:3px;">` +
-              ingArr.map(i => `<span style="display:inline-block;margin-right:8px;font-size:10px;color:var(--muted);">${escapeHtml(i.nombre||'')}${i.gramos ? ' '+i.gramos+'g' : ''}</span>`).join('') +
+            ${ingArr.length ? `<div class="mc-alimento-macros">` +
+              ingArr.map(i => `${escapeHtml(i.nombre||'')}${i.gramos ? ' '+i.gramos+'g' : ''}`).join(' · ') +
               `</div>` : ''}
           </div>
           <div class="mc-alimento-right">
-            <div class="mc-alimento-gramos" style="font-size:11px;color:var(--muted);">${cProt>0?'P'+cProt+'g':''}</div>
+            <div class="mc-alimento-gramos">${cProt>0?'P'+cProt+'g':''}</div>
             <div class="mc-alimento-kcal">${cKcal} kcal</div>
           </div>
         </div>`;
@@ -7305,7 +7312,7 @@ function _renderMenuDia() {
         <div class="mc-comida-hdr" onclick="mcToggleComida('${bodyId}')">
           <div class="mc-comida-hdr-left">
             <div class="mc-comida-icon ${meta.clase}">${meta.emoji}</div>
-            <div>
+            <div style="flex:1;min-width:0;">
               <div class="mc-comida-titulo">${escapeHtml(franja)}</div>
               <div class="mc-comida-sub">HC${Math.round(franjaHc)}g · P${Math.round(franjaProt)}g · G${Math.round(franjaGrasa)}g</div>
             </div>
@@ -7315,8 +7322,10 @@ function _renderMenuDia() {
             <div class="mc-check ${isDone ? 'done' : ''}" onclick="event.stopPropagation();mcToggleDoneMenu(${diaNum},'${escapeHtml(franja)}',this)">${isDone ? '✓' : ''}</div>
           </div>
         </div>
-        <div id="${bodyId}" style="display:none;padding:8px 12px 4px;">
-          ${ingredientesHtml || '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Sin ingredientes detallados.</div>'}
+        <div id="${bodyId}" style="display:none;">
+          <div class="mc-ing-body">
+            ${ingredientesHtml || '<div style="font-size:12px;color:var(--muted);padding:10px 14px;">Sin ingredientes detallados.</div>'}
+          </div>
         </div>
       </div>`;
   });
