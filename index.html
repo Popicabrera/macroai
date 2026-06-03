@@ -11188,24 +11188,17 @@ async function menuGuardarMenuCompleto() {
 
   try {
     if (_menuId) {
-      const patchRes = await supaAdmin(`/rest/v1/menus_macroai?id=eq.${_menuId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
-      if (!patchRes.ok) { const t=await patchRes.text(); throw new Error(`PATCH menu falló ${patchRes.status}: ${t}`); }
-      const delRes = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${_menuId}`,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
-      if (!delRes.ok) { const t=await delRes.text(); throw new Error(`DELETE celdas falló ${delRes.status}: ${t}`); }
+      await supaAdmin(`/rest/v1/menus_macroai?id=eq.${_menuId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre})});
+      await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${_menuId}`,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
     } else {
       const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,pendiente:false,cliente_email:clienteEmail})});
-      const rawText = await res.text();
-      console.log('[menuGuardar] POST menus_macroai status:', res.status, 'body:', rawText);
-      if (!res.ok) throw new Error(`POST menu falló ${res.status}: ${rawText}`);
-      let rows;
-      try { rows = JSON.parse(rawText); } catch(e) { throw new Error('Respuesta no es JSON: '+rawText); }
-      if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú. Respuesta: '+rawText);
+      if (!res.ok) { const t=await res.text(); throw new Error(`POST menu falló ${res.status}: ${t}`); }
+      const rows = await res.json();
+      if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú');
       _menuId = rows[0].id;
     }
-    console.log('[menuGuardar] Insertando', celdas.length, 'celdas para menu_id', _menuId);
     const celRes = await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
     if (!celRes.ok) { const t=await celRes.text(); throw new Error(`POST celdas falló ${celRes.status}: ${t}`); }
-    console.log('[menuGuardar] Celdas insertadas OK');
 
     // ── Guardar inteligente: si hay cliente, guardar como pendiente (el cliente lo activa cuando quiera) ──
     if (clienteEmail) {
