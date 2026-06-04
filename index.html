@@ -6828,11 +6828,13 @@ async function handleFotoProducto(e) {
   <div id="menuTipoDiaBar" style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;"></div>
 
   <!-- COMIDAS -->
-  <div class="main-scroll-area mc-list" id="menuComidas">
+  <div class="main-scroll-area">
+  <div class="mc-list" id="menuComidas">
     <div style="text-align:center;padding:40px 0;color:var(--muted);">
       <div class="auth-spinner" style="margin:0 auto 12px;"></div>
       <div style="font-size:13px;">Cargando menú...</div>
     </div>
+  </div>
   </div>
 </div>
 </div>
@@ -7393,7 +7395,7 @@ function menuToggleTipoDia(diaNum) {
 function _recalcMenuNutrientes() {
   // Leer consumido desde los checks del DOM
   let doneKcal=0, doneProt=0, doneHc=0, doneGrasa=0;
-  document.querySelectorAll('#menuComidas .mc-check[data-franja-nombre]').forEach(el => {
+  document.querySelectorAll('#menuComidas .mc-check[data-franja]').forEach(el => {
     if (el.classList.contains('done')) {
       doneKcal  += parseFloat(el.dataset.kcal)  || 0;
       doneProt  += parseFloat(el.dataset.prot)  || 0;
