@@ -10378,6 +10378,7 @@ let _menuId   = null;
 let _menuDiasColapsados = {};
 let _menuListCache = [];
 let _menuCocClientePerfil = null; // perfil del cliente seleccionado para el semanario
+let _menuEraActivo = false; // true si el menú cargado en el editor era el activo del cliente
 
 // ── COCINA: Selector de cliente ──
 let _menuCocClientes = [];
@@ -10440,6 +10441,7 @@ window._menuCocLimpiarCliente = function() {
   _menuGrid = {};
   _menuId = null;
   _menuDiasColapsados = {};
+  _menuEraActivo = false;
   ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = 'Seleccionar cliente para ver macros objetivo'; el.style.color = 'var(--muted)'; el.style.fontWeight = '400'; }
@@ -10458,6 +10460,7 @@ window._menuCocSeleccionar = async function(clienteEmail) {
   _menuGrid = {};
   _menuId = null;
   _menuDiasColapsados = {};
+  _menuEraActivo = false;
   const nombre = perfil ? (perfil.nombre || perfil.cliente_email || 'Cliente') : null;
   const label = nombre ? `👤 ${nombre}` : 'Seleccionar cliente para ver macros objetivo';
   const labelColor = nombre ? 'var(--text)' : 'var(--muted)';
@@ -10479,6 +10482,7 @@ window._menuCocSeleccionar = async function(clienteEmail) {
         const m = rows[0];
         const estado = m.activo ? '✅ activo' : '🔔 pendiente';
         showToast(`📂 Cargando menú ${estado}: ${m.nombre}`);
+        _menuEraActivo = !!m.activo;
         await menuCargarExistente(m.id);
       } else {
         // Sin menú asignado: limpiar input nombre
@@ -11389,19 +11393,28 @@ async function menuGuardarMenuCompleto() {
     const celRes = await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
     if (!celRes.ok) { const t=await celRes.text(); throw new Error(`POST celdas falló ${celRes.status}: ${t}`); }
 
-    // ── Guardar inteligente: si hay cliente, guardar como pendiente (el cliente lo activa cuando quiera) ──
+    // ── Guardar inteligente según si era el menú activo o uno nuevo ──
     if (clienteEmail) {
-      // Quitar flag pendiente de cualquier menú pendiente anterior de este cliente
-      await supaAdmin(
-        `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${_menuId}`,
-        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
-      );
-      // Marcar este menú como pendiente para el cliente
-      await supaAdmin(
-        `/rest/v1/menus_macroai?id=eq.${_menuId}`,
-        { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
-      );
-      showToast(`✅ Menú listo para ${clienteNombre} — lo activará cuando quiera`);
+      if (_menuEraActivo) {
+        // Corrección del menú activo → actualizar directamente sin interrumpir al cliente
+        await supaAdmin(
+          `/rest/v1/menus_macroai?id=eq.${_menuId}`,
+          { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, activo: true, pendiente: false }) }
+        );
+        showToast(`✅ Menú actualizado para ${clienteNombre}`);
+      } else {
+        // Menú nuevo → pendiente hasta que el cliente lo active
+        // NO tocar el menú activo actual — el cliente sigue usándolo
+        await supaAdmin(
+          `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${_menuId}`,
+          { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
+        );
+        await supaAdmin(
+          `/rest/v1/menus_macroai?id=eq.${_menuId}`,
+          { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
+        );
+        showToast(`✅ Menú listo para ${clienteNombre} — lo activará cuando quiera`);
+      }
     } else {
       showToast('✅ Menú guardado');
     }
