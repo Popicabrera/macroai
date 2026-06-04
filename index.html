@@ -3459,7 +3459,7 @@ function updateBars(){
   document.getElementById('protResta').textContent=protR;
   document.getElementById('chResta').textContent=chR;
   document.getElementById('grasaResta').textContent=grasaR;
-  document.getElementById('kcalObj').textContent='de '+S.kcalObj+' kcal';
+  document.getElementById('kcalObj').textContent=_kcalObjLabel(S.kcalObj);
   document.getElementById('kcalResta').style.color=kcalR<0?'var(--red)':'var(--accent)';
   // Refrescar diario MFP si está visible
   if (document.getElementById('viewMain')?.classList.contains('active')) {
@@ -5437,7 +5437,7 @@ async function cargarDiarioPorFecha(fecha) {
       // Actualizar objetivos con los macros del día correcto
       S.kcalObj=mFuturo.kcal; S.prot=mFuturo.prot; S.ch=mFuturo.ch; S.grasa=mFuturo.grasa;
       document.getElementById('kcalResta').textContent = mFuturo.kcal;
-      document.getElementById('kcalObj').textContent = 'de ' + mFuturo.kcal + ' kcal';
+      document.getElementById('kcalObj').textContent = _kcalObjLabel(mFuturo.kcal);
       document.getElementById('protResta').textContent = mFuturo.prot;
       document.getElementById('chResta').textContent = mFuturo.ch;
       document.getElementById('grasaResta').textContent = mFuturo.grasa;
@@ -5474,7 +5474,7 @@ function _diarioModoLectura(activo) {
 
 function _diarioRenderVacio(esFuturo) {
   document.getElementById('kcalResta').textContent = S.kcalObj;
-  document.getElementById('kcalObj').textContent = 'de ' + S.kcalObj + ' kcal';
+  document.getElementById('kcalObj').textContent = _kcalObjLabel(S.kcalObj);
   document.getElementById('protResta').textContent = S.prot;
   document.getElementById('chResta').textContent = S.ch;
   document.getElementById('grasaResta').textContent = S.grasa;
@@ -5505,7 +5505,7 @@ function _diarioRenderOtroDia(data, fecha) {
   const _chR   = Math.round(data.ch - data.chC);
   const _grasaR= Math.round(data.grasa - data.grasaC);
   document.getElementById('kcalResta').textContent = _kcalR;
-  document.getElementById('kcalObj').textContent = 'de ' + data.kcalObj + ' kcal';
+  document.getElementById('kcalObj').textContent = _kcalObjLabel(data.kcalObj);
   document.getElementById('protResta').textContent = _protR;
   document.getElementById('chResta').textContent = _chR;
   document.getElementById('grasaResta').textContent = _grasaR;
@@ -5905,7 +5905,7 @@ function _diarioRenderFuturo(fecha) {
   const restaCh   = Math.round(S.ch - totalPlan.ch);
   const restaGrasa= Math.round(S.grasa - totalPlan.grasa);
   document.getElementById('kcalResta').textContent = restaKcal;
-  document.getElementById('kcalObj').textContent = 'de ' + S.kcalObj + ' kcal';
+  document.getElementById('kcalObj').textContent = _kcalObjLabel(S.kcalObj);
   document.getElementById('protResta').textContent = restaProt;
   document.getElementById('chResta').textContent = restaCh;
   document.getElementById('grasaResta').textContent = restaGrasa;
@@ -7473,6 +7473,15 @@ function _resetMenuMacroPanel() {
 
 // Totales del día del menú (se guardan al renderizar para que _recalcMenuNutrientes los use)
 let _menuTotalKcal=0, _menuTotalProt=0, _menuTotalHc=0, _menuTotalGrasa=0;
+
+// Devuelve el texto correcto para "de X kcal" según modo:
+// en modo Menú usa _menuTotalKcal (kcal reales del menú del día);
+// en modo Macros usa el objetivo del perfil pasado como fallback.
+function _kcalObjLabel(fallback) {
+  const kcalMenu = _menuTotalKcal || 0;
+  const val = (_MODO_APP === 'menu' && kcalMenu > 0) ? kcalMenu : (fallback || S.kcalObj || 0);
+  return 'de ' + val + ' kcal';
+}
 
 function _updateMenuMacroPanel(kcal, prot, hc, grasa) {
   // Solo guardar totales — el panel lo pinta _recalcMenuNutrientes
@@ -10358,7 +10367,17 @@ async function menuCocAbrirSelectorCliente() {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
   overlay.id = '_menuCocCliOverlay';
 
-  const lista = _menuCocClientes.map(c => `
+  const opcionSinCliente = `
+    <div onclick="_menuCocLimpiarCliente()"
+      style="padding:11px 14px;background:var(--s1);border:1px solid var(--border);border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;">✕</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <div style="font-size:13px;font-weight:600;color:var(--muted);">Sin cliente — borrador libre</div>
+        <div style="font-size:11px;color:var(--muted2);">Vacía el planificador para trabajar sin macros asignados</div>
+      </div>
+    </div>`;
+
+  const lista = opcionSinCliente + _menuCocClientes.map(c => `
     <div onclick="_menuCocSeleccionar('${escapeHtml(c.cliente_email||'').replace(/'/g,"\\'")}')"
       style="padding:11px 14px;background:var(--s1);border:1px solid var(--border);border-radius:11px;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
       <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||c.cliente_email||'Sin nombre')}</div>
@@ -10377,6 +10396,22 @@ async function menuCocAbrirSelectorCliente() {
   overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 }
+
+window._menuCocLimpiarCliente = function() {
+  document.getElementById('_menuCocCliOverlay')?.remove();
+  _menuCocClientePerfil = null;
+  _menuGrid = {};
+  _menuId = null;
+  _menuDiasColapsados = {};
+  ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = 'Seleccionar cliente para ver macros objetivo'; el.style.color = 'var(--muted)'; el.style.fontWeight = '400'; }
+  });
+  const ni = menuGetNombreInput();
+  if (ni) ni.value = '';
+  menuRenderGrid();
+  menuActualizarTextoBtnGuardar();
+};
 
 window._menuCocSeleccionar = async function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
