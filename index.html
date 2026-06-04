@@ -11066,23 +11066,7 @@ function menuRenderGrid() {
       }
     });
 
-    if (sumKcal > 0) {
-      const over = sumKcal > objKcal + 50;
-      const pctFill = Math.min(Math.round(sumKcal / objKcal * 100), 100);
-      const sumBar = document.createElement('div');
-      sumBar.className = 'msd-sum-bar' + (over ? ' msd-sum-over' : '');
-      sumBar.innerHTML = `
-        <div class="msd-sum-pills">
-          <span class="msd-sum-pill msd-sum-kcal${over?' msd-sum-red':''}">${Math.round(sumKcal)} / ${objKcal} kcal${over?' ⚠️':''}</span>
-          <span class="msd-sum-pill">P ${Math.round(sumProt*10)/10}/${objProt}g</span>
-          <span class="msd-sum-pill">HC ${Math.round(sumHc*10)/10}/${objHc}g</span>
-          <span class="msd-sum-pill">G ${Math.round(sumGrasa*10)/10}/${objGrasa}g</span>
-        </div>
-        <div class="msd-sum-track">
-          <div class="msd-sum-fill${over?' msd-fill-over':''}" style="width:${pctFill}%"></div>
-        </div>`;
-      card.appendChild(sumBar);
-    }
+    // Barra de totales del día eliminada (limpieza visual)
 
     container.appendChild(card);
   });
