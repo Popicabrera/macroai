@@ -7030,21 +7030,28 @@ function _menuAjustarGramos(gramos, ing, tipoDia, perfil) {
   const gObj   = perfil.g_objetivo   || 1;
   const hcDesc = perfil.hc_descanso  || hcObj;
   const gDesc  = perfil.g_descanso   || gObj;
-  const ratio_ch    = hcDesc / hcObj;
-  const ratio_grasa = gDesc  / gObj;
-  // Clasificar el ingrediente por macro predominante (kcal)
-  const p100  = ing.p_100 || 0;
+  const ratio_hc    = hcDesc / hcObj;    // ej. 190/220 = 0.864
+  const ratio_grasa = gDesc  / gObj;     // ej. 38/40  = 0.950
+
+  const p100  = ing.p_100  || 0;
   const hc100 = ing.hc_100 || 0;
   const g100  = ing.g_100  || 0;
+
+  // Aporte calórico de cada macro en 100g
   const kcal_prot  = p100  * 4;
   const kcal_carbo = hc100 * 4;
   const kcal_grasa = g100  * 9;
-  const maxKcal = Math.max(kcal_prot, kcal_carbo, kcal_grasa);
-  if (maxKcal === 0) return gramos; // sin datos → sin ajuste
-  let ratio = 1;
-  if (maxKcal === kcal_prot)  ratio = 1;              // proteína: sin tocar
-  else if (maxKcal === kcal_carbo) ratio = ratio_ch;  // carbohidrato: ratio HC
-  else ratio = ratio_grasa;                           // grasa: ratio grasa
+  const kcal_total = kcal_prot + kcal_carbo + kcal_grasa;
+  if (kcal_total === 0) return gramos; // sin datos → sin ajuste
+
+  // Peso relativo de HC y grasa sobre el total calórico del ingrediente
+  const peso_hc    = kcal_carbo / kcal_total;
+  const peso_grasa = kcal_grasa / kcal_total;
+  const peso_prot  = kcal_prot  / kcal_total;
+
+  // Ratio final ponderado: proteína no baja (ratio 1), HC y grasa según perfil
+  const ratio = peso_prot * 1 + peso_hc * ratio_hc + peso_grasa * ratio_grasa;
+
   return Math.round(gramos * ratio);
 }
 
