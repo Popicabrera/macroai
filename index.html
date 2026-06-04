@@ -10043,12 +10043,15 @@ function bibRecalcTotales() {
 function bibRenderTargetBanner() {
   const banner = document.getElementById('bibTargetBanner');
   if (!banner) return;
-  if (!_cocEditorCellKey || !_menuTargets[_cocEditorCellKey]) {
-    banner.style.display = 'none';
-    return;
+  let t = null, tLabel = 'Target';
+  if (_cocEditorCellKey && _menuTargets[_cocEditorCellKey]) {
+    t = _menuTargets[_cocEditorCellKey];
+  } else if (_menuCocClientePerfil) {
+    const p = _menuCocClientePerfil;
+    t = { kcal: p.kcal_objetivo||0, prot: p.p_objetivo||0, hc: p.hc_objetivo||0, grasa: p.g_objetivo||0 };
+    tLabel = 'Ref. día entreno';
   }
-  const t = _menuTargets[_cocEditorCellKey];
-
+  if (!t || !t.kcal) { banner.style.display = 'none'; return; }
   // Calcular totales actuales
   let cKcal=0, cProt=0, cHc=0, cGrasa=0;
   _cocEditorIngs.forEach(ing => {
@@ -10082,7 +10085,7 @@ function bibRenderTargetBanner() {
   banner.style.display = 'block';
   banner.innerHTML =
     '<div class="btb-grid">' +
-      '<div class="btb-row-label">Target</div>' +
+      '<div class="btb-row-label">' + tLabel + '</div>' +
       '<div class="btb-cell" style="color:' + C_KCAL  + ';">' + t.kcal  + ' kcal</div>' +
       '<div class="btb-cell" style="color:' + C_PROT  + ';">P '  + t.prot  + 'g</div>' +
       '<div class="btb-cell" style="color:' + C_HC    + ';">HC ' + t.hc    + 'g</div>' +
