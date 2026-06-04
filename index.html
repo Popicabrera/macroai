@@ -2079,7 +2079,7 @@ function eliminarFavorito(id){
   let favs=loadFavs();favs=favs.filter(f=>f.id!==id);saveFavs(favs);renderFavoritos();
 }
 
-function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escapeHtml(t){if(!t&&t!==0)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 // ── TODAY DATA ──
 function loadToday(){
@@ -7269,19 +7269,21 @@ function _renderMenuDia() {
           franjaGrasa += iGrasa;
 
           const ajustado = !esEntreno && gramosAdj !== gramosOrig;
-          ingredientesHtml += `<div class="mc-alimento-row">
-            <div class="mc-alimento-dot"></div>
-            <div style="flex:1;min-width:0;">
-              <div class="mc-alimento-nombre">${escapeHtml(ing.nombre||'')}</div>
-              ${iProt > 0 ? `<div class="mc-alimento-macros">P${iProt}g · HC${iHc}g · G${iGrasa}g</div>` : ''}
-            </div>
-            <div class="mc-alimento-right">
-              <div class="mc-alimento-gramos">${ajustado
-                ? `<span style="text-decoration:line-through;opacity:0.4;font-size:11px;">${gramosOrig}g</span> <span style="color:var(--blue);">${gramosAdj}g</span>`
-                : `${gramosAdj}g`}</div>
-              <div class="mc-alimento-kcal">${iKcal} kcal</div>
-            </div>
-          </div>`;
+          const _gramosHtml = ajustado
+            ? '<span style="text-decoration:line-through;opacity:0.4;font-size:11px;">' + gramosOrig + 'g</span> <span style="color:var(--blue);">' + gramosAdj + 'g</span>'
+            : gramosAdj + 'g';
+          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
+          ingredientesHtml += '<div class="mc-alimento-row">'
+            + '<div class="mc-alimento-dot"></div>'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div class="mc-alimento-nombre">' + escapeHtml(ing.nombre||'') + '</div>'
+            + _macrosHtml
+            + '</div>'
+            + '<div class="mc-alimento-right">'
+            + '<div class="mc-alimento-gramos">' + _gramosHtml + '</div>'
+            + '<div class="mc-alimento-kcal">' + iKcal + ' kcal</div>'
+            + '</div>'
+            + '</div>';
         });
       } else {
         // Sin desglose por ingrediente → usar macros directos del plato
@@ -7293,19 +7295,20 @@ function _renderMenuDia() {
         franjaProt  += cProt;
         franjaHc    += cHc;
         franjaGrasa += cGrasa;
-        ingredientesHtml += `<div class="mc-alimento-row">
-          <div class="mc-alimento-dot"></div>
-          <div style="flex:1;min-width:0;">
-            <div class="mc-alimento-nombre" style="font-weight:600;">${escapeHtml(bib.nombre)}</div>
-            ${ingArr.length ? `<div class="mc-alimento-macros">` +
-              ingArr.map(i => `${escapeHtml(i.nombre||'')}${i.gramos ? ' '+i.gramos+'g' : ''}`).join(' · ') +
-              `</div>` : ''}
-          </div>
-          <div class="mc-alimento-right">
-            <div class="mc-alimento-gramos">${cProt>0?'P'+cProt+'g':''}</div>
-            <div class="mc-alimento-kcal">${cKcal} kcal</div>
-          </div>
-        </div>`;
+        const _ingListaHtml = ingArr.length
+          ? '<div class="mc-alimento-macros">' + ingArr.map(i => escapeHtml(i.nombre||'') + (i.gramos ? ' '+i.gramos+'g' : '')).join(' · ') + '</div>'
+          : '';
+        ingredientesHtml += '<div class="mc-alimento-row">'
+          + '<div class="mc-alimento-dot"></div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div class="mc-alimento-nombre" style="font-weight:600;">' + escapeHtml(bib.nombre) + '</div>'
+          + _ingListaHtml
+          + '</div>'
+          + '<div class="mc-alimento-right">'
+          + '<div class="mc-alimento-gramos">' + (cProt>0?'P'+cProt+'g':'') + '</div>'
+          + '<div class="mc-alimento-kcal">' + cKcal + ' kcal</div>'
+          + '</div>'
+          + '</div>';
       }
     });
 
