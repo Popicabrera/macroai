@@ -3988,6 +3988,15 @@ function initApp(){
   // Cargar perfil desde Supabase (macros del entrenador + modo_app + dias_entreno)
   cargarPerfilUsuario();
 
+  // Polling silencioso cada 2 min: si el entrenador cambia macros, el cliente los ve sin recargar
+  if (!window._perfilPollingInterval) {
+    window._perfilPollingInterval = setInterval(() => {
+      if (CURRENT_USER && CURRENT_USER.email !== ADMIN_EMAIL) {
+        cargarPerfilUsuario();
+      }
+    }, 2 * 60 * 1000);
+  }
+
   // Renderizar diario MFP
   renderMFPDiario();
 
