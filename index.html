@@ -10499,15 +10499,6 @@ function menuRenderDiaHeader(tpl) {
           </div>
         </div>
       </div>
-      <div class="mch-bar-row">
-        <div class="mch-bar-wrap">
-          <div class="mch-bar-fill" style="width:${pctStr}%;background:${barColor};"></div>
-        </div>
-        <div class="mch-bar-labels">
-          <span>${obj.kcal} kcal asignadas</span>
-          <span>${pctStr}%</span>
-        </div>
-      </div>
     </div>`;
 }
 
@@ -11944,10 +11935,7 @@ async function _guardarNuevoAlimento() {
   transition:color 0.3s;
 }
 .mch-macro-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
-.mch-bar-row{display:flex;flex-direction:column;gap:3px;}
-.mch-bar-wrap{height:4px;background:var(--s3);border-radius:4px;overflow:hidden;}
-.mch-bar-fill{height:100%;border-radius:4px;transition:width 0.3s ease;}
-.mch-bar-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);font-weight:600;letter-spacing:0.2px;}
+
 /* Badges tipo de día */
 .mch-badge{padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:0.3px;white-space:nowrap;}
 .mch-badge-entreno{background:rgba(192,57,43,0.12);color:var(--red);border:1px solid rgba(192,57,43,0.25);}
