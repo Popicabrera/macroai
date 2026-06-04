@@ -9066,7 +9066,7 @@ let _MODO_APP = 'macros'; // default
 async function cargarPerfilUsuario() {
   if (!CURRENT_USER) return;
   try {
-    const res = await supaFetch('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email) + '&limit=1');
+    const res = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email) + '&limit=1');
     const rows = await res.json();
     if (Array.isArray(rows) && rows.length) {
       const p = rows[0];
@@ -9114,7 +9114,7 @@ async function cargarPerfilUsuario() {
   const pA = document.getElementById('perfilAvatar');
   if (pE) pE.textContent = CURRENT_USER.email || '';
   try {
-    const uRes = await supaFetch('/rest/v1/usuarios_macroai?select=nombre&email=eq.' + encodeURIComponent(CURRENT_USER.email) + '&limit=1');
+    const uRes = await supaAdmin('/rest/v1/usuarios_macroai?select=nombre&email=eq.' + encodeURIComponent(CURRENT_USER.email) + '&limit=1');
     const uRows = await uRes.json();
     const _realNombre = (Array.isArray(uRows) && uRows.length && uRows[0].nombre) ? uRows[0].nombre.trim() : '';
     // Actualizar CURRENT_USER y localStorage con el nombre real
@@ -9143,7 +9143,7 @@ async function guardarDiasEntreno() {
   saveWeekDays(WEEK_DAYS);
   autoDetectDayType();
   try {
-    await supaFetch('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email), {
+    await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email), {
       method: 'PATCH',
       headers: {'Prefer': 'return=minimal', 'Content-Type': 'application/json'},
       body: JSON.stringify({dias_entreno: WEEK_DAYS})
