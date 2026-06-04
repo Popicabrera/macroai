@@ -10985,27 +10985,35 @@ function menuRenderGrid() {
             ${ingHtml}
           </div>`;
 
-        const editBtn = document.createElement('button');
-        editBtn.className = 'menu-celda-edit';
-        editBtn.title = 'Editar comida';
-        editBtn.innerHTML = '✏️';
-        editBtn.addEventListener('click', e => {
-          e.stopPropagation();
-          const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
-          if (comidaBib) abrirEditorBiblioteca(comidaBib, cellKey);
-          else showToast('Comida no encontrada en biblioteca');
+        // Clic en la comida → bottom sheet Editar / Eliminar
+        content.style.cursor = 'pointer';
+        content.addEventListener('click', () => {
+          const ov = document.createElement('div');
+          ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+          ov.innerHTML = `
+            <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">${escapeHtml(cell.nombre)}</div>
+              <button id="_csEdit" style="width:100%;padding:14px;background:rgba(255,211,61,0.08);border:1px solid rgba(255,211,61,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#a07800;cursor:pointer;margin-bottom:8px;">Editar</button>
+              <button id="_csDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Eliminar</button>
+              <button id="_csCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+            </div>`;
+          ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+          document.body.appendChild(ov);
+          ov.querySelector('#_csEdit').onclick = () => {
+            ov.remove();
+            const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
+            if (comidaBib) abrirEditorBiblioteca(comidaBib, cellKey);
+            else showToast('Comida no encontrada en biblioteca');
+          };
+          ov.querySelector('#_csDel').onclick = () => {
+            ov.remove();
+            delete _menuGrid[cellKey];
+            menuRenderGrid();
+            menuActualizarTotales();
+          };
+          ov.querySelector('#_csCancel').onclick = () => ov.remove();
         });
-
-        const del = document.createElement('button');
-        del.className = 'menu-celda-del';
-        del.textContent = '✕';
-        del.addEventListener('click', e => {
-          e.stopPropagation();
-          delete _menuGrid[cellKey];
-          menuRenderGrid();
-          menuActualizarTotales();
-        });
-        row.appendChild(lbl); row.appendChild(content); row.appendChild(editBtn); row.appendChild(del);
+        row.appendChild(lbl); row.appendChild(content);
       } else {
         const target = _menuTargets[cellKey];
         if (target) {
@@ -11020,36 +11028,34 @@ function menuRenderGrid() {
               </div>
             </div>`;
 
-          // Botón ✏️ para editar el target inline
-          const editTargetBtn = document.createElement('button');
-          editTargetBtn.className = 'menu-celda-edit';
-          editTargetBtn.title = 'Editar target';
-          editTargetBtn.innerHTML = '✏️';
-          editTargetBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            // Toggle: si ya hay editor abierto para esta celda, ciérralo
-            const existing = content.querySelector('.msd-target-editor');
-            if (existing) { existing.remove(); return; }
-            document.querySelectorAll('.msd-target-editor').forEach(el => el.remove());
-            const editor = msdAbrirEditorTarget(cellKey);
-            content.appendChild(editor);
+          // Click en target → bottom sheet Editar target / Eliminar target / Añadir comida
+          content.querySelector('.menu-celda-target').addEventListener('click', () => {
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+            ov.innerHTML = `
+              <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Target: ${escapeHtml(label)}</div>
+                <button id="_ctAdd" style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:8px;">Añadir comida</button>
+                <button id="_ctEdit" style="width:100%;padding:14px;background:rgba(255,211,61,0.08);border:1px solid rgba(255,211,61,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#a07800;cursor:pointer;margin-bottom:8px;">Editar target</button>
+                <button id="_ctDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Eliminar target</button>
+                <button id="_ctCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+              </div>`;
+            ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+            document.body.appendChild(ov);
+            ov.querySelector('#_ctAdd').onclick = () => { ov.remove(); menuAbrirSelector(key, fi, franja, label); };
+            ov.querySelector('#_ctEdit').onclick = () => {
+              ov.remove();
+              const existing = content.querySelector('.msd-target-editor');
+              if (existing) { existing.remove(); return; }
+              document.querySelectorAll('.msd-target-editor').forEach(el => el.remove());
+              const editor = msdAbrirEditorTarget(cellKey);
+              content.appendChild(editor);
+            };
+            ov.querySelector('#_ctDel').onclick = () => { ov.remove(); delete _menuTargets[cellKey]; menuRenderGrid(); menuActualizarTotales(); };
+            ov.querySelector('#_ctCancel').onclick = () => ov.remove();
           });
 
-          // Botón ✕ para borrar target
-          const delTargetBtn = document.createElement('button');
-          delTargetBtn.className = 'menu-celda-del';
-          delTargetBtn.textContent = '✕';
-          delTargetBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            delete _menuTargets[cellKey];
-            menuRenderGrid();
-            menuActualizarTotales();
-          });
-
-          // Click en content → abrir selector de comida
-          content.querySelector('.menu-celda-target').addEventListener('click', () => menuAbrirSelector(key, fi, franja, label));
-
-          row.appendChild(lbl); row.appendChild(content); row.appendChild(editTargetBtn); row.appendChild(delTargetBtn);
+          row.appendChild(lbl); row.appendChild(content);
         } else {
           // Celda vacía sin target
           content.innerHTML = `
