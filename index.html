@@ -9699,7 +9699,6 @@ function cocRenderBiblioteca(comidas) {
     const hdr = document.createElement('div');
     hdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:13px 2px;cursor:pointer;user-select:none;';
     hdr.innerHTML = `
-      <span style="font-size:20px;line-height:1;">${ICONS[cat]||'🍽️'}</span>
       <span style="flex:1;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);">${label}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px;">${items.length}</span>
       <span class="bib-chevron" style="font-size:16px;color:var(--muted);transition:transform .2s;">▾</span>
