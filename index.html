@@ -9668,13 +9668,10 @@ function cocRenderBiblioteca(comidas) {
     const ingsTexto = ings.map(i => `${i.nombre}${i.gramos ? ' · ' + i.gramos + 'g' : ''}`).join(', ');
     const card = document.createElement('div');
     card.className = 'bib-card';
+    card.style.cursor = 'pointer';
     card.innerHTML = `
       <div class="bib-card-body">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div class="bib-card-name" style="flex:1;">${escapeHtml(c.nombre||'Sin nombre')}</div>
-          <button class="bib-card-action-btn edit-btn" title="Editar" onclick="event.stopPropagation();abrirEditorBiblioteca(window._cocBibComidaById('${c.id}'))">✏️</button>
-          <button class="bib-card-action-btn del-btn" title="Eliminar" onclick="event.stopPropagation();eliminarComidaBib('${c.id}','${escapeHtml(c.nombre||'')}')">🗑️</button>
-        </div>
+        <div class="bib-card-name">${escapeHtml(c.nombre||'Sin nombre')}</div>
         <div class="bib-card-macros">
           <span class="bib-macro-pill kcal">${Math.round(c.kcal||0)} kcal</span>
           <span class="bib-macro-pill prot">P ${Math.round((c.proteina||0)*10)/10}g</span>
@@ -9682,12 +9679,9 @@ function cocRenderBiblioteca(comidas) {
           <span class="bib-macro-pill grasa">G ${Math.round((c.grasa||0)*10)/10}g</span>
         </div>
       </div>
-      ${ingsTexto ? `<div class="bib-card-ings" style="display:none;">${escapeHtml(ingsTexto)}</div>` : ''}
+      ${ingsTexto ? `<div class="bib-card-ings" style="padding:6px 0 2px;font-size:12px;color:var(--muted);">${escapeHtml(ingsTexto)}</div>` : ''}
     `;
-    card.addEventListener('click', () => {
-      const ingsEl = card.querySelector('.bib-card-ings');
-      if (ingsEl) ingsEl.style.display = ingsEl.style.display === 'none' ? '' : 'none';
-    });
+    card.addEventListener('click', () => _bibSheet(c));
     return card;
   };
 
@@ -9723,6 +9717,24 @@ function cocRenderBiblioteca(comidas) {
     ORDER.forEach(cat => renderGrupoEn(target, cat, LABELS[cat], grupos[cat]||[]));
     if (sinCat.length) renderGrupoEn(target, '__sin__', 'Sin categoría', sinCat);
   });
+}
+
+// ── BIB BOTTOM SHEET ──
+function _bibSheet(c) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">${escapeHtml(c.nombre||'Sin nombre')}</div>
+      <button id="_bibShEdit" style="width:100%;padding:14px;background:rgba(255,211,61,0.08);border:1px solid rgba(255,211,61,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#a07800;cursor:pointer;margin-bottom:8px;">Editar</button>
+      <button id="_bibShDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Eliminar</button>
+      <button id="_bibShCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelector('#_bibShEdit').onclick = () => { ov.remove(); abrirEditorBiblioteca(window._cocBibComidaById(c.id)); };
+  ov.querySelector('#_bibShDel').onclick = () => { ov.remove(); eliminarComidaBib(c.id, c.nombre); };
+  ov.querySelector('#_bibShCancel').onclick = () => ov.remove();
 }
 
 // ── CONTEXT MENU ──
