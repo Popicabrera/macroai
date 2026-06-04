@@ -10657,11 +10657,13 @@ async function msdGenerar() {
   btn.textContent = '⏳ Calculando...';
 
   const esEntreno = _msdTipo === 'entreno' || _msdTipo === 'igual';
+  // Usar siempre el perfil del cliente cargado en Cocina, no _drumVals (que depende de qué pestaña haya abierto el admin antes)
+  const _pSug = _menuCocClientePerfil || {};
   const macrosDia = {
-    kcal:  esEntreno ? (_drumVals.kcalE||2200) : (_drumVals.kcalD||1900),
-    prot:  esEntreno ? (_drumVals.pE||160)     : (_drumVals.pD||150),
-    hc:    esEntreno ? (_drumVals.hcE||220)    : (_drumVals.hcD||170),
-    grasa: esEntreno ? (_drumVals.gE||65)      : (_drumVals.gD||60),
+    kcal:  esEntreno ? (_pSug.kcal_objetivo||_drumVals.kcalE||2200) : (_pSug.kcal_descanso||_drumVals.kcalD||1900),
+    prot:  esEntreno ? (_pSug.p_objetivo   ||_drumVals.pE||160)     : (_pSug.p_descanso   ||_drumVals.pD||150),
+    hc:    esEntreno ? (_pSug.hc_objetivo  ||_drumVals.hcE||220)    : (_pSug.hc_descanso  ||_drumVals.hcD||170),
+    grasa: esEntreno ? (_pSug.g_objetivo   ||_drumVals.gE||65)      : (_pSug.g_descanso   ||_drumVals.gD||60),
   };
 
   const franjas = MENU_FRANJAS.filter(f => _msdFranjasActivas.has(f));
