@@ -2086,7 +2086,7 @@ function loadToday(){
   // Cargar localStorage inmediatamente (respuesta rapida sin esperar red)
   try{
     const d=JSON.parse(localStorage.getItem('macroai_dia_'+getToday())||'null');
-    if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=d.comidas||[];}
+    if(d){S.kcalC=d.kcalC||0;S.protC=d.protC||0;S.chC=d.chC||0;S.grasaC=d.grasaC||0;S.comidas=(d.comidas||[]).filter(c=>!c.fromMenu);}
   }catch(e){}
   // Sincronizar desde Supabase — usa updated_at para decidir quién tiene el dato más reciente
   if(CURRENT_USER){
@@ -2100,12 +2100,16 @@ function loadToday(){
         const supaUpdated=r.updated_at||'';
         if(supaUpdated && supaUpdated<=localUpdated)return; // localStorage es más reciente
         if(!r.comidas||!Array.isArray(r.comidas))return;
-        S.comidas=r.comidas;
+        const comidasLimpias=(r.comidas||[]).filter(c=>!c.fromMenu);
+        const hayContaminados = comidasLimpias.length !== (r.comidas||[]).length;
+        S.comidas=comidasLimpias;
         updateBars();
         const d2={fecha:getToday(),tipoDia:r.tipo_dia||S.tipoDia,kcalObj:r.kcal_objetivo||S.kcalObj,
           protObj:r.prot_objetivo||S.prot,chObj:r.ch_objetivo||S.ch,grasaObj:r.grasa_objetivo||S.grasa,
           kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas,updated_at:supaUpdated};
         localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d2));
+        // Si había items fromMenu contaminados, limpiar también en Supabase
+        if(hayContaminados) saveFechaSupabase(getToday(), d2);
         renderMFPDiario();
       }).catch(()=>{});
   }
@@ -6796,7 +6800,7 @@ async function handleFotoProducto(e) {
   <!-- PANEL MACROS DEL MENÚ -->
   <div class="macro-panel" id="menuMacroPanel">
     <div class="mp-kcal-row">
-      <div class="mp-kcal-label">Nutrientes del día</div>
+      <div class="mp-kcal-label">Nutrientes restantes</div>
       <div class="mp-kcal-val">
         <span id="menuKcalBig" class="mp-kcal-big">—</span>
         <span class="mp-kcal-unit">kcal</span>
@@ -7349,41 +7353,8 @@ function _renderMenuDia() {
   }
 
   _updateMenuMacroPanel(totalKcal, totalProt, totalHc, totalGrasa);
+  _recalcMenuNutrientes();
 
-  // ── Reconciliar diario con el estado done (solo si es hoy) ──
-  // Garantiza coherencia si el usuario tenía franjas marcadas antes del fix
-  // o si vuelve a la vista Menú con items ya guardados en Supabase.
-  if (esHoy) {
-    const doneStateHoy = _menuLoadDone(diaNum);
-    // Recolectar macros por franja desde el DOM (ya renderizado)
-    const checks = document.querySelectorAll('#menuComidas .mc-check[data-franja-nombre]');
-    checks.forEach(checkEl => {
-      const franjaId = '__menu__' + checkEl.dataset.franjaNombre;
-      const yaEnDiario = S.comidas.some(c => c.id === franjaId);
-      const estaMarcada = checkEl.classList.contains('done');
-      if (estaMarcada && !yaEnDiario) {
-        // Franja marcada pero no registrada → añadir
-        S.comidas.push({
-          id: franjaId,
-          nombre: (checkEl.dataset.franjaNombre || '') + ' (menú)',
-          tipo: (checkEl.dataset.franjaNombre || '').toLowerCase(),
-          mealId: (checkEl.dataset.franjaNombre || '').toLowerCase(),
-          kcal:  parseFloat(checkEl.dataset.kcal)  || 0,
-          prot:  parseFloat(checkEl.dataset.prot)  || 0,
-          ch:    parseFloat(checkEl.dataset.hc)    || 0,
-          grasa: parseFloat(checkEl.dataset.grasa) || 0,
-          fromMenu: true
-        });
-        updateBars();
-        saveToday();
-      } else if (!estaMarcada && yaEnDiario) {
-        // Franja desmarcada pero sigue en diario → quitar
-        S.comidas = S.comidas.filter(c => c.id !== franjaId);
-        updateBars();
-        saveToday();
-      }
-    });
-  }
 }
 
 // Toggle manual del tipo de día — persiste el override en localStorage
@@ -7402,6 +7373,42 @@ function menuToggleTipoDia(diaNum) {
   _renderMenuDia();
 }
 
+// Recalcula el panel "Nutrientes restantes" del Menú
+// Total del día menos las franjas ya marcadas como consumidas
+function _recalcMenuNutrientes() {
+  // Leer consumido desde los checks del DOM
+  let doneKcal=0, doneProt=0, doneHc=0, doneGrasa=0;
+  document.querySelectorAll('#menuComidas .mc-check[data-franja-nombre]').forEach(el => {
+    if (el.classList.contains('done')) {
+      doneKcal  += parseFloat(el.dataset.kcal)  || 0;
+      doneProt  += parseFloat(el.dataset.prot)  || 0;
+      doneHc    += parseFloat(el.dataset.hc)    || 0;
+      doneGrasa += parseFloat(el.dataset.grasa) || 0;
+    }
+  });
+
+  const restKcal  = Math.round(_menuTotalKcal  - doneKcal);
+  const restProt  = Math.round((_menuTotalProt  - doneProt)  * 10) / 10;
+  const restHc    = Math.round((_menuTotalHc    - doneHc)    * 10) / 10;
+  const restGrasa = Math.round((_menuTotalGrasa - doneGrasa) * 10) / 10;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('menuKcalBig', restKcal.toLocaleString('es-ES'));
+  set('menuChVal',   restHc);
+  set('menuProtVal', restProt);
+  set('menuGrasaVal',restGrasa);
+
+  const kcalEl = document.getElementById('menuKcalBig');
+  if (kcalEl) kcalEl.style.color = restKcal < 0 ? 'var(--red)' : '';
+
+  // Barras: % consumido sobre el total
+  const pct = (done, total) => total > 0 ? Math.min(100, (done / total) * 100) : 0;
+  const setFill = (id, p) => { const el = document.getElementById(id); if(el) el.style.width = p + '%'; };
+  setFill('menuChFill',    pct(doneHc,    _menuTotalHc));
+  setFill('menuProtFill',  pct(doneProt,  _menuTotalProt));
+  setFill('menuGrasaFill', pct(doneGrasa, _menuTotalGrasa));
+}
+
 function mcToggleDoneMenu(diaNum, franja, el) {
   const doneState = _menuLoadDone(diaNum);
   const nuevo = !doneState[franja];
@@ -7410,35 +7417,8 @@ function mcToggleDoneMenu(diaNum, franja, el) {
   el.classList.toggle('done', nuevo);
   el.textContent = nuevo ? '✓' : '';
 
-  // ── Sincronizar con el diario (solo si es hoy) ──
-  if (diaNum !== _menuDiaHoy()) return;
-
-  const kcal  = parseFloat(el.dataset.kcal)  || 0;
-  const prot  = parseFloat(el.dataset.prot)  || 0;
-  const hc    = parseFloat(el.dataset.hc)    || 0;
-  const grasa = parseFloat(el.dataset.grasa) || 0;
-  const nombreFranja = el.dataset.franjaNombre || franja;
-
-  // ID único para identificar los items de esta franja en S.comidas
-  const menuItemId = '__menu__' + franja;
-
-  if (nuevo) {
-    // Añadir la franja como una entrada en el diario
-    S.comidas.push({
-      id: menuItemId,
-      nombre: nombreFranja + ' (menú)',
-      tipo: franja.toLowerCase(),
-      mealId: franja.toLowerCase(),
-      kcal, prot, ch: hc, grasa,
-      fromMenu: true
-    });
-  } else {
-    // Quitar todos los items de esta franja del diario
-    S.comidas = S.comidas.filter(c => c.id !== menuItemId);
-  }
-
-  updateBars();
-  saveToday();
+  // ── Actualizar panel Nutrientes del Menú ──
+  _recalcMenuNutrientes();
 }
 
 function _menuVacioHtml() {
@@ -7458,21 +7438,15 @@ function _resetMenuMacroPanel() {
   if(labelEl) labelEl.textContent = 'Sin menú';
 }
 
+// Totales del día del menú (se guardan al renderizar para que _recalcMenuNutrientes los use)
+let _menuTotalKcal=0, _menuTotalProt=0, _menuTotalHc=0, _menuTotalGrasa=0;
+
 function _updateMenuMacroPanel(kcal, prot, hc, grasa) {
-  kcal = Math.round(kcal || 0); prot = Math.round(prot || 0);
-  hc   = Math.round(hc   || 0); grasa = Math.round(grasa || 0);
-  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  set('menuKcalBig', kcal.toLocaleString('es-ES'));
-  set('menuChVal',   hc);
-  set('menuProtVal', prot);
-  set('menuGrasaVal',grasa);
-  // Barras proporcionales
-  const maxHc   = Math.max(hc, 1); const maxProt = Math.max(prot, 1); const maxGrasa = Math.max(grasa, 1);
-  const totalG  = hc + prot + grasa || 1;
-  const setFill = (id, pct) => { const el = document.getElementById(id); if(el) el.style.width = Math.min(pct, 100) + '%'; };
-  setFill('menuChFill',    (hc    / totalG) * 100 * 1.5);
-  setFill('menuProtFill',  (prot  / totalG) * 100 * 1.5);
-  setFill('menuGrasaFill', (grasa / totalG) * 100 * 1.5);
+  // Solo guardar totales — el panel lo pinta _recalcMenuNutrientes
+  _menuTotalKcal  = Math.round(kcal  || 0);
+  _menuTotalProt  = Math.round((prot  || 0) * 10) / 10;
+  _menuTotalHc    = Math.round((hc    || 0) * 10) / 10;
+  _menuTotalGrasa = Math.round((grasa || 0) * 10) / 10;
 }
 
 function mcToggleComida(bodyId) {
