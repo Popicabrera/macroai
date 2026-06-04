@@ -11855,17 +11855,18 @@ async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, cliente
   cerrarMenuAsignacion();
   showToast('\u23f3 Asignando...');
   try {
-    // 1. Desactivar cualquier menú activo anterior de este cliente
+    // 1. Quitar pendiente de cualquier otro menú pendiente anterior (NO tocar el activo)
     await supaAdmin(
-      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&activo=eq.true`,
-      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: false }) }
+      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${menuId}`,
+      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
     );
-    // 2. Asignar y activar el menú seleccionado
+    // 2. Marcar este menú como pendiente — el cliente lo activará cuando quiera
+    // El menú activo actual NO se toca: el cliente sigue usándolo hasta que active el nuevo
     await supaAdmin(
       `/rest/v1/menus_macroai?id=eq.${menuId}`,
-      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, activo: true }) }
+      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
     );
-    showToast(`\u2705 Menú asignado a ${clienteNombre}`);
+    showToast(`\u2705 Menú preparado para ${clienteNombre} — lo activará cuando quiera`);
     // Reabrir la lista para reflejar estado Activo actualizado
     const ld = document.getElementById('menuListaExistentes');
     if (ld) ld.style.display = 'none';
