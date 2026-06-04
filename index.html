@@ -6912,6 +6912,10 @@ async function handleFotoProducto(e) {
 .mc-check.done{background:var(--accent);border-color:var(--accent);color:#f5f0e8;}
 /* Ingredientes */
 .mc-ing-body{border-top:1px solid var(--border);padding:0 0 8px;background:var(--s2);}
+.mc-franja-body{display:none;}
+.mc-franja-body.open{display:block;}
+.mc-chevron{font-size:11px;color:var(--muted2);margin-left:4px;transition:transform 0.2s;display:inline-block;transform:rotate(-90deg);}
+.mc-chevron.open{transform:rotate(0deg);}
 .mc-alimento-row{display:flex;align-items:center;padding:7px 12px 7px 14px;gap:8px;border-bottom:1px solid rgba(0,0,0,0.04);}
 .mc-alimento-row:last-child{border-bottom:none;}
 .mc-alimento-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0.4;flex-shrink:0;}
@@ -7319,34 +7323,36 @@ function _renderMenuDia() {
 
     const bodyId = `mc-body-${diaNum}-${idx}`;
     const inicialAbierto = false;
-    html += `
-      <div class="mc-comida-sec">
-        <div class="mc-comida-hdr" onclick="mcToggleComida('${bodyId}')">
-          <div class="mc-comida-hdr-left">
-            <div class="mc-comida-icon ${meta.clase}">${meta.emoji}</div>
-            <div style="flex:1;min-width:0;">
-              <div class="mc-comida-titulo">${escapeHtml(franja)}</div>
-              <div class="mc-comida-sub">HC${Math.round(franjaHc)}g · P${Math.round(franjaProt)}g · G${Math.round(franjaGrasa)}g</div>
-            </div>
-          </div>
-          <div class="mc-comida-right">
-            <span class="mc-comida-kcal">${Math.round(franjaKcal)} kcal</span>
-            <div class="mc-check ${isDone ? 'done' : ''}"
-              data-kcal="${Math.round(franjaKcal)}"
-              data-prot="${Math.round(franjaProt*10)/10}"
-              data-hc="${Math.round(franjaHc*10)/10}"
-              data-grasa="${Math.round(franjaGrasa*10)/10}"
-              data-franja-nombre="${escapeHtml(franja)}"
-              onclick="event.stopPropagation();mcToggleDoneMenu(${diaNum},'${escapeHtml(franja)}',this)">${isDone ? '✓' : ''}</div>
-            <span class="mc-chevron" style="font-size:11px;color:var(--muted2);margin-left:4px;transition:transform 0.2s;display:inline-block;transform:rotate(${inicialAbierto ? '0deg' : '-90deg'});">▾</span>
-          </div>
-        </div>
-        <div id="${bodyId}" style="display:${inicialAbierto ? 'block' : 'none'};">
-          <div class="mc-ing-body">
-            ${ingredientesHtml || '<div style="font-size:12px;color:var(--muted);padding:10px 14px;">Sin ingredientes detallados.</div>'}
-          </div>
-        </div>
-      </div>`;
+    html += '<div class="mc-comida-sec">'
+      + '<div class="mc-comida-hdr" data-body="' + bodyId + '" data-chev="mc-chev-' + diaNum + '-' + idx + '" onclick="mcToggleComida(this)">'
+      + '<div class="mc-comida-hdr-left">'
+      + '<div class="mc-comida-icon ' + meta.clase + '">' + meta.emoji + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div class="mc-comida-titulo">' + escapeHtml(franja) + '</div>'
+      + '<div class="mc-comida-sub">HC' + Math.round(franjaHc) + 'g · P' + Math.round(franjaProt) + 'g · G' + Math.round(franjaGrasa) + 'g</div>'
+      + '</div>'
+      + '</div>'
+      + '<div class="mc-comida-right">'
+      + '<span class="mc-comida-kcal">' + Math.round(franjaKcal) + ' kcal</span>'
+      + '<div class="mc-check ' + (isDone ? 'done' : '') + '"'
+      + ' data-kcal="' + Math.round(franjaKcal) + '"'
+      + ' data-prot="' + (Math.round(franjaProt*10)/10) + '"'
+      + ' data-hc="' + (Math.round(franjaHc*10)/10) + '"'
+      + ' data-grasa="' + (Math.round(franjaGrasa*10)/10) + '"'
+      + ' data-franja="' + escapeHtml(franja) + '"'
+      + ' data-dia="' + diaNum + '"'
+      + ' onclick="event.stopPropagation();mcToggleDoneMenuEl(this)">'
+      + (isDone ? '✓' : '')
+      + '</div>'
+      + '<span class="mc-chevron" id="mc-chev-' + diaNum + '-' + idx + '">▾</span>'
+      + '</div>'
+      + '</div>'
+      + '<div class="mc-franja-body" id="' + bodyId + '">'
+      + '<div class="mc-ing-body">'
+      + (ingredientesHtml || '<div style="font-size:12px;color:var(--muted);padding:10px 14px;">Sin ingredientes detallados.</div>')
+      + '</div>'
+      + '</div>'
+      + '</div>';
   });
 
   document.getElementById('menuComidas').innerHTML = html;
@@ -7458,17 +7464,20 @@ function _updateMenuMacroPanel(kcal, prot, hc, grasa) {
   _menuTotalGrasa = Math.round((grasa || 0) * 10) / 10;
 }
 
-function mcToggleComida(bodyId) {
+function mcToggleComida(hdr) {
+  const bodyId = hdr.dataset.body;
+  const chevId = hdr.dataset.chev;
   const el = document.getElementById(bodyId);
   if (!el) return;
-  const abierto = el.style.display !== 'none';
-  el.style.display = abierto ? 'none' : 'block';
-  // Rotar chevron del header padre
-  const hdr = el.previousElementSibling;
-  if (hdr) {
-    const chev = hdr.querySelector('.mc-chevron');
-    if (chev) chev.style.transform = abierto ? 'rotate(-90deg)' : 'rotate(0deg)';
-  }
+  const open = el.classList.toggle('open');
+  const chev = chevId ? document.getElementById(chevId) : hdr.querySelector('.mc-chevron');
+  if (chev) chev.classList.toggle('open', open);
+}
+
+function mcToggleDoneMenuEl(checkEl) {
+  const diaNum = parseInt(checkEl.dataset.dia);
+  const franja = checkEl.dataset.franja;
+  mcToggleDoneMenu(diaNum, franja, checkEl);
 }
 
 function mcToggleDone(fecha, momentoKey, checkEl) {
