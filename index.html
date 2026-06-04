@@ -7319,7 +7319,13 @@ function _renderMenuDia() {
           </div>
           <div class="mc-comida-right">
             <span class="mc-comida-kcal">${Math.round(franjaKcal)} kcal</span>
-            <div class="mc-check ${isDone ? 'done' : ''}" onclick="event.stopPropagation();mcToggleDoneMenu(${diaNum},'${escapeHtml(franja)}',this)">${isDone ? '✓' : ''}</div>
+            <div class="mc-check ${isDone ? 'done' : ''}"
+              data-kcal="${Math.round(franjaKcal)}"
+              data-prot="${Math.round(franjaProt*10)/10}"
+              data-hc="${Math.round(franjaHc*10)/10}"
+              data-grasa="${Math.round(franjaGrasa*10)/10}"
+              data-franja-nombre="${escapeHtml(franja)}"
+              onclick="event.stopPropagation();mcToggleDoneMenu(${diaNum},'${escapeHtml(franja)}',this)">${isDone ? '✓' : ''}</div>
           </div>
         </div>
         <div id="${bodyId}" style="display:none;">
@@ -7343,6 +7349,41 @@ function _renderMenuDia() {
   }
 
   _updateMenuMacroPanel(totalKcal, totalProt, totalHc, totalGrasa);
+
+  // ── Reconciliar diario con el estado done (solo si es hoy) ──
+  // Garantiza coherencia si el usuario tenía franjas marcadas antes del fix
+  // o si vuelve a la vista Menú con items ya guardados en Supabase.
+  if (esHoy) {
+    const doneStateHoy = _menuLoadDone(diaNum);
+    // Recolectar macros por franja desde el DOM (ya renderizado)
+    const checks = document.querySelectorAll('#menuComidas .mc-check[data-franja-nombre]');
+    checks.forEach(checkEl => {
+      const franjaId = '__menu__' + checkEl.dataset.franjaNombre;
+      const yaEnDiario = S.comidas.some(c => c.id === franjaId);
+      const estaMarcada = checkEl.classList.contains('done');
+      if (estaMarcada && !yaEnDiario) {
+        // Franja marcada pero no registrada → añadir
+        S.comidas.push({
+          id: franjaId,
+          nombre: (checkEl.dataset.franjaNombre || '') + ' (menú)',
+          tipo: (checkEl.dataset.franjaNombre || '').toLowerCase(),
+          mealId: (checkEl.dataset.franjaNombre || '').toLowerCase(),
+          kcal:  parseFloat(checkEl.dataset.kcal)  || 0,
+          prot:  parseFloat(checkEl.dataset.prot)  || 0,
+          ch:    parseFloat(checkEl.dataset.hc)    || 0,
+          grasa: parseFloat(checkEl.dataset.grasa) || 0,
+          fromMenu: true
+        });
+        updateBars();
+        saveToday();
+      } else if (!estaMarcada && yaEnDiario) {
+        // Franja desmarcada pero sigue en diario → quitar
+        S.comidas = S.comidas.filter(c => c.id !== franjaId);
+        updateBars();
+        saveToday();
+      }
+    });
+  }
 }
 
 // Toggle manual del tipo de día — persiste el override en localStorage
@@ -7368,6 +7409,36 @@ function mcToggleDoneMenu(diaNum, franja, el) {
   _menuSaveDone(diaNum, doneState);
   el.classList.toggle('done', nuevo);
   el.textContent = nuevo ? '✓' : '';
+
+  // ── Sincronizar con el diario (solo si es hoy) ──
+  if (diaNum !== _menuDiaHoy()) return;
+
+  const kcal  = parseFloat(el.dataset.kcal)  || 0;
+  const prot  = parseFloat(el.dataset.prot)  || 0;
+  const hc    = parseFloat(el.dataset.hc)    || 0;
+  const grasa = parseFloat(el.dataset.grasa) || 0;
+  const nombreFranja = el.dataset.franjaNombre || franja;
+
+  // ID único para identificar los items de esta franja en S.comidas
+  const menuItemId = '__menu__' + franja;
+
+  if (nuevo) {
+    // Añadir la franja como una entrada en el diario
+    S.comidas.push({
+      id: menuItemId,
+      nombre: nombreFranja + ' (menú)',
+      tipo: franja.toLowerCase(),
+      mealId: franja.toLowerCase(),
+      kcal, prot, ch: hc, grasa,
+      fromMenu: true
+    });
+  } else {
+    // Quitar todos los items de esta franja del diario
+    S.comidas = S.comidas.filter(c => c.id !== menuItemId);
+  }
+
+  updateBars();
+  saveToday();
 }
 
 function _menuVacioHtml() {
