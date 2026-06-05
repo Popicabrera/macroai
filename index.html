@@ -2017,6 +2017,8 @@ function editarFavorito(id){
 
     // Abre el buscador completo del diario para añadir alimento al favorito
     const abrirBuscadorFav=()=>{
+      // Ocultar el overlay temporalmente (sin destruirlo) para que viewBuscador sea visible
+      overlay.style.display = 'none';
       _buscadorFavCallback = (producto, gramos) => {
         ings.push({
           nombre: producto.nombre,
@@ -2030,8 +2032,25 @@ function editarFavorito(id){
           ch: Math.round((producto.hc_100||0)*gramos/100*10)/10,
           grasa: Math.round((producto.g_100||0)*gramos/100*10)/10,
         });
+        // Restaurar overlay y re-renderizar
+        overlay.style.display = 'flex';
         renderIngs(); actualizarTotales();
       };
+      // Si el usuario cancela en el buscador (botón ‹), restaurar el overlay
+      const _origCerrarBuscador = window._favEditCerrarBuscadorPatch;
+      const origCB = window.cerrarBuscador;
+      window._favEditCerrarBuscadorPatch = true;
+      const patchedClose = () => {
+        overlay.style.display = 'flex';
+        window.cerrarBuscador = origCB;
+        window._favEditCerrarBuscadorPatch = false;
+        origCB();
+      };
+      // Parchear el botón ‹ del buscador para restaurar overlay al cancelar
+      const backBtn = document.querySelector('#viewBuscador .back-btn');
+      const origOnclick = backBtn ? backBtn.onclick : null;
+      if(backBtn) backBtn.onclick = patchedClose;
+      _buscadorFavCallback._restoreOverlay = () => { overlay.style.display='flex'; if(backBtn && origOnclick!==null) backBtn.onclick=origOnclick; };
       abrirBuscador('__fav_edit__', '➕ Añadir a favorito');
     };
 
@@ -4584,7 +4603,18 @@ function seleccionarAlimentoBuscadorConGramos(producto, gramos) {
   }
 }
 
-function cerrarBuscador() { showView('viewMain'); }
+function cerrarBuscador() {
+  if (_buscadorMealId === '__fav_edit__') {
+    _buscadorMealId = '';
+    if(_buscadorFavCallback && _buscadorFavCallback._restoreOverlay) {
+      _buscadorFavCallback._restoreOverlay();
+    }
+    _buscadorFavCallback = null;
+    showView('viewFavoritos');
+    return;
+  }
+  showView('viewMain');
+}
 
 function setTabBuscador(tab) {
   _buscadorTab = tab;
@@ -4831,6 +4861,7 @@ function fsmRegistrar() {
     fsmCerrar();
     cerrarBuscador();
     if(_buscadorFavCallback) {
+      if(_buscadorFavCallback._restoreOverlay) _buscadorFavCallback._restoreOverlay();
       _buscadorFavCallback(p, g);
       _buscadorFavCallback = null;
     }
