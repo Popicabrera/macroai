@@ -8537,8 +8537,10 @@ async function cargarMenusGuardados() {
       const estadoLabel = m.activo ? 'Activo' : m.pendiente ? 'Pendiente' : 'Borrador';
       // Asignar deshabilitado si ya está activo o pendiente
       const canAssign = !m.activo && !m.pendiente;
+      const cacheIdx = _menuListCache.length;
+      _menuListCache.push(m);
       const btnAsignar = canAssign
-        ? `<button onclick="menuAsignarDesdeGuardados('${m.id}','${escapeHtml(m.nombre||'Menú')}',event)" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;background:rgba(91,141,184,0.15);border:1px solid rgba(91,141,184,0.3);color:var(--blue);">👤 Asignar</button>`
+        ? `<button onclick="menuAbrirAsignacion('${m.id}',${cacheIdx})" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;background:rgba(91,141,184,0.15);border:1px solid rgba(91,141,184,0.3);color:var(--blue);">👤 Asignar</button>`
         : `<button disabled style="padding:5px 10px;border-radius:8px;font-size:11px;cursor:not-allowed;background:var(--s2);border:1px solid var(--border);color:var(--muted2);opacity:.5;">👤 Asignar</button>`;
       html += `
         <div style="background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
@@ -12002,9 +12004,20 @@ async function menuCargarExistente(menuId) {
 // ── PASO 6: ASIGNAR MENÚ A CLIENTE
 // ══════════════════════════════════════════
 
-function menuAbrirAsignacion(menuId, cacheIdx) {
+async function menuAbrirAsignacion(menuId, cacheIdx) {
   const menuNombre = (_menuListCache[cacheIdx]||{}).nombre || '';
   cerrarMenuAsignacion();
+
+  // Si no hay clientes cargados, cargarlos primero
+  if (!_adminUsersData.length) {
+    try {
+      const res = await supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,nombre,activo&order=nombre.asc');
+      const perfiles = await res.json();
+      if (Array.isArray(perfiles)) {
+        _adminUsersData = perfiles.map(p => ({ email: p.cliente_email, nombre: p.nombre, activo: p.activo }));
+      }
+    } catch(e) { console.error('Error cargando clientes:', e); }
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'menu-asig-overlay';
