@@ -9483,6 +9483,11 @@ function dsbUpdateActive() {
             <span style="font-size:11px;color:var(--muted);">▾</span>
           </div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <button onclick="menuAbrirPantallaCrear()" id="menuBtnNuevoDesktop"
+              style="padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+              font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;white-space:nowrap;flex-shrink:0;">
+              + Nuevo
+            </button>
             <input id="menuNombreInput" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
               style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
               padding:9px 13px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
@@ -9526,6 +9531,11 @@ function dsbUpdateActive() {
         <span style="font-size:11px;color:var(--muted);">▾</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="menuAbrirPantallaCrear()" id="menuBtnNuevoMobile"
+          style="padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;
+          font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;white-space:nowrap;flex-shrink:0;">
+          + Nuevo
+        </button>
         <input id="menuNombreInputMobile" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
           style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
           padding:10px 14px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
@@ -10598,6 +10608,97 @@ function menuIniciarGrid() {
   menuActualizarTotales();
 }
 
+// ── Pantalla "Nuevo menú" con nombre + volver ──
+function menuAbrirPantallaCrear() {
+  const clienteNombre = _menuCocClientePerfil ? (_menuCocClientePerfil.nombre || _menuCocClientePerfil.cliente_email) : null;
+  const overlay = document.createElement('div');
+  overlay.id = '_menuCrearOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:4000;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:480px;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 20px 40px;font-family:'Inter',sans-serif;">
+      <div style="display:flex;align-items:center;margin-bottom:18px;gap:8px;">
+        <button onclick="menuCerrarPantallaCrear()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);font-size:22px;line-height:1;">←</button>
+        <span style="flex:1;text-align:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);">Nuevo menú</span>
+        <div style="width:34px;"></div>
+      </div>
+      ${clienteNombre ? `<div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:13px;color:var(--muted);">
+        <span>👤</span><span>${escapeHtml(clienteNombre)}</span>
+      </div>
+      <div style="background:rgba(99,90,219,0.08);border:1px solid rgba(99,90,219,0.2);border-radius:10px;padding:9px 12px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.5;">
+        ℹ️ El menú activo de ${escapeHtml(clienteNombre)} no cambia hasta que él acepte el nuevo.
+      </div>` : ''}
+      <div style="margin-bottom:6px;font-size:12px;color:var(--muted);">Nombre del menú</div>
+      <input id="_menuCrearNombreInput" type="text" placeholder="Ej: Menú semana 24"
+        style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif;box-sizing:border-box;margin-bottom:18px;">
+      <div style="display:flex;gap:10px;">
+        <button onclick="menuCerrarPantallaCrear()"
+          style="flex:1;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">
+          Cancelar
+        </button>
+        <button onclick="menuCrearNuevoDesdeModal()"
+          style="flex:2;padding:11px;background:var(--accent-purple,#534AB7);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+          Crear y rellenar →
+        </button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) menuCerrarPantallaCrear(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('_menuCrearNombreInput')?.focus(), 100);
+}
+
+function menuCerrarPantallaCrear() {
+  document.getElementById('_menuCrearOverlay')?.remove();
+}
+
+function menuCrearNuevoDesdeModal() {
+  const nombre = (document.getElementById('_menuCrearNombreInput')?.value || '').trim();
+  if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
+  menuCerrarPantallaCrear();
+  // Limpiar grid y poner el nombre
+  menuIniciarGrid();
+  _menuEraActivo = false;
+  const ni = menuGetNombreInput();
+  if (ni) ni.value = nombre;
+  // Sincronizar ambos inputs
+  const niD = document.getElementById('menuNombreInput');
+  const niM = document.getElementById('menuNombreInputMobile');
+  if (niD) niD.value = nombre;
+  if (niM) niM.value = nombre;
+  menuActualizarTextoBtnGuardar();
+  showToast('✏️ Rellena el menú y pulsa Guardar y asignar');
+}
+
+// ── Modal de confirmación antes de asignar ──
+function menuMostrarConfirmacionAsignacion(nombre, clienteNombre, onConfirm, onSoloBorrador) {
+  const overlay = document.createElement('div');
+  overlay.id = '_menuConfirmOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:4000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:360px;background:var(--bg);border-radius:18px;padding:24px;font-family:'Inter',sans-serif;">
+      <div style="width:48px;height:48px;border-radius:50%;background:rgba(29,158,117,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;">📤</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);margin-bottom:6px;">Asignar menú a ${escapeHtml(clienteNombre)}</div>
+      <div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:18px;line-height:1.5;">El cliente verá una notificación para activar el nuevo menú.<br>Su menú actual seguirá activo hasta que lo acepte.</div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:10px 14px;margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:var(--muted);">Menú</span><span style="color:var(--text);font-weight:600;">${escapeHtml(nombre)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:var(--muted);">Cliente</span><span style="color:var(--text);font-weight:600;">${escapeHtml(clienteNombre)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:var(--muted);">Estado</span><span style="color:#854F0B;font-weight:600;">Pendiente de activar</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:var(--muted);">Menú actual</span><span style="color:#0F6E56;font-weight:600;">Sigue activo</span></div>
+      </div>
+      <button id="_menuConfirmBtn"
+        style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:8px;">
+        Confirmar y enviar
+      </button>
+      <button id="_menuBorradorBtn"
+        style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">
+        Solo guardar como borrador
+      </button>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  document.getElementById('_menuConfirmBtn').onclick = () => { overlay.remove(); onConfirm(); };
+  document.getElementById('_menuBorradorBtn').onclick = () => { overlay.remove(); onSoloBorrador(); };
+}
+
 // ─── SUGERIR REPARTO DÍA CON IA ────────────────────────────────────────────
 let _menuTargets = {};
 let _msdKey = null;
@@ -11369,17 +11470,38 @@ async function menuGuardarMenuCompleto() {
         );
         showToast(`✅ Menú actualizado para ${clienteNombre}`);
       } else {
-        // Menú nuevo → pendiente hasta que el cliente lo active
-        // NO tocar el menú activo actual — el cliente sigue usándolo
-        await supaAdmin(
-          `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${_menuId}`,
-          { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
+        // Menú nuevo → mostrar modal de confirmación antes de asignar
+        menuActualizarTextoBtnGuardar(); // restaurar botón mientras espera
+        const menuIdGuardado = _menuId;
+        menuMostrarConfirmacionAsignacion(
+          nombre,
+          clienteNombre,
+          // onConfirmar → asignar como pendiente
+          async () => {
+            try {
+              await supaAdmin(
+                `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${menuIdGuardado}`,
+                { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
+              );
+              await supaAdmin(
+                `/rest/v1/menus_macroai?id=eq.${menuIdGuardado}`,
+                { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
+              );
+              showToast(`✅ Menú enviado a ${clienteNombre} — lo activará cuando quiera`);
+            } catch(e) { showToast('❌ Error al asignar el menú'); console.error(e); }
+          },
+          // onSoloBorrador → guardar sin asignar
+          async () => {
+            try {
+              await supaAdmin(
+                `/rest/v1/menus_macroai?id=eq.${menuIdGuardado}`,
+                { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: null, pendiente: false, activo: false }) }
+              );
+              showToast('✅ Menú guardado como borrador');
+            } catch(e) { showToast('❌ Error al guardar'); console.error(e); }
+          }
         );
-        await supaAdmin(
-          `/rest/v1/menus_macroai?id=eq.${_menuId}`,
-          { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
-        );
-        showToast(`✅ Menú listo para ${clienteNombre} — lo activará cuando quiera`);
+        return; // salir sin pasar por el finally de restaurar botón
       }
     } else {
       showToast('✅ Menú guardado');
