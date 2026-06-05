@@ -12058,11 +12058,13 @@ async function menuAbrirAsignacion(menuId, cacheIdx) {
     try {
       const res = await supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,nombre,activo&order=nombre.asc');
       const perfiles = await res.json();
+      console.log('[menuAbrirAsignacion] perfiles:', perfiles);
       if (Array.isArray(perfiles)) {
         _adminUsersData = perfiles.map(p => ({ email: p.cliente_email, nombre: p.nombre, activo: p.activo }));
       }
     } catch(e) { console.error('Error cargando clientes:', e); }
   }
+  console.log('[menuAbrirAsignacion] _adminUsersData:', _adminUsersData);
 
   const overlay = document.createElement('div');
   overlay.className = 'menu-asig-overlay';
