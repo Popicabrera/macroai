@@ -8576,7 +8576,42 @@ async function verMenuGuardado(menuId) {
   } catch(e) {}
 }
 
-// ── Asignar menú desde lista de guardados ──
+// ── Asignar directamente desde la barra principal ──
+async function menuAbrirAsignarDirecto() {
+  const nombre = (menuGetNombreInput()?.value||'').trim();
+  if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
+
+  // Si el menú no está guardado aún, guardarlo primero como borrador
+  if (!_menuId) {
+    showToast('⏳ Guardando menú...');
+    const celdasMap = {};
+    MENU_TEMPLATES.forEach(tpl => {
+      const tipoDiaReal = _menuTplTipo(tpl, _menuCocClientePerfil);
+      const tipoDiaGuardar = (tipoDiaReal === 'igual') ? 'entreno' : tipoDiaReal;
+      MENU_FRANJAS.forEach((franja,fi)=>{
+        const cell = _menuGrid[`${tpl.key}-f${fi}`];
+        if (cell) celdasMap[tipoDiaGuardar + '|' + franja] = { tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null };
+      });
+    });
+    const celdas = Object.values(celdasMap);
+    if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
+    try {
+      const res = await supaAdmin('/rest/v1/menus_macroai',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({nombre,activo:false,pendiente:false,cliente_email:null})});
+      if (!res.ok) throw new Error('POST menu falló');
+      const rows = await res.json();
+      if (!Array.isArray(rows)||!rows[0]) throw new Error('No se creó el menú');
+      _menuId = rows[0].id;
+      await supaAdmin('/rest/v1/menu_celdas',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(celdas.map(c=>({...c,menu_id:_menuId})))});
+    } catch(e) { showToast('❌ Error al guardar el menú'); console.error(e); return; }
+  }
+
+  // Abrir selector de cliente con el menuId actual
+  const cacheIdx = _menuListCache.length;
+  _menuListCache.push({ id: _menuId, nombre });
+  menuAbrirAsignacion(_menuId, cacheIdx);
+}
+
+
 function menuAsignarDesdeGuardados(menuId, nombreMenu, e) {
   if (e) e.stopPropagation();
   const clienteEmail = _adminMenuEmail;
@@ -9585,6 +9620,11 @@ function dsbUpdateActive() {
             <input id="menuNombreInput" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
               style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
               padding:9px 13px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
+            <button onclick="menuAbrirAsignarDirecto()"
+              style="padding:9px 12px;background:rgba(91,141,184,0.15);border:1px solid rgba(91,141,184,0.3);border-radius:11px;
+              font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0;">
+              👤 Asignar
+            </button>
             <button onclick="menuGuardarMenuCompleto()"
               style="padding:9px 14px;background:var(--accent);border:none;border-radius:11px;
               font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;">
@@ -9633,6 +9673,11 @@ function dsbUpdateActive() {
         <input id="menuNombreInputMobile" type="text" placeholder="Nombre del menú (ej: Volumen semana 1)"
           style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;
           padding:10px 14px;font-size:13px;color:var(--text);outline:none;font-family:'Inter',sans-serif;">
+        <button onclick="menuAbrirAsignarDirecto()"
+          style="padding:10px 12px;background:rgba(91,141,184,0.15);border:1px solid rgba(91,141,184,0.3);border-radius:11px;
+          font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0;">
+          👤 Asignar
+        </button>
         <button onclick="menuGuardarMenuCompleto()"
           style="padding:10px 14px;background:var(--accent);border:none;border-radius:11px;
           font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;">
