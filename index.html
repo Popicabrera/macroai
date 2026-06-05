@@ -2015,59 +2015,24 @@ function editarFavorito(id){
       });
     };
 
-    // Mini-buscador para añadir alimento al favorito
+    // Abre el buscador completo del diario para añadir alimento al favorito
     const abrirBuscadorFav=()=>{
-      const bOv=document.createElement('div');
-      bOv.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:flex-end;';
-      bOv.innerHTML=`
-        <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px 14px 32px;width:100%;max-height:75vh;display:flex;flex-direction:column;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;">➕ Añadir alimento</div>
-          <input id="favBusqInput" placeholder="🔍 Buscar alimento..." autocomplete="off"
-            style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:14px;color:var(--text);box-sizing:border-box;margin-bottom:10px;outline:none;">
-          <div id="favBusqRes" style="overflow-y:auto;flex:1;"></div>
-          <button onclick="this.closest('div[style]').parentElement.remove();" style="width:100%;padding:11px;background:var(--s3);border:none;border-radius:12px;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">Cancelar</button>
-        </div>`;
-      document.body.appendChild(bOv);
-      bOv.addEventListener('click',e=>{if(e.target===bOv)bOv.remove();});
-      const input=bOv.querySelector('#favBusqInput');
-      const resDiv=bOv.querySelector('#favBusqRes');
-      let bTimer=null;
-      const mostrarResultados=(lista)=>{
-        if(!lista.length){resDiv.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Sin resultados</div>';return;}
-        resDiv.innerHTML='';
-        lista.forEach(r=>{
-          const it=document.createElement('div');
-          it.style.cssText='padding:10px 12px;border-radius:10px;margin-bottom:5px;background:var(--s2);border:1px solid var(--border);cursor:pointer;';
-          it.innerHTML=`<div style="font-size:13px;font-weight:600;">${escapeHtml(r.nombre)}</div><div style="font-size:11px;color:var(--muted);">⚡${Math.round(r.kcal_100||0)} kcal · P${r.p_100||0}g CH${r.hc_100||0}g G${r.g_100||0}g (por 100g)</div>`;
-          it.addEventListener('click',()=>{
-            ings.push({nombre:r.nombre,gramos:100,kcal_100:r.kcal_100||0,p_100:r.p_100||0,hc_100:r.hc_100||0,g_100:r.g_100||0,kcal:Math.round(r.kcal_100||0),prot:Math.round((r.p_100||0)*10)/10,ch:Math.round((r.hc_100||0)*10)/10,grasa:Math.round((r.g_100||0)*10)/10});
-            bOv.remove();renderIngs();actualizarTotales();
-          });
-          resDiv.appendChild(it);
+      _buscadorFavCallback = (producto, gramos) => {
+        ings.push({
+          nombre: producto.nombre,
+          gramos: gramos,
+          kcal_100: producto.kcal_100 || 0,
+          p_100: producto.p_100 || 0,
+          hc_100: producto.hc_100 || 0,
+          g_100: producto.g_100 || 0,
+          kcal: Math.round((producto.kcal_100||0)*gramos/100),
+          prot: Math.round((producto.p_100||0)*gramos/100*10)/10,
+          ch: Math.round((producto.hc_100||0)*gramos/100*10)/10,
+          grasa: Math.round((producto.g_100||0)*gramos/100*10)/10,
         });
+        renderIngs(); actualizarTotales();
       };
-      input.addEventListener('input',()=>{
-        clearTimeout(bTimer);
-        const q=input.value.trim();
-        if(q.length<2){resDiv.innerHTML='';return;}
-        resDiv.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">Buscando...</div>';
-        bTimer=setTimeout(async()=>{
-          try{
-            const r=await fetch(WORKER_URL+'/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
-            const d=await r.json();
-            if(d.found&&d.resultados&&d.resultados.length){mostrarResultados(d.resultados);return;}
-          }catch(e){}
-          try{
-            const r2=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:`Eres nutricionista. Busca "${q}". Devuelve SOLO JSON sin markdown: {"found":true,"resultados":[{"nombre":"...","kcal_100":0,"p_100":0,"hc_100":0,"g_100":0}]}. Máx 4 resultados.`,messages:[{role:'user',content:`Macros por 100g: ${q}`}]})});
-            const d2=await r2.json();
-            const raw=(d2.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
-            const p=JSON.parse(raw);
-            if(p.found&&p.resultados&&p.resultados.length){mostrarResultados(p.resultados);return;}
-          }catch(e){}
-          resDiv.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Sin resultados</div>';
-        },800);
-      });
-      setTimeout(()=>input.focus(),100);
+      abrirBuscador('__fav_edit__', '➕ Añadir a favorito');
     };
 
     overlay.innerHTML=`
@@ -4384,6 +4349,7 @@ let _buscadorMealName = '';
 let _buscadorTab = 'todos';
 let _buscadorTimer = null;
 let _misAlimentosCache = null;
+let _buscadorFavCallback = null;
 
 function abrirBuscador(mealId, mealName) {
   _buscadorMealId = mealId;
@@ -4859,6 +4825,18 @@ function fsmRegistrar() {
     : p.nombre;
   const nombre = `${_nombreBase} (${g}g)`;
   const ingTexto = `🥦 ${p.nombre}:${g}g:${kcal}kcal\nTOTAL:kcal=${kcal},prot=${prot},ch=${hc},grasa=${grasa}`;
+
+  // ── MODO FAVORITO EDIT: añadir ingrediente al editor de favorito ──
+  if (_buscadorMealId === '__fav_edit__') {
+    fsmCerrar();
+    cerrarBuscador();
+    if(_buscadorFavCallback) {
+      _buscadorFavCallback(p, g);
+      _buscadorFavCallback = null;
+    }
+    _buscadorMealId = '';
+    return;
+  }
 
   // ── MODO BIBLIOTECA: añadir ingrediente al editor de biblioteca ──
   if (_buscadorMealId === '__bib__') {
