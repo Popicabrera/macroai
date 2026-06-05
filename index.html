@@ -9842,20 +9842,23 @@ function abrirEditorBiblioteca(comida, cellKey) {
   overlay.innerHTML = `
     <div class="bib-sheet" id="bibEditorSheet">
 
-      <!-- PARTE FIJA: título, nombre, categoría, banner macros -->
+      <!-- PARTE FIJA: nombre+categoría en 2 columnas, banner macros -->
       <div>
-        <div class="bib-sheet-title">${comida ? 'Editar comida' : 'Nueva comida'}</div>
-
-        <div class="bib-field-label">Nombre</div>
-        <input id="bibEdNombre" class="bib-input" type="text" placeholder="Ej: Pollo con arroz"
-          value="${escapeHtml(comida?.nombre || '')}" style="margin-bottom:12px;">
-
-        <div class="bib-field-label">Categoría</div>
-        <select id="bibEdCat" class="bib-select" style="margin-bottom:14px;">
-          ${[['desayuno salado','Desayuno salado'],['desayuno dulce','Desayuno dulce'],['almuerzo','Almuerzo'],['comida','Comida'],['merienda','Merienda'],['cena','Cena']].map(([val,label]) =>
-            `<option value="${val}" ${(comida?.tipo||'').toLowerCase()===val?'selected':''}>${label}</option>`
-          ).join('')}
-        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div>
+            <div class="bib-field-label">Nombre</div>
+            <input id="bibEdNombre" class="bib-input" type="text" placeholder="Ej: Pollo con arroz"
+              value="${escapeHtml(comida?.nombre || '')}">
+          </div>
+          <div>
+            <div class="bib-field-label">Categoría</div>
+            <select id="bibEdCat" class="bib-select">
+              ${[['desayuno salado','Desayuno salado'],['desayuno dulce','Desayuno dulce'],['almuerzo','Almuerzo'],['comida','Comida'],['merienda','Merienda'],['cena','Cena']].map(([val,label]) =>
+                `<option value="${val}" ${(comida?.tipo||'').toLowerCase()===val?'selected':''}>${label}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
 
         <!-- Banner target sticky: Target / Actual / Diferencia -->
         <div id="bibTargetBanner" style="margin-bottom:12px;"></div>
