@@ -10596,6 +10596,7 @@ function menuGetGridContainer() {
 
 function menuIniciarGrid() {
   _menuGrid = {};
+  _menuTargets = {};
   _menuId   = null;
   _menuDiasColapsados = {};
   const ni = menuGetNombreInput();
@@ -11836,6 +11837,7 @@ async function menuCargarExistente(menuId) {
     const celdas = await resC.json();
 
     _menuGrid = {};
+    _menuTargets = {};
     _menuId   = menuId;
     const ni = menuGetNombreInput();
     if (ni) ni.value = menu.nombre||'';
