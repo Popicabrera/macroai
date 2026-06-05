@@ -10086,54 +10086,20 @@ function bibRenderTargetBanner() {
   const colD  = v => v > 5  ? '#BA7517' : v < -5  ? '#A32D2D' : '#0F6E56';
   const colDK = v => v > 30 ? '#BA7517' : v < -30 ? '#A32D2D' : '#0F6E56';
 
-  // Fila Actual
-  let html =
+  // Solo macros de esta comida — sin referencias ni diferencias
+  if (rKcal === 0 && rProt === 0 && rHc === 0 && rGrasa === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  const html =
     '<div class="btb-grid">' +
-      '<div class="btb-row-label">Actual</div>' +
+      '<div class="btb-row-label">Total</div>' +
       '<div class="btb-cell" style="color:' + C_KCAL  + ';">' + rKcal  + ' kcal</div>' +
       '<div class="btb-cell" style="color:' + C_PROT  + ';">P '  + rProt  + 'g</div>' +
       '<div class="btb-cell" style="color:' + C_HC    + ';">HC ' + rHc    + 'g</div>' +
       '<div class="btb-cell" style="color:' + C_GRASA + ';">G '  + rGrasa + 'g</div>' +
     '</div>';
-
-  // Barra % distribución
-  html +=
-    '<div style="margin:7px 0 4px;">' +
-      '<div style="display:flex;height:5px;border-radius:4px;overflow:hidden;gap:1px;">' +
-        '<div style="flex:' + pHc   + ';background:' + C_HC    + ';border-radius:4px 0 0 4px;min-width:' + (pHc   > 0 ? '3px' : '0') + ';"></div>' +
-        '<div style="flex:' + pProt + ';background:' + C_PROT  + ';min-width:'                            + (pProt > 0 ? '3px' : '0') + ';"></div>' +
-        '<div style="flex:' + pGrasa+ ';background:' + C_GRASA + ';border-radius:0 4px 4px 0;min-width:' + (pGrasa> 0 ? '3px' : '0') + ';"></div>' +
-      '</div>' +
-      '<div style="display:flex;gap:10px;margin-top:4px;">' +
-        '<span style="font-size:11px;color:' + C_HC    + ';font-weight:600;">HC ' + pHc    + '%</span>' +
-        '<span style="font-size:11px;color:' + C_PROT  + ';font-weight:600;">P '  + pProt  + '%</span>' +
-        '<span style="font-size:11px;color:' + C_GRASA + ';font-weight:600;">G '  + pGrasa + '%</span>' +
-      '</div>' +
-    '</div>';
-
-  // Ref + Dif solo si hay target
-  if (t && t.kcal) {
-    const dKcal  = Math.round(t.kcal  - cKcal);
-    const dProt  = Math.round((t.prot  - cProt)  * 10) / 10;
-    const dHc    = Math.round((t.hc    - cHc)    * 10) / 10;
-    const dGrasa = Math.round((t.grasa - cGrasa) * 10) / 10;
-    html +=
-      '<div class="btb-sep"></div>' +
-      '<div class="btb-grid">' +
-        '<div class="btb-row-label">' + tLabel + '</div>' +
-        '<div class="btb-cell" style="color:' + C_KCAL  + ';">' + t.kcal  + ' kcal</div>' +
-        '<div class="btb-cell" style="color:' + C_PROT  + ';">P '  + t.prot  + 'g</div>' +
-        '<div class="btb-cell" style="color:' + C_HC    + ';">HC ' + t.hc    + 'g</div>' +
-        '<div class="btb-cell" style="color:' + C_GRASA + ';">G '  + t.grasa + 'g</div>' +
-      '</div>' +
-      '<div class="btb-grid">' +
-        '<div class="btb-row-label">Dif.</div>' +
-        '<div class="btb-cell" style="color:' + colDK(dKcal)  + ';">' + sign(dKcal)  + ' kcal</div>' +
-        '<div class="btb-cell" style="color:' + colD(dProt)   + ';">' + sign(dProt)  + 'g P</div>' +
-        '<div class="btb-cell" style="color:' + colD(dHc)     + ';">' + sign(dHc)    + 'g HC</div>' +
-        '<div class="btb-cell" style="color:' + colD(dGrasa)  + ';">' + sign(dGrasa) + 'g G</div>' +
-      '</div>';
-  }
 
   banner.style.display = 'block';
   banner.innerHTML = html;
