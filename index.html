@@ -9332,7 +9332,18 @@ async function cargarPerfilUsuario() {
         saveWeekDays(WEEK_DAYS);
       }
       saveCFG(CFG);
-      autoDetectDayType();
+      autoDetectDayType(); // actualiza S.kcalObj/prot/ch/grasa con valores reales
+      // Limpiar kcalObj guardado en localStorage para hoy — usar siempre el del perfil
+      const _diaKey = "macroai_dia_" + getToday();
+      const _diaRaw = localStorage.getItem(_diaKey);
+      if (_diaRaw) {
+        try {
+          const _diaObj = JSON.parse(_diaRaw);
+          _diaObj.kcalObj = S.kcalObj; _diaObj.protObj = S.prot; _diaObj.chObj = S.ch; _diaObj.grasaObj = S.grasa;
+          localStorage.setItem(_diaKey, JSON.stringify(_diaObj));
+        } catch(e) {}
+      }
+      updateBars();
       // Actualizar diario con los macros correctos
       renderMFPDiario();
       renderWeekDays();
