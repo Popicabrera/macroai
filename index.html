@@ -11794,11 +11794,165 @@ async function menuDesasignarMenuCliente() {
 
 // ── PRÓXIMO MENÚ: previsualización y activación ──
 
+const _FRANJA_ICONS = { 'Desayuno':'☀️','Almuerzo':'🥗','Comida':'🍽️','Merienda':'🍎','Cena':'🌙' };
+
+function _menuProximoBuildDiaData(celdas, bib, tipoDia) {
+  const celdasTpl = (Array.isArray(celdas) ? celdas : []).filter(c => c.tipo_dia === tipoDia);
+  if (!celdasTpl.length) return null;
+  const porFranja = {};
+  celdasTpl.forEach(c => {
+    if (!porFranja[c.franja]) porFranja[c.franja] = [];
+    porFranja[c.franja].push(c);
+  });
+  let totalKcal = 0, totalP = 0, totalC = 0, totalG = 0;
+  const franjas = [];
+  Object.entries(porFranja).forEach(([franja, fCeldas]) => {
+    let franjaKcal = 0;
+    const ingredientes = [];
+    fCeldas.forEach(celda => {
+      const b = bib[celda.comida_id];
+      if (!b) return;
+      const ings = Array.isArray(b.ingredientes) ? b.ingredientes
+        : (typeof b.ingredientes === 'string' ? (() => { try { return JSON.parse(b.ingredientes); } catch(e) { return []; } })() : []);
+      if (ings.length && ings.some(i => i.gramos)) {
+        ings.forEach(ing => {
+          const f = (ing.gramos||0)/100;
+          const iKcal = Math.round(((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9)*f);
+          const iP = Math.round((ing.p_100||0)*f*10)/10;
+          const iC = Math.round((ing.hc_100||0)*f*10)/10;
+          const iG = Math.round((ing.g_100||0)*f*10)/10;
+          franjaKcal += iKcal;
+          totalP += iP; totalC += iC; totalG += iG;
+          ingredientes.push({ nombre: ing.nombre||'', gramos: ing.gramos, kcal: iKcal, p: iP, c: iC, g: iG });
+        });
+      } else {
+        const bKcal = Math.round(b.kcal||0);
+        franjaKcal += bKcal;
+        totalP += (b.proteina||0); totalC += (b.hc||0); totalG += (b.grasa||0);
+        ingredientes.push({ nombre: b.nombre, gramos: null, kcal: bKcal, p: Math.round((b.proteina||0)*10)/10, c: Math.round((b.hc||0)*10)/10, g: Math.round((b.grasa||0)*10)/10 });
+      }
+    });
+    totalKcal += franjaKcal;
+    franjas.push({ franja, franjaKcal, ingredientes });
+  });
+  return { franjas, totalKcal: Math.round(totalKcal), totalP: Math.round(totalP*10)/10, totalC: Math.round(totalC*10)/10, totalG: Math.round(totalG*10)/10 };
+}
+
+function _menuProximoRenderDetalle(ov, diaData, tpl) {
+  const franjaIconos = _FRANJA_ICONS;
+  let franjasHtml = '';
+  diaData.franjas.forEach(({ franja, franjaKcal, ingredientes }) => {
+    const icon = franjaIconos[franja] || '🍴';
+    let ingsHtml = '';
+    ingredientes.forEach(ing => {
+      ingsHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:0.5px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(ing.nombre)}</div>
+          <div style="display:flex;gap:4px;margin-top:3px;">
+            <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(192,57,43,0.1);color:var(--accent);">${ing.p}g P</span>
+            <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(186,117,23,0.12);color:#854F0B;">${ing.c}g C</span>
+            <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(55,138,221,0.12);color:var(--blue);">${ing.g}g G</span>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-left:10px;flex-shrink:0;">${ing.gramos !== null ? ing.gramos+'g' : ''}</div>
+      </div>`;
+    });
+    franjasHtml += `<div style="background:var(--s1);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin:0 12px 8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;">
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span style="font-size:16px;">${icon}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text);">${escapeHtml(franja)}</span>
+        </div>
+        <span style="font-size:11px;color:var(--muted);">${Math.round(franjaKcal)} kcal</span>
+      </div>
+      <div style="padding:0 14px 10px;">${ingsHtml}</div>
+    </div>`;
+  });
+
+  const sheet = ov.querySelector('#_pmSheet');
+  sheet.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0;background:${tpl.headerBg};">
+      <button onclick="document.getElementById('_pmSheet').innerHTML='';_menuProximoRenderResumen(document.getElementById('_proximoMenuOv'))" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:none;font-size:18px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:${tpl.textColor};">${tpl.label}</div>
+        <div style="font-size:11px;color:var(--muted);">${diaData.totalKcal} kcal · P${diaData.totalP}g C${diaData.totalC}g G${diaData.totalG}g</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 16px;">
+      ${franjasHtml}
+    </div>`;
+}
+
+const _MENU_PROXIMOS_TPLS = {
+  entreno:  { key:'entreno',  label:'Día de entreno',  headerBg:'rgba(192,57,43,0.07)', textColor:'var(--accent)',  cardBg:'rgba(192,57,43,0.08)', cardBorder:'rgba(192,57,43,0.25)' },
+  descanso: { key:'descanso', label:'Día de descanso', headerBg:'rgba(55,138,221,0.07)', textColor:'var(--blue)',   cardBg:'rgba(55,138,221,0.08)', cardBorder:'rgba(55,138,221,0.25)' },
+};
+
+function _menuProximoRenderDetalleByKey(ov, key) {
+  _menuProximoRenderDetalle(ov, ov._menuData[key], _MENU_PROXIMOS_TPLS[key]);
+}
+
+function _menuProximoRenderResumen(ov) {
+  const data = ov._menuData;
+  const sheet = ov.querySelector('#_pmSheet');
+  const nombre = escapeHtml(_menuPendienteCache.nombre||'Próximo menú');
+
+  const templates = [
+    Object.assign({}, _MENU_PROXIMOS_TPLS.entreno,  { barColor:'#C0392B', subtitleColor:'rgba(192,57,43,0.8)' }),
+    Object.assign({}, _MENU_PROXIMOS_TPLS.descanso, { barColor:'#2980B9', subtitleColor:'rgba(55,138,221,0.8)' }),
+  ];
+
+  let cardsHtml = '';
+  templates.forEach(tpl => {
+    const d = data[tpl.key];
+    if (!d) return;
+    const total = (d.totalP*4) + (d.totalC*4) + (d.totalG*9) || 1;
+    const pPct = Math.round(d.totalP*4/total*100);
+    const cPct = Math.round(d.totalC*4/total*100);
+    const gPct = 100 - pPct - cPct;
+    cardsHtml += `<div onclick="_menuProximoRenderDetalleByKey(document.getElementById('_proximoMenuOv'),'${tpl.key}')"
+      style="background:${tpl.cardBg};border:0.5px solid ${tpl.cardBorder};border-radius:14px;padding:14px 16px;cursor:pointer;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:${tpl.textColor};">${tpl.label}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${d.totalKcal} kcal totales</div>
+        </div>
+        <span style="font-size:20px;color:var(--muted);">›</span>
+      </div>
+      <div style="display:flex;gap:2px;height:6px;border-radius:6px;overflow:hidden;margin-bottom:7px;">
+        <div style="width:${pPct}%;background:#C0392B;border-radius:6px 0 0 6px;"></div>
+        <div style="width:${cPct}%;background:#E67E22;"></div>
+        <div style="width:${gPct}%;background:#2980B9;border-radius:0 6px 6px 0;"></div>
+      </div>
+      <div style="display:flex;gap:14px;">
+        <span style="font-size:11px;color:var(--accent);">P ${d.totalP}g</span>
+        <span style="font-size:11px;color:#854F0B;">C ${d.totalC}g</span>
+        <span style="font-size:11px;color:var(--blue);">G ${d.totalG}g</span>
+      </div>
+    </div>`;
+  });
+
+  sheet.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
+      <button onclick="document.getElementById('_proximoMenuOv').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:none;font-size:18px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);">${nombre}</div>
+        <div style="font-size:11px;color:var(--muted);">Preparado por tu entrenador</div>
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(186,117,23,0.12);color:#854F0B;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;">⏳ Pendiente</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 0;">
+      ${cardsHtml}
+    </div>
+    <div style="padding:12px 14px 24px;border-top:0.5px solid var(--border);flex-shrink:0;">
+      <button onclick="menuActivarProximo()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:14px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">▶ Activar este menú ahora</button>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">El menú actual se desactivará automáticamente</div>
+    </div>`;
+}
+
 async function menuVerProximo() {
   if (!_menuPendienteCache) return;
   const menuId = _menuPendienteCache.id;
-
-  // Obtener celdas + biblioteca
   showToast('⏳ Cargando previsualización...');
   try {
     const [resC, resB] = await Promise.all([
@@ -11810,98 +11964,17 @@ async function menuVerProximo() {
     const bib = {};
     if (Array.isArray(bibRows)) bibRows.forEach(r => { bib[r.id] = r; });
 
-    // Construir HTML de franjas agrupadas por template (entreno / descanso)
-    const templates = [
-      { key: 'entreno',  label: 'Día de entreno',  color: 'rgba(192,57,43,0.15)', border: 'rgba(192,57,43,0.35)', textColor: 'var(--accent)' },
-      { key: 'descanso', label: 'Día de descanso', color: 'rgba(91,141,184,0.12)', border: 'rgba(91,141,184,0.35)', textColor: 'var(--blue)' }
-    ];
-
-    let bodyHtml = '';
-    templates.forEach(tpl => {
-      const celdasTpl = Array.isArray(celdas) ? celdas.filter(c => c.tipo_dia === tpl.key) : [];
-      if (!celdasTpl.length) return;
-
-      // Agrupar por franja
-      const porFranja = {};
-      celdasTpl.forEach(c => {
-        if (!porFranja[c.franja]) porFranja[c.franja] = [];
-        porFranja[c.franja].push(c);
-      });
-
-      bodyHtml += `<div style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;background:${tpl.color};border:1px solid ${tpl.border};font-size:10px;font-weight:700;color:${tpl.textColor};margin:10px 14px 6px;letter-spacing:0.4px;text-transform:uppercase;">${tpl.label}</div>`;
-
-      Object.entries(porFranja).forEach(([franja, fCeldas]) => {
-        let franjaKcal = 0;
-        let ingHtml = '';
-        fCeldas.forEach(celda => {
-          const b = bib[celda.comida_id];
-          if (!b) return;
-          const ings = Array.isArray(b.ingredientes) ? b.ingredientes
-            : (typeof b.ingredientes === 'string' ? (() => { try { return JSON.parse(b.ingredientes); } catch(e) { return []; } })() : []);
-          if (ings.length && ings.some(i => i.gramos)) {
-            ings.forEach(ing => {
-              const f = (ing.gramos||0)/100;
-              const iKcal = Math.round(((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9)*f);
-              const iP = Math.round((ing.p_100||0)*f*10)/10;
-              const iC = Math.round((ing.hc_100||0)*f*10)/10;
-              const iG = Math.round((ing.g_100||0)*f*10)/10;
-              franjaKcal += iKcal;
-              ingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:0.5px solid var(--border);">
-                <div>
-                  <div style="font-size:13px;color:var(--text);font-weight:500;">${escapeHtml(ing.nombre||'')}</div>
-                  <div style="display:flex;gap:4px;margin-top:3px;">
-                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(192,57,43,0.1);color:var(--accent);">${iP}g P</span>
-                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(186,117,23,0.12);color:#854F0B;">${iC}g C</span>
-                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(55,138,221,0.12);color:var(--blue);">${iG}g G</span>
-                  </div>
-                </div>
-                <div style="font-size:12px;color:var(--muted);margin-left:8px;flex-shrink:0;">${ing.gramos}g</div>
-              </div>`;
-            });
-          } else {
-            franjaKcal += Math.round(b.kcal||0);
-            ingHtml += `<div style="padding:6px 0;border-top:0.5px solid var(--border);">
-              <div style="font-size:13px;color:var(--text);font-weight:500;">${escapeHtml(b.nombre)}</div>
-            </div>`;
-          }
-        });
-
-        bodyHtml += `<div style="background:var(--s1);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin:0 12px 8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;">
-            <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">${escapeHtml(franja)}</span>
-            <span style="font-size:11px;color:var(--muted);">${Math.round(franjaKcal)} kcal</span>
-          </div>
-          <div style="padding:0 14px 10px;">${ingHtml}</div>
-        </div>`;
-      });
-    });
-
-    // Overlay
     const ov = document.createElement('div');
     ov.id = '_proximoMenuOv';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9500;display:flex;flex-direction:column;justify-content:flex-end;';
-
-    ov.innerHTML = `
-      <div style="background:var(--bg);border-radius:20px 20px 0 0;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
-          <button onclick="document.getElementById('_proximoMenuOv').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:none;font-size:18px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
-          <div style="flex:1;">
-            <div style="font-size:15px;font-weight:700;color:var(--text);">${escapeHtml(_menuPendienteCache.nombre||'Próximo menú')}</div>
-            <div style="font-size:11px;color:var(--muted);">Preparado por tu entrenador</div>
-          </div>
-          <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(186,117,23,0.12);color:#854F0B;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;">⏳ Pendiente</div>
-        </div>
-        <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:16px;">
-          ${bodyHtml}
-        </div>
-        <div style="padding:12px 14px 24px;border-top:0.5px solid var(--border);flex-shrink:0;">
-          <button onclick="menuActivarProximo()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:14px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">▶ Activar este menú ahora</button>
-          <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">El menú actual se desactivará automáticamente</div>
-        </div>
-      </div>`;
-
+    ov._menuData = {
+      entreno:  _menuProximoBuildDiaData(celdas, bib, 'entreno'),
+      descanso: _menuProximoBuildDiaData(celdas, bib, 'descanso'),
+    };
+    ov.innerHTML = `<div id="_pmSheet" style="background:var(--bg);border-radius:20px 20px 0 0;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;"></div>`;
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
     document.body.appendChild(ov);
+    _menuProximoRenderResumen(ov);
   } catch(e) {
     showToast('❌ Error cargando previsualización'); console.error(e);
   }
