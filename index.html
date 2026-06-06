@@ -7211,10 +7211,13 @@ async function cargarMiMenu() {
     if (!_menuActivoCache) {
       // Si hay menú pendiente, mostrar banner de activación aunque no haya activo
       if (_menuPendienteCache) {
-        const bannerSinActivo = `<div onclick="menuVerProximo()" style="display:flex;align-items:center;gap:10px;background:rgba(239,159,39,0.12);border:1px solid rgba(239,159,39,0.5);border-radius:14px;padding:12px 14px;margin:10px 14px 4px;cursor:pointer;">
-          <span style="font-size:18px;flex-shrink:0;">🔔</span>
-          <div style="flex:1;font-size:12px;color:var(--text);line-height:1.5;">Tu entrenador te ha preparado un menú.<br><span style="color:var(--muted);font-size:11px;">Actívalo cuando quieras empezar.</span></div>
-          <button style="padding:7px 13px;background:rgba(239,159,39,0.25);border:1px solid rgba(239,159,39,0.5);border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#854F0B;cursor:pointer;white-space:nowrap;">Ver</button>
+        const bannerSinActivo = `<div style="background:var(--s1);border-radius:14px;padding:14px 16px;border-left:3px solid var(--accent);display:flex;align-items:center;gap:12px;margin:10px 14px 4px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(192,57,43,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📅</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);">Nuevo menú semanal listo</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px;">Preparado por tu entrenador</div>
+          </div>
+          <button onclick="menuConfirmarActivar()" style="padding:7px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Activar</button>
         </div>`;
         comidasEl.innerHTML = bannerSinActivo + _menuVacioHtml();
       } else {
@@ -7326,10 +7329,13 @@ function _renderMenuDia() {
 
   // Banner próximo menú (solo si hay uno pendiente)
   const bannerPendiente = _menuPendienteCache
-    ? `<div onclick="menuVerProximo()" style="display:flex;align-items:center;gap:10px;background:rgba(239,159,39,0.12);border:1px solid rgba(239,159,39,0.5);border-radius:14px;padding:12px 14px;margin:8px 12px 4px;cursor:pointer;">
-        <span style="font-size:18px;flex-shrink:0;">🔔</span>
-        <div style="flex:1;font-size:12px;color:var(--text);line-height:1.5;">Tu próximo menú está listo.<br><span style="color:var(--muted);font-size:11px;">Actívalo cuando quieras empezar.</span></div>
-        <button style="padding:7px 13px;background:rgba(239,159,39,0.25);border:1px solid rgba(239,159,39,0.5);border-radius:9px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#854F0B;cursor:pointer;white-space:nowrap;">Ver</button>
+    ? `<div style="background:var(--s1);border-radius:14px;padding:14px 16px;border-left:3px solid var(--accent);display:flex;align-items:center;gap:12px;margin:8px 12px 4px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(192,57,43,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📅</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);">Nuevo menú semanal listo</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;">Preparado por tu entrenador</div>
+        </div>
+        <button onclick="menuConfirmarActivar()" style="padding:7px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Activar</button>
       </div>`
     : '';
 
@@ -11792,218 +11798,49 @@ async function menuDesasignarMenuCliente() {
   };
 }
 
-// ── PRÓXIMO MENÚ: previsualización y activación ──
+// ── PRÓXIMO MENÚ: confirmar y activar ──
 
-const _FRANJA_ICONS = { 'Desayuno':'☀️','Almuerzo':'🥗','Comida':'🍽️','Merienda':'🍎','Cena':'🌙' };
-
-function _menuProximoBuildDiaData(celdas, bib, tipoDia) {
-  const celdasTpl = (Array.isArray(celdas) ? celdas : []).filter(c => c.tipo_dia === tipoDia);
-  if (!celdasTpl.length) return null;
-  const porFranja = {};
-  celdasTpl.forEach(c => {
-    if (!porFranja[c.franja]) porFranja[c.franja] = [];
-    porFranja[c.franja].push(c);
-  });
-  let totalKcal = 0, totalP = 0, totalC = 0, totalG = 0;
-  const franjas = [];
-  Object.entries(porFranja).forEach(([franja, fCeldas]) => {
-    let franjaKcal = 0;
-    const ingredientes = [];
-    fCeldas.forEach(celda => {
-      const b = bib[celda.comida_id];
-      if (!b) return;
-      const ings = Array.isArray(b.ingredientes) ? b.ingredientes
-        : (typeof b.ingredientes === 'string' ? (() => { try { return JSON.parse(b.ingredientes); } catch(e) { return []; } })() : []);
-      if (ings.length && ings.some(i => i.gramos)) {
-        ings.forEach(ing => {
-          const f = (ing.gramos||0)/100;
-          const iKcal = Math.round(((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9)*f);
-          const iP = Math.round((ing.p_100||0)*f*10)/10;
-          const iC = Math.round((ing.hc_100||0)*f*10)/10;
-          const iG = Math.round((ing.g_100||0)*f*10)/10;
-          franjaKcal += iKcal;
-          totalP += iP; totalC += iC; totalG += iG;
-          ingredientes.push({ nombre: ing.nombre||'', gramos: ing.gramos, kcal: iKcal, p: iP, c: iC, g: iG });
-        });
-      } else {
-        const bKcal = Math.round(b.kcal||0);
-        franjaKcal += bKcal;
-        totalP += (b.proteina||0); totalC += (b.hc||0); totalG += (b.grasa||0);
-        ingredientes.push({ nombre: b.nombre, gramos: null, kcal: bKcal, p: Math.round((b.proteina||0)*10)/10, c: Math.round((b.hc||0)*10)/10, g: Math.round((b.grasa||0)*10)/10 });
-      }
-    });
-    totalKcal += franjaKcal;
-    franjas.push({ franja, franjaKcal, ingredientes });
-  });
-  return { franjas, totalKcal: Math.round(totalKcal), totalP: Math.round(totalP*10)/10, totalC: Math.round(totalC*10)/10, totalG: Math.round(totalG*10)/10 };
-}
-
-function _menuProximoRenderDetalle(ov, diaData, tpl) {
-  const franjaIconos = _FRANJA_ICONS;
-  let franjasHtml = '';
-  diaData.franjas.forEach(({ franja, franjaKcal, ingredientes }) => {
-    const icon = franjaIconos[franja] || '🍴';
-    let ingsHtml = '';
-    ingredientes.forEach(ing => {
-      ingsHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:0.5px solid var(--border);">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(ing.nombre)}</div>
-          <div style="display:flex;gap:4px;margin-top:3px;">
-            <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(192,57,43,0.1);color:var(--accent);">${ing.p}g P</span>
-            <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(186,117,23,0.12);color:#854F0B;">${ing.c}g C</span>
-            <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(55,138,221,0.12);color:var(--blue);">${ing.g}g G</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-left:10px;flex-shrink:0;">${ing.gramos !== null ? ing.gramos+'g' : ''}</div>
-      </div>`;
-    });
-    franjasHtml += `<div style="background:var(--s1);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin:0 12px 8px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;">
-        <div style="display:flex;align-items:center;gap:7px;">
-          <span style="font-size:16px;">${icon}</span>
-          <span style="font-size:12px;font-weight:700;color:var(--text);">${escapeHtml(franja)}</span>
-        </div>
-        <span style="font-size:11px;color:var(--muted);">${Math.round(franjaKcal)} kcal</span>
-      </div>
-      <div style="padding:0 14px 10px;">${ingsHtml}</div>
-    </div>`;
-  });
-
-  const sheet = ov.querySelector('#_pmSheet');
-  sheet.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0;background:${tpl.headerBg};">
-      <button onclick="document.getElementById('_pmSheet').innerHTML='';_menuProximoRenderResumen(document.getElementById('_proximoMenuOv'))" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:none;font-size:18px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
-      <div style="flex:1;">
-        <div style="font-size:14px;font-weight:700;color:${tpl.textColor};">${tpl.label}</div>
-        <div style="font-size:11px;color:var(--muted);">${diaData.totalKcal} kcal · P${diaData.totalP}g C${diaData.totalC}g G${diaData.totalG}g</div>
-      </div>
-    </div>
-    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 16px;">
-      ${franjasHtml}
-    </div>`;
-}
-
-const _MENU_PROXIMOS_TPLS = {
-  entreno:  { key:'entreno',  label:'Día de entreno',  headerBg:'rgba(192,57,43,0.07)', textColor:'var(--accent)',  cardBg:'rgba(192,57,43,0.08)', cardBorder:'rgba(192,57,43,0.25)' },
-  descanso: { key:'descanso', label:'Día de descanso', headerBg:'rgba(55,138,221,0.07)', textColor:'var(--blue)',   cardBg:'rgba(55,138,221,0.08)', cardBorder:'rgba(55,138,221,0.25)' },
-};
-
-function _menuProximoRenderDetalleByKey(ov, key) {
-  _menuProximoRenderDetalle(ov, ov._menuData[key], _MENU_PROXIMOS_TPLS[key]);
-}
-
-function _menuProximoRenderResumen(ov) {
-  const data = ov._menuData;
-  const sheet = ov.querySelector('#_pmSheet');
-  const nombre = escapeHtml(_menuPendienteCache.nombre||'Próximo menú');
-
-  const templates = [
-    Object.assign({}, _MENU_PROXIMOS_TPLS.entreno,  { barColor:'#C0392B', subtitleColor:'rgba(192,57,43,0.8)' }),
-    Object.assign({}, _MENU_PROXIMOS_TPLS.descanso, { barColor:'#2980B9', subtitleColor:'rgba(55,138,221,0.8)' }),
-  ];
-
-  let cardsHtml = '';
-  templates.forEach(tpl => {
-    const d = data[tpl.key];
-    if (!d) return;
-    const total = (d.totalP*4) + (d.totalC*4) + (d.totalG*9) || 1;
-    const pPct = Math.round(d.totalP*4/total*100);
-    const cPct = Math.round(d.totalC*4/total*100);
-    const gPct = 100 - pPct - cPct;
-    cardsHtml += `<div onclick="_menuProximoRenderDetalleByKey(document.getElementById('_proximoMenuOv'),'${tpl.key}')"
-      style="background:${tpl.cardBg};border:0.5px solid ${tpl.cardBorder};border-radius:14px;padding:14px 16px;cursor:pointer;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div>
-          <div style="font-size:14px;font-weight:700;color:${tpl.textColor};">${tpl.label}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${d.totalKcal} kcal totales</div>
-        </div>
-        <span style="font-size:20px;color:var(--muted);">›</span>
-      </div>
-      <div style="display:flex;gap:2px;height:6px;border-radius:6px;overflow:hidden;margin-bottom:7px;">
-        <div style="width:${pPct}%;background:#C0392B;border-radius:6px 0 0 6px;"></div>
-        <div style="width:${cPct}%;background:#E67E22;"></div>
-        <div style="width:${gPct}%;background:#2980B9;border-radius:0 6px 6px 0;"></div>
-      </div>
-      <div style="display:flex;gap:14px;">
-        <span style="font-size:11px;color:var(--accent);">P ${d.totalP}g</span>
-        <span style="font-size:11px;color:#854F0B;">C ${d.totalC}g</span>
-        <span style="font-size:11px;color:var(--blue);">G ${d.totalG}g</span>
-      </div>
-    </div>`;
-  });
-
-  sheet.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
-      <button onclick="document.getElementById('_proximoMenuOv').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:none;font-size:18px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
-      <div style="flex:1;">
-        <div style="font-size:15px;font-weight:700;color:var(--text);">${nombre}</div>
-        <div style="font-size:11px;color:var(--muted);">Preparado por tu entrenador</div>
-      </div>
-      <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(186,117,23,0.12);color:#854F0B;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;">⏳ Pendiente</div>
-    </div>
-    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 0;">
-      ${cardsHtml}
-    </div>
-    <div style="padding:12px 14px 24px;border-top:0.5px solid var(--border);flex-shrink:0;">
-      <button onclick="menuActivarProximo()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:14px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">▶ Activar este menú ahora</button>
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">El menú actual se desactivará automáticamente</div>
-    </div>`;
-}
-
-async function menuVerProximo() {
+function menuConfirmarActivar() {
   if (!_menuPendienteCache) return;
-  const menuId = _menuPendienteCache.id;
-  showToast('⏳ Cargando previsualización...');
-  try {
-    const [resC, resB] = await Promise.all([
-      supaFetch(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=*`),
-      supaFetch(`/rest/v1/biblioteca_comidas?select=id,nombre,kcal,proteina,hc,grasa,ingredientes&order=nombre.asc`)
-    ]);
-    const celdas = await resC.json();
-    const bibRows = await resB.json();
-    const bib = {};
-    if (Array.isArray(bibRows)) bibRows.forEach(r => { bib[r.id] = r; });
-
-    const ov = document.createElement('div');
-    ov.id = '_proximoMenuOv';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9500;display:flex;flex-direction:column;justify-content:flex-end;';
-    ov._menuData = {
-      entreno:  _menuProximoBuildDiaData(celdas, bib, 'entreno'),
-      descanso: _menuProximoBuildDiaData(celdas, bib, 'descanso'),
-    };
-    ov.innerHTML = `<div id="_pmSheet" style="background:var(--bg);border-radius:20px 20px 0 0;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;"></div>`;
-    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
-    document.body.appendChild(ov);
-    _menuProximoRenderResumen(ov);
-  } catch(e) {
-    showToast('❌ Error cargando previsualización'); console.error(e);
-  }
+  const ov = document.createElement('div');
+  ov.id = '_menuConfirmOv';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9500;display:flex;flex-direction:column;justify-content:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 32px;">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 20px;"></div>
+      <div style="width:52px;height:52px;border-radius:14px;background:rgba(192,57,43,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;">📅</div>
+      <div style="text-align:center;margin-bottom:6px;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);">Activar nuevo menú</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6;">Tu menú actual se reemplazará<br>por el nuevo que te ha preparado<br>tu entrenador.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px;">
+        <button id="_menuConfirmBtn" onclick="menuActivarProximo()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:12px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Sí, activar ahora</button>
+        <button onclick="document.getElementById('_menuConfirmOv').remove()" style="width:100%;padding:14px;background:var(--s2);border:0.5px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:14px;cursor:pointer;">Ahora no</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
 }
 
 async function menuActivarProximo() {
   if (!_menuPendienteCache) return;
   const nuevoId = _menuPendienteCache.id;
-  const btn = document.querySelector('#_proximoMenuOv button[onclick="menuActivarProximo()"]');
+  const btn = document.getElementById('_menuConfirmBtn');
   if (btn) { btn.textContent = 'Activando...'; btn.disabled = true; }
   try {
-    // 1. Desactivar menú activo actual
     if (_menuActivoCache) {
       await supaFetch(`/rest/v1/menus_macroai?id=eq.${_menuActivoCache.id}`,
         { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: false }) });
     }
-    // 2. Activar el nuevo y quitar pendiente
     await supaFetch(`/rest/v1/menus_macroai?id=eq.${nuevoId}`,
       { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ activo: true, pendiente: false }) });
-
     showToast('✅ ¡Nuevo menú activado!');
-    document.getElementById('_proximoMenuOv')?.remove();
-
-    // Resetear caché y recargar
+    document.getElementById('_menuConfirmOv')?.remove();
     _menuActivoCache = null; _menuCeldasCache = null; _menuPendienteCache = null;
     cargarMiMenu();
   } catch(e) {
     showToast('❌ Error al activar el menú'); console.error(e);
-    if (btn) { btn.textContent = '▶ Activar este menú ahora'; btn.disabled = false; }
+    if (btn) { btn.textContent = 'Sí, activar ahora'; btn.disabled = false; }
   }
 }
 
