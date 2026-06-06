@@ -10356,7 +10356,7 @@ function bibRenderTargetBanner() {
 
   const rowSt   = 'display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;align-items:center;padding:5px 10px;';
   const lblSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
-  const cellSt  = 'font-size:13px;font-weight:600;text-align:center;';
+  const cellSt  = 'font-size:13px;font-weight:700;text-align:center;';
   const hdrSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:center;';
 
   // Filas ingredientes para ajuste manual
@@ -10365,14 +10365,14 @@ function bibRenderTargetBanner() {
     const kcalIng = g > 0 ? Math.round((ing.kcal_100||0)*g/100) : 0;
     const shortName = ing.nombre.length > 14 ? ing.nombre.substring(0,13)+'…' : ing.nombre;
     return '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 58px;align-items:center;padding:4px 10px;border-top:1px solid var(--border);">' +
-      '<span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+ing.nombre+'">'+shortName+'</span>' +
-      '<span style="font-size:11px;color:var(--muted);text-align:center;" id="btb_kcal_'+idx+'">'+kcalIng+'</span>' +
-      '<span style="font-size:11px;color:#2d5a2d;text-align:center;" id="btb_p_'+idx+'">'+Math.round((ing.p_100||0)*g/100*10)/10+'g</span>' +
-      '<span style="font-size:11px;color:#BA7517;text-align:center;" id="btb_hc_'+idx+'">'+Math.round((ing.hc_100||0)*g/100*10)/10+'g</span>' +
-      '<span style="font-size:11px;color:#185FA5;text-align:center;" id="btb_g_'+idx+'">'+Math.round((ing.g_100||0)*g/100*10)/10+'g</span>' +
+      '<span style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+ing.nombre+'">'+shortName+'</span>' +
+      '<span style="font-size:12px;font-weight:700;color:#A32D2D;text-align:center;" id="btb_kcal_'+idx+'">'+kcalIng+'</span>' +
+      '<span style="font-size:12px;font-weight:700;color:#0F6E56;text-align:center;" id="btb_p_'+idx+'">'+Math.round((ing.p_100||0)*g/100*10)/10+'g</span>' +
+      '<span style="font-size:12px;font-weight:700;color:#BA7517;text-align:center;" id="btb_hc_'+idx+'">'+Math.round((ing.hc_100||0)*g/100*10)/10+'g</span>' +
+      '<span style="font-size:12px;font-weight:700;color:#185FA5;text-align:center;" id="btb_g_'+idx+'">'+Math.round((ing.g_100||0)*g/100*10)/10+'g</span>' +
       '<input type="number" min="0" value="'+g+'" data-idx="'+idx+'" ' +
         'onchange="bibBannerGramChange(this)" ' +
-        'style="width:50px;font-size:12px;font-weight:600;text-align:center;padding:3px 4px;border-radius:6px;border:1px solid var(--border);background:var(--s1);color:var(--text);" />' +
+        'style="width:50px;font-size:13px;font-weight:700;text-align:center;padding:3px 4px;border-radius:6px;border:1px solid var(--border);background:var(--s1);color:var(--text);" />' +
     '</div>';
   }).join('');
 
@@ -10390,8 +10390,8 @@ function bibRenderTargetBanner() {
       // Fila TARGET
       '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
         '<span style="'+lblSt+'">Target</span>' +
-        '<span style="'+cellSt+'color:var(--muted);">'+tKcal+'</span>' +
-        '<span style="'+cellSt+'color:#2d5a2d;">'+tProt+'g</span>' +
+        '<span style="'+cellSt+'color:#A32D2D;">'+tKcal+'</span>' +
+        '<span style="'+cellSt+'color:#0F6E56;">'+tProt+'g</span>' +
         '<span style="'+cellSt+'color:#BA7517;">'+tHc+'g</span>' +
         '<span style="'+cellSt+'color:#185FA5;">'+tGrasa+'g</span>' +
       '</div>' +
@@ -10399,7 +10399,7 @@ function bibRenderTargetBanner() {
       '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
         '<span style="'+lblSt+'">Actual</span>' +
         '<span id="btb_actual_kcal" style="'+cellSt+'color:#A32D2D;">'+rKcal+'</span>' +
-        '<span id="btb_actual_p" style="'+cellSt+'color:#2d5a2d;">'+rProt+'g</span>' +
+        '<span id="btb_actual_p" style="'+cellSt+'color:#0F6E56;">'+rProt+'g</span>' +
         '<span id="btb_actual_hc" style="'+cellSt+'color:#BA7517;">'+rHc+'g</span>' +
         '<span id="btb_actual_g" style="'+cellSt+'color:#185FA5;">'+rGrasa+'g</span>' +
       '</div>' +
