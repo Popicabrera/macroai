@@ -1,4 +1,4 @@
-<!DOCTYPE  html>
+*<!DOCTYPE  html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -9901,6 +9901,11 @@ function cocRenderBiblioteca(comidas) {
     if (Array.isArray(c.ingredientes)) ings = c.ingredientes;
     else if (typeof c.ingredientes === 'string') { try { ings = JSON.parse(c.ingredientes); } catch(e){} }
     const ingsTexto = ings.map(i => `${i.nombre}${i.gramos ? ' · ' + i.gramos + 'g' : ''}`).join(', ');
+    // % distribución calórica
+    const kcalTotal = ((c.proteina||0)*4 + (c.hc||0)*4 + (c.grasa||0)*9) || 1;
+    const pProt  = Math.round((c.proteina||0)*4 / kcalTotal * 100);
+    const pHc    = Math.round((c.hc||0)*4    / kcalTotal * 100);
+    const pGrasa = Math.round((c.grasa||0)*9  / kcalTotal * 100);
     const card = document.createElement('div');
     card.className = 'bib-card';
     card.style.cursor = 'pointer';
@@ -9909,9 +9914,18 @@ function cocRenderBiblioteca(comidas) {
         <div class="bib-card-name">${escapeHtml(c.nombre||'Sin nombre')}</div>
         <div class="bib-card-macros">
           <span class="bib-macro-pill kcal">${Math.round(c.kcal||0)} kcal</span>
-          <span class="bib-macro-pill prot">P ${Math.round((c.proteina||0)*10)/10}g</span>
-          <span class="bib-macro-pill ch">CH ${Math.round((c.hc||0)*10)/10}g</span>
-          <span class="bib-macro-pill grasa">G ${Math.round((c.grasa||0)*10)/10}g</span>
+          <span class="bib-macro-pill prot" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.2;padding:3px 9px;">
+            <span>P ${Math.round((c.proteina||0)*10)/10}g</span>
+            <span style="font-size:9px;opacity:0.7;">${pProt}%</span>
+          </span>
+          <span class="bib-macro-pill ch" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.2;padding:3px 9px;">
+            <span>CH ${Math.round((c.hc||0)*10)/10}g</span>
+            <span style="font-size:9px;opacity:0.7;">${pHc}%</span>
+          </span>
+          <span class="bib-macro-pill grasa" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.2;padding:3px 9px;">
+            <span>G ${Math.round((c.grasa||0)*10)/10}g</span>
+            <span style="font-size:9px;opacity:0.7;">${pGrasa}%</span>
+          </span>
         </div>
       </div>
       ${ingsTexto ? `<div class="bib-card-ings" style="padding:6px 0 2px;font-size:12px;color:var(--text);">${escapeHtml(ingsTexto)}</div>` : ''}
