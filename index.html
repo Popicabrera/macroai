@@ -10294,14 +10294,22 @@ function bibRenderTargetBanner() {
     return;
   }
 
+  // % distribución calórica
+  const kcalTotal = (cProt*4 + cHc*4 + cGrasa*9) || 1;
+  const pProt  = Math.round(cProt  * 4 / kcalTotal * 100);
+  const pHc    = Math.round(cHc    * 4 / kcalTotal * 100);
+  const pGrasa = Math.round(cGrasa * 9 / kcalTotal * 100);
+
+  const pillStyle = 'display:inline-flex;flex-direction:column;align-items:center;font-size:11px;font-weight:700;padding:4px 9px;border-radius:10px;line-height:1.3;';
+
   banner.style.display = 'block';
   banner.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">' +
-      '<span style="font-size:18px;font-weight:700;color:#A32D2D;font-family:\'Space Grotesk\',sans-serif;">' + rKcal + ' kcal</span>' +
-      '<div style="display:flex;gap:6px;">' +
-        '<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);">P ' + rProt + 'g</span>' +
-        '<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(186,117,23,0.1);color:#BA7517;border:1px solid rgba(186,117,23,0.2);">HC ' + rHc + 'g</span>' +
-        '<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(24,95,165,0.1);color:#185FA5;border:1px solid rgba(24,95,165,0.2);">G ' + rGrasa + 'g</span>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">' +
+      '<span style="font-size:20px;font-weight:700;color:#A32D2D;font-family:\'Space Grotesk\',sans-serif;">' + rKcal + ' kcal</span>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<span style="' + pillStyle + 'background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);"><span>P ' + rProt + 'g</span><span style="font-size:10px;opacity:0.75;">' + pProt + '%</span></span>' +
+        '<span style="' + pillStyle + 'background:rgba(186,117,23,0.1);color:#BA7517;border:1px solid rgba(186,117,23,0.2);"><span>HC ' + rHc + 'g</span><span style="font-size:10px;opacity:0.75;">' + pHc + '%</span></span>' +
+        '<span style="' + pillStyle + 'background:rgba(24,95,165,0.1);color:#185FA5;border:1px solid rgba(24,95,165,0.2);"><span>G ' + rGrasa + 'g</span><span style="font-size:10px;opacity:0.75;">' + pGrasa + '%</span></span>' +
       '</div>' +
     '</div>';
 }
