@@ -10533,8 +10533,13 @@ async function guardarComidaBib() {
 /* Item dentro de categoría */
 .menu-selector-item{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:background .15s;}
 .menu-selector-item:active{background:var(--s2);}
-.menu-selector-item-nombre{font-size:13px;font-weight:600;color:var(--text);}
-.menu-selector-item-macros{font-size:11px;color:var(--muted);margin-top:2px;}
+.menu-selector-item-nombre{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.menu-selector-item-macros{display:flex;gap:5px;flex-wrap:wrap;}
+.msi-pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.msi-kcal{background:#f5e6d3;color:#7a3d0a;}
+.msi-prot{background:#e8f0e8;color:#2d5a2d;}
+.msi-hc{background:#e8eef5;color:#1a3d6b;}
+.msi-grasa{background:#fdf0e0;color:#6b4400;}
 .menu-selector-cancel{width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
 </style>
 
@@ -11630,7 +11635,12 @@ function _mscCrearItem(c) {
   item.className = 'menu-selector-item';
   item.innerHTML = `
     <div class="menu-selector-item-nombre">${escapeHtml(c.nombre||'')}</div>
-    <div class="menu-selector-item-macros">${Math.round(c.kcal||0)} kcal · P${Math.round((c.proteina||0)*10)/10}g CH${Math.round((c.hc||0)*10)/10}g G${Math.round((c.grasa||0)*10)/10}g</div>`;
+    <div class="menu-selector-item-macros">
+      <span class="msi-pill msi-kcal">${Math.round(c.kcal||0)} kcal</span>
+      <span class="msi-pill msi-prot">P ${Math.round((c.proteina||0)*10)/10}g</span>
+      <span class="msi-pill msi-hc">CH ${Math.round((c.hc||0)*10)/10}g</span>
+      <span class="msi-pill msi-grasa">G ${Math.round((c.grasa||0)*10)/10}g</span>
+    </div>`;
   item.addEventListener('click', ()=>{ if(_menuSelectorCallback) _menuSelectorCallback(c); });
   return item;
 }
