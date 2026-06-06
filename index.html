@@ -9514,7 +9514,7 @@ function dsbUpdateActive() {
 .bib-macro-pill.ch{background:rgba(232,168,56,0.10);color:#9a6f00;border:1px solid rgba(232,168,56,0.2);}
 .bib-macro-pill.grasa{background:rgba(91,141,184,0.10);color:var(--blue);border:1px solid rgba(91,141,184,0.2);}
 .bib-card-ings{padding:8px 14px 10px;border-top:1px solid var(--border);background:rgba(0,0,0,0.02);
-  font-size:12px;color:var(--muted);line-height:1.7;}
+  font-size:12px;color:var(--text);line-height:1.7;}
 .bib-card-action-btn{
   background:none;border:none;cursor:pointer;font-size:15px;padding:4px 5px;
   border-radius:8px;line-height:1;opacity:0.55;transition:opacity 0.15s,background 0.15s;flex-shrink:0;
@@ -9914,7 +9914,7 @@ function cocRenderBiblioteca(comidas) {
           <span class="bib-macro-pill grasa">G ${Math.round((c.grasa||0)*10)/10}g</span>
         </div>
       </div>
-      ${ingsTexto ? `<div class="bib-card-ings" style="padding:6px 0 2px;font-size:12px;color:var(--muted);">${escapeHtml(ingsTexto)}</div>` : ''}
+      ${ingsTexto ? `<div class="bib-card-ings" style="padding:6px 0 2px;font-size:12px;color:var(--text);">${escapeHtml(ingsTexto)}</div>` : ''}
     `;
     card.addEventListener('click', () => _bibSheet(c));
     return card;
