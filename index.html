@@ -7363,12 +7363,12 @@ function _renderMenuDia() {
       const baseGrasa = bib.grasa    || 0;
       const baseKcal  = bib.kcal     || 0;
 
-      // Usar siempre los gramos guardados — el menú ya fue creado con gramos correctos por tipo de día
+      // Ajustar gramos por tipo de día (WLS) si es descanso
       if (ingArr.length && ingArr.some(i => i.gramos)) {
         ingArr.forEach(ing => {
           if (!ing.gramos) return;
           const gramosOrig = ing.gramos;
-          const gramosAdj  = gramosOrig;
+          const gramosAdj  = _menuAjustarGramos(gramosOrig, ing, tipoDia, _menuPerfilMacros);
 
           // Calcular kcal del ingrediente ajustado
           const factor = gramosAdj / 100;
