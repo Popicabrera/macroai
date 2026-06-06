@@ -10330,7 +10330,7 @@ function bibRenderTargetBanner() {
     banner.style.display = 'block';
     banner.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">' +
-        '<span style="font-size:20px;font-weight:700;color:#A32D2D;font-family:\'Space Grotesk\',sans-serif;">' + rKcal + ' kcal</span>' +
+        '<span style="font-size:20px;font-weight:700;color:#A32D2D;">' + rKcal + ' kcal</span>' +
         '<div style="display:flex;gap:8px;">' +
           '<span style="' + pillStyle + 'background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);"><span>P ' + rProt + 'g</span><span style="font-size:10px;opacity:0.75;">' + pProt + '%</span></span>' +
           '<span style="' + pillStyle + 'background:rgba(186,117,23,0.1);color:#BA7517;border:1px solid rgba(186,117,23,0.2);"><span>HC ' + rHc + 'g</span><span style="font-size:10px;opacity:0.75;">' + pHc + '%</span></span>' +
@@ -10340,7 +10340,7 @@ function bibRenderTargetBanner() {
     return;
   }
 
-  // Con target: TARGET / ACTUAL / DIFERENCIA
+  // Con target: tabla TARGET / ACTUAL / DIFERENCIA + ajuste manual por ingrediente
   const tKcal  = Math.round(target.kcal  || 0);
   const tProt  = Math.round((target.prot  || 0) * 10) / 10;
   const tHc    = Math.round((target.hc    || 0) * 10) / 10;
@@ -10354,51 +10354,126 @@ function bibRenderTargetBanner() {
   const difColor = (d) => d > 0 ? '#A32D2D' : d < 0 ? '#185FA5' : '#2d5a2d';
   const difSign  = (d) => (d > 0 ? '+' : '') + d;
 
-  const colStyle  = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;';
-  const lblStyle  = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
-  const kcalSt    = 'font-size:15px;font-weight:700;font-family:\'Space Grotesk\',sans-serif;';
-  const macroSt   = 'font-size:11px;font-weight:600;';
+  const rowSt   = 'display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;align-items:center;padding:5px 10px;';
+  const lblSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
+  const cellSt  = 'font-size:13px;font-weight:600;text-align:center;';
+  const hdrSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:center;';
+
+  // Filas ingredientes para ajuste manual
+  const ingsHtml = _cocEditorIngs.filter(i => i.nombre && i.nombre.trim()).map((ing, idx) => {
+    const g = ing.gramos || 0;
+    const kcalIng = g > 0 ? Math.round((ing.kcal_100||0)*g/100) : 0;
+    const shortName = ing.nombre.length > 14 ? ing.nombre.substring(0,13)+'…' : ing.nombre;
+    return '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 58px;align-items:center;padding:4px 10px;border-top:1px solid var(--border);">' +
+      '<span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+ing.nombre+'">'+shortName+'</span>' +
+      '<span style="font-size:11px;color:var(--muted);text-align:center;" id="btb_kcal_'+idx+'">'+kcalIng+'</span>' +
+      '<span style="font-size:11px;color:#2d5a2d;text-align:center;" id="btb_p_'+idx+'">'+Math.round((ing.p_100||0)*g/100*10)/10+'g</span>' +
+      '<span style="font-size:11px;color:#BA7517;text-align:center;" id="btb_hc_'+idx+'">'+Math.round((ing.hc_100||0)*g/100*10)/10+'g</span>' +
+      '<span style="font-size:11px;color:#185FA5;text-align:center;" id="btb_g_'+idx+'">'+Math.round((ing.g_100||0)*g/100*10)/10+'g</span>' +
+      '<input type="number" min="0" value="'+g+'" data-idx="'+idx+'" ' +
+        'onchange="bibBannerGramChange(this)" ' +
+        'style="width:50px;font-size:12px;font-weight:600;text-align:center;padding:3px 4px;border-radius:6px;border:1px solid var(--border);background:var(--s1);color:var(--text);" />' +
+    '</div>';
+  }).join('');
 
   banner.style.display = 'block';
   banner.innerHTML =
     '<div style="background:var(--s2);border-radius:10px;border:1px solid var(--border);overflow:hidden;">' +
-      '<div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;padding:6px 10px 2px;">' +
-        '<div style="' + colStyle + '"><span style="' + lblStyle + '">Target</span></div>' +
-        '<div style="background:var(--border);"></div>' +
-        '<div style="' + colStyle + '"><span style="' + lblStyle + '">Actual</span></div>' +
-        '<div style="background:var(--border);"></div>' +
-        '<div style="' + colStyle + '"><span style="' + lblStyle + '">Diferencia</span></div>' +
+      // Cabecera columnas
+      '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;padding:5px 10px 3px;border-bottom:1px solid var(--border);">' +
+        '<span style="'+lblSt+'"></span>' +
+        '<span style="'+hdrSt+'color:var(--muted);">Kcal</span>' +
+        '<span style="'+hdrSt+'color:#2d5a2d;">Prot</span>' +
+        '<span style="'+hdrSt+'color:#BA7517;">HC</span>' +
+        '<span style="'+hdrSt+'color:#185FA5;">Grasa</span>' +
       '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;padding:2px 10px 5px;border-bottom:1px solid var(--border);">' +
-        '<div style="' + colStyle + '"><span style="' + kcalSt + 'color:#888;">' + tKcal + ' kcal</span></div>' +
-        '<div style="background:var(--border);"></div>' +
-        '<div style="' + colStyle + '"><span style="' + kcalSt + 'color:#A32D2D;">' + rKcal + ' kcal</span></div>' +
-        '<div style="background:var(--border);"></div>' +
-        '<div style="' + colStyle + '"><span style="' + kcalSt + 'color:' + difColor(dKcal) + ';">' + difSign(dKcal) + ' kcal</span></div>' +
+      // Fila TARGET
+      '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
+        '<span style="'+lblSt+'">Target</span>' +
+        '<span style="'+cellSt+'color:var(--muted);">'+tKcal+'</span>' +
+        '<span style="'+cellSt+'color:#2d5a2d;">'+tProt+'g</span>' +
+        '<span style="'+cellSt+'color:#BA7517;">'+tHc+'g</span>' +
+        '<span style="'+cellSt+'color:#185FA5;">'+tGrasa+'g</span>' +
       '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;padding:5px 10px 5px;">' +
-        '<div style="' + colStyle + '">' +
-          '<span style="' + macroSt + 'color:#2d5a2d;">P ' + tProt + 'g</span>' +
-          '<span style="' + macroSt + 'color:#BA7517;">HC ' + tHc + 'g</span>' +
-          '<span style="' + macroSt + 'color:#185FA5;">G ' + tGrasa + 'g</span>' +
-        '</div>' +
-        '<div style="background:var(--border);"></div>' +
-        '<div style="' + colStyle + '">' +
-          '<span style="' + macroSt + 'color:#2d5a2d;">P ' + rProt + 'g</span>' +
-          '<span style="' + macroSt + 'color:#BA7517;">HC ' + rHc + 'g</span>' +
-          '<span style="' + macroSt + 'color:#185FA5;">G ' + rGrasa + 'g</span>' +
-        '</div>' +
-        '<div style="background:var(--border);"></div>' +
-        '<div style="' + colStyle + '">' +
-          '<span style="' + macroSt + 'color:' + difColor(dProt)  + ';">P '  + difSign(dProt)  + 'g</span>' +
-          '<span style="' + macroSt + 'color:' + difColor(dHc)    + ';">HC ' + difSign(dHc)    + 'g</span>' +
-          '<span style="' + macroSt + 'color:' + difColor(dGrasa) + ';">G '  + difSign(dGrasa) + 'g</span>' +
-        '</div>' +
+      // Fila ACTUAL
+      '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
+        '<span style="'+lblSt+'">Actual</span>' +
+        '<span id="btb_actual_kcal" style="'+cellSt+'color:#A32D2D;">'+rKcal+'</span>' +
+        '<span id="btb_actual_p" style="'+cellSt+'color:#2d5a2d;">'+rProt+'g</span>' +
+        '<span id="btb_actual_hc" style="'+cellSt+'color:#BA7517;">'+rHc+'g</span>' +
+        '<span id="btb_actual_g" style="'+cellSt+'color:#185FA5;">'+rGrasa+'g</span>' +
       '</div>' +
-      '<div style="padding:0 10px 10px;">' +
-        '<button onclick="bibAjustarAlTarget()" style="width:100%;padding:9px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.25);border-radius:8px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;font-family:\'Space Grotesk\',sans-serif;">⚡ Ajustar gramos al target</button>' +
+      // Fila DIFERENCIA
+      '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
+        '<span style="'+lblSt+'">Dif.</span>' +
+        '<span id="btb_dif_kcal" style="'+cellSt+'color:'+difColor(dKcal)+';">'+difSign(dKcal)+'</span>' +
+        '<span id="btb_dif_p" style="'+cellSt+'color:'+difColor(dProt)+';">'+difSign(dProt)+'g</span>' +
+        '<span id="btb_dif_hc" style="'+cellSt+'color:'+difColor(dHc)+';">'+difSign(dHc)+'g</span>' +
+        '<span id="btb_dif_g" style="'+cellSt+'color:'+difColor(dGrasa)+';">'+difSign(dGrasa)+'g</span>' +
+      '</div>' +
+      // Cabecera ajuste manual
+      '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 58px;padding:5px 10px 3px;">' +
+        '<span style="'+lblSt+'color:var(--muted);">Ingrediente</span>' +
+        '<span style="'+hdrSt+'color:var(--muted);">Kcal</span>' +
+        '<span style="'+hdrSt+'color:#2d5a2d;">P</span>' +
+        '<span style="'+hdrSt+'color:#BA7517;">HC</span>' +
+        '<span style="'+hdrSt+'color:#185FA5;">G</span>' +
+        '<span style="'+hdrSt+'color:var(--muted);">Gramos</span>' +
+      '</div>' +
+      ingsHtml +
+      // Botón ajuste automático
+      '<div style="padding:8px 10px;">' +
+        '<button onclick="bibAjustarAlTarget()" style="width:100%;padding:9px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.25);border-radius:8px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer>⚡ Ajustar gramos automáticamente al target</button>' +
       '</div>' +
     '</div>';
+}
+
+// Actualiza gramos desde el banner y recalcula totales
+function bibBannerGramChange(input) {
+  const idx = parseInt(input.dataset.idx);
+  const g = Math.max(0, parseInt(input.value) || 0);
+  if (!_cocEditorIngs[idx]) return;
+  _cocEditorIngs[idx].gramos = g;
+  // Actualizar macros de esa fila en el banner
+  const ing = _cocEditorIngs[idx];
+  const kcalIng  = g > 0 ? Math.round((ing.kcal_100||0)*g/100) : 0;
+  const protIng  = g > 0 ? Math.round((ing.p_100||0)*g/100*10)/10 : 0;
+  const chIng    = g > 0 ? Math.round((ing.hc_100||0)*g/100*10)/10 : 0;
+  const grasaIng = g > 0 ? Math.round((ing.g_100||0)*g/100*10)/10 : 0;
+  const kcalEl = document.getElementById('btb_kcal_'+idx);
+  const pEl    = document.getElementById('btb_p_'+idx);
+  const hcEl   = document.getElementById('btb_hc_'+idx);
+  const gEl    = document.getElementById('btb_g_'+idx);
+  if (kcalEl) kcalEl.textContent = kcalIng;
+  if (pEl)    pEl.textContent    = protIng+'g';
+  if (hcEl)   hcEl.textContent   = chIng+'g';
+  if (gEl)    gEl.textContent    = grasaIng+'g';
+  // Sincronizar con el editor de ingredientes (la fila de abajo)
+  bibIngActualizarGramos(idx, g);
+  // Recalcular totales y actualizar banner ACTUAL/DIF
+  let cKcal=0,cProt=0,cHc=0,cGrasa=0;
+  _cocEditorIngs.forEach(i => {
+    const gr = i.gramos||0;
+    cKcal  += (i.kcal_100||0)*gr/100;
+    cProt  += (i.p_100||0)*gr/100;
+    cHc    += (i.hc_100||0)*gr/100;
+    cGrasa += (i.g_100||0)*gr/100;
+  });
+  const rK=Math.round(cKcal), rP=Math.round(cProt*10)/10, rH=Math.round(cHc*10)/10, rG=Math.round(cGrasa*10)/10;
+  const target2 = _menuTargets[_cocEditorCellKey];
+  if (!target2) return;
+  const tK=Math.round(target2.kcal||0), tP=Math.round((target2.prot||0)*10)/10, tH=Math.round((target2.hc||0)*10)/10, tGr=Math.round((target2.grasa||0)*10)/10;
+  const dK=rK-tK, dP=Math.round((rP-tP)*10)/10, dH=Math.round((rH-tH)*10)/10, dGr=Math.round((rG-tGr)*10)/10;
+  const difColor2 = (d) => d>0?'#A32D2D':d<0?'#185FA5':'#2d5a2d';
+  const difSign2  = (d) => (d>0?'+':'')+d;
+  const aK=document.getElementById('btb_actual_kcal'); if(aK){aK.textContent=rK;}
+  const aP=document.getElementById('btb_actual_p');    if(aP){aP.textContent=rP+'g';}
+  const aH=document.getElementById('btb_actual_hc');   if(aH){aH.textContent=rH+'g';}
+  const aG=document.getElementById('btb_actual_g');    if(aG){aG.textContent=rG+'g';}
+  const dKel=document.getElementById('btb_dif_kcal'); if(dKel){dKel.textContent=difSign2(dK);dKel.style.color=difColor2(dK);}
+  const dPel=document.getElementById('btb_dif_p');    if(dPel){dPel.textContent=difSign2(dP)+'g';dPel.style.color=difColor2(dP);}
+  const dHel=document.getElementById('btb_dif_hc');   if(dHel){dHel.textContent=difSign2(dH)+'g';dHel.style.color=difColor2(dH);}
+  const dGel=document.getElementById('btb_dif_g');    if(dGel){dGel.textContent=difSign2(dGr)+'g';dGel.style.color=difColor2(dGr);}
 }
 
 function bibAjustarAlTarget() {
