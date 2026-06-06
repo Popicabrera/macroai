@@ -9685,7 +9685,7 @@ function dsbUpdateActive() {
           <!-- Selector de cliente -->
           <div id="menuCocClienteBar" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:11px;cursor:pointer;" onclick="menuCocAbrirSelectorCliente()">
             <span style="font-size:14px;">👤</span>
-            <span id="menuCocClienteLabel" style="flex:1;font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;">Seleccionar cliente para ver macros objetivo</span>
+            <span id="menuCocClienteLabel" style="flex:1;font-size:12px;color:var(--text);font-family:'Inter',sans-serif;font-weight:500;">Seleccionar cliente para ver macros objetivo</span>
             <span style="font-size:11px;color:var(--muted);">▾</span>
           </div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -9738,7 +9738,7 @@ function dsbUpdateActive() {
       <!-- Selector de cliente mobile -->
       <div id="menuCocClienteBarMobile" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;cursor:pointer;" onclick="menuCocAbrirSelectorCliente()">
         <span style="font-size:14px;">👤</span>
-        <span id="menuCocClienteLabelMobile" style="flex:1;font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;">Seleccionar cliente para ver macros objetivo</span>
+        <span id="menuCocClienteLabelMobile" style="flex:1;font-size:12px;color:var(--text);font-family:'Inter',sans-serif;font-weight:500;">Seleccionar cliente para ver macros objetivo</span>
         <span style="font-size:11px;color:var(--muted);">▾</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -9908,8 +9908,8 @@ function cocRenderBiblioteca(comidas) {
     // Lista ingredientes
     const ingsHtml = ings.length ? ings.map(i =>
       `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;">
-        <span style="color:var(--text);">${escapeHtml(i.nombre||'')}</span>
-        <span style="color:var(--muted2);font-size:11px;">${i.gramos ? i.gramos+'g' : ''}</span>
+        <span style="color:var(--text);font-weight:500;">${escapeHtml(i.nombre||'')}</span>
+        <span style="color:var(--muted);font-size:11px;">${i.gramos ? i.gramos+'g' : ''}</span>
       </div>`
     ).join('') : '';
     const card = document.createElement('div');
@@ -9922,15 +9922,15 @@ function cocRenderBiblioteca(comidas) {
           <span class="bib-macro-pill kcal">${Math.round(c.kcal||0)} kcal</span>
           <span class="bib-macro-pill prot" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.2;padding:3px 9px;">
             <span>P ${Math.round((c.proteina||0)*10)/10}g</span>
-            <span style="font-size:9px;opacity:0.7;">${pProt}%</span>
+            <span style="font-size:9px;">${pProt}%</span>
           </span>
           <span class="bib-macro-pill ch" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.2;padding:3px 9px;">
             <span>CH ${Math.round((c.hc||0)*10)/10}g</span>
-            <span style="font-size:9px;opacity:0.7;">${pHc}%</span>
+            <span style="font-size:9px;">${pHc}%</span>
           </span>
           <span class="bib-macro-pill grasa" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.2;padding:3px 9px;">
             <span>G ${Math.round((c.grasa||0)*10)/10}g</span>
-            <span style="font-size:9px;opacity:0.7;">${pGrasa}%</span>
+            <span style="font-size:9px;">${pGrasa}%</span>
           </span>
         </div>
       </div>
@@ -10499,13 +10499,13 @@ async function guardarComidaBib() {
 .menu-dia-body{display:flex;flex-direction:column;}
 .menu-franja-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;min-height:54px;}
 .menu-franja-row:last-child{border-bottom:none;}
-.menu-franja-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;width:88px;flex-shrink:0;white-space:nowrap;}
+.menu-franja-label{font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;width:88px;flex-shrink:0;white-space:nowrap;}
 .menu-franja-content{flex:1;min-width:0;}
 .menu-celda-asignada{display:flex;flex-direction:column;gap:2px;}
 .menu-celda-nombre{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .menu-celda-macros{font-size:11px;display:flex;flex-wrap:wrap;align-items:center;gap:3px;}
 .mcd-sep{color:var(--muted2);}
-.menu-celda-add{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 0;transition:color .15s;}
+.menu-celda-add{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;padding:4px 0;transition:color .15s;}
 .menu-celda-add:active{color:var(--accent);}
 .menu-celda-add-icon{width:26px;height:26px;border-radius:8px;background:var(--s2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
 .menu-celda-del{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s;}
@@ -10513,7 +10513,7 @@ async function guardarComidaBib() {
 .menu-celda-edit{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;}
 .menu-celda-edit:active{opacity:0.6;}
 .menu-celda-ings{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
-.menu-celda-ing-pill{font-size:10px;color:var(--muted);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;white-space:nowrap;}
+.menu-celda-ing-pill{font-size:10px;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;white-space:nowrap;}
 .menu-celda-ing-pill strong{color:var(--text);font-weight:600;}
 .menu-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
 .menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:80vh;display:flex;flex-direction:column;gap:10px;}
@@ -10639,7 +10639,7 @@ window._menuCocLimpiarCliente = function() {
   _menuEraActivo = false;
   ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.textContent = 'Seleccionar cliente para ver macros objetivo'; el.style.color = 'var(--muted)'; el.style.fontWeight = '400'; }
+    if (el) { el.textContent = 'Seleccionar cliente para ver macros objetivo'; el.style.color = 'var(--text)'; el.style.fontWeight = '500'; }
   });
   const ni = menuGetNombreInput();
   if (ni) ni.value = '';
