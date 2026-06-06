@@ -11800,6 +11800,20 @@ async function menuDesasignarMenuCliente() {
 
 // ── PRÓXIMO MENÚ: confirmar y activar ──
 
+function _calSvgHoy() {
+  var d=new Date(),day=d.getDate();
+  var mes=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'][d.getMonth()];
+  return '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    +'<rect x="1" y="4" width="30" height="27" rx="5" fill="#fff" stroke="#c0392b" stroke-width="1.5"/>'
+    +'<rect x="1" y="4" width="30" height="9" rx="5" fill="#c0392b"/>'
+    +'<rect x="1" y="9" width="30" height="4" fill="#c0392b"/>'
+    +'<rect x="9" y="1" width="3.5" height="7" rx="1.75" fill="#c0392b"/>'
+    +'<rect x="19.5" y="1" width="3.5" height="7" rx="1.75" fill="#c0392b"/>'
+    +'<text x="16" y="10.5" text-anchor="middle" fill="#fff" font-size="5" font-weight="700" font-family="Space Grotesk,sans-serif" letter-spacing="0.5">'+mes+'</text>'
+    +'<text x="16" y="27" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="800" font-family="Space Grotesk,sans-serif">'+day+'</text>'
+    +'</svg>';
+}
+
 function menuConfirmarActivar() {
   if (!_menuPendienteCache) return;
   const ov = document.createElement('div');
@@ -11808,7 +11822,7 @@ function menuConfirmarActivar() {
   ov.innerHTML = `
     <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 32px;">
       <div style="width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 20px;"></div>
-      <div style="width:52px;height:52px;border-radius:14px;background:rgba(192,57,43,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;">📅</div>
+      <div id="_menuCalIcon" style="width:52px;height:52px;border-radius:14px;background:rgba(192,57,43,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"></div>
       <div style="text-align:center;margin-bottom:6px;">
         <div style="font-size:16px;font-weight:700;color:var(--text);">Activar nuevo menú</div>
         <div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6;">Tu menú actual se reemplazará<br>por el nuevo que te ha preparado<br>tu entrenador.</div>
@@ -11820,6 +11834,8 @@ function menuConfirmarActivar() {
     </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
+  var calEl = document.getElementById('_menuCalIcon');
+  if (calEl) calEl.innerHTML = _calSvgHoy();
 }
 
 async function menuActivarProximo() {
