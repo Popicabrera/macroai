@@ -11243,8 +11243,11 @@ Devuelve ÚNICAMENTE un JSON array sin texto ni markdown:
         messages: [{ role: 'user', content: prompt }]
       })
     });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    const texto = data.content?.find(b => b.type === 'text')?.text || '';
+    console.log('msdGenerar response:', JSON.stringify(data).substring(0,300));
+    const texto = data.content?.find(b => b.type === 'text')?.text || data.content?.[0]?.text || '';
+    if (!texto) throw new Error('Sin texto en respuesta');
     const clean = texto.replace(/```json|```/g, '').trim();
     const targets = JSON.parse(clean);
 
