@@ -6878,7 +6878,7 @@ async function handleFotoProducto(e) {
   <div class="header">
     <div class="logo">Macro<em>AI</em></div>
     <div class="hbtns">
-      <div class="day-pill" style="cursor:default;" id="menuTipoBadge">
+      <div class="day-pill" style="cursor:pointer;" id="menuTipoBadge" onclick="menuToggleTipoDia(_menuDiaActual)">
         <div class="pdot" id="menuPillDot"></div>
         <span id="menuTipoLabel">Cargando...</span>
       </div>
@@ -6919,8 +6919,7 @@ async function handleFotoProducto(e) {
     </div>
   </div>
 
-  <!-- BARRA TIPO DÍA (fija, fuera del scroll) -->
-  <div id="menuTipoDiaBar" style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;"></div>
+
 
   <!-- COMIDAS -->
   <div class="main-scroll-area">
@@ -7296,22 +7295,6 @@ function _renderMenuDia() {
 
   const franjasDia = MENU_FRANJAS.filter(f => porFranja[f]);
 
-  // --- TOGGLE ENTRENO / DESCANSO (barra fija, fuera del scroll) ---
-  const tipoDiaBar = document.getElementById('menuTipoDiaBar');
-  if (tipoDiaBar) {
-    tipoDiaBar.innerHTML = `
-      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">
-        ${esHoy ? 'HOY' : _MENU_DIAS_NOMBRES[diaNum-1].toUpperCase()}
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:11px;color:var(--muted);">Tipo de día:</span>
-        <button onclick="menuToggleTipoDia(${diaNum})"
-          style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1.5px solid ${esEntreno ? 'rgba(192,57,43,0.4)' : 'rgba(91,141,184,0.4)'};background:${esEntreno ? 'rgba(192,57,43,0.08)' : 'rgba(91,141,184,0.08)'};font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:${esEntreno ? 'var(--accent)' : 'var(--blue)'};cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.15s;">
-          ${esEntreno ? '🏋️ Entreno' : '💤 Descanso'}
-          ${_menuTipoDiaOverride[diaNum] ? '<span style="font-size:9px;opacity:0.6;">*</span>' : ''}
-        </button>
-      </div>`;
-  }
 
   if (!franjasDia.length) {
     document.getElementById('menuComidas').innerHTML = `
