@@ -2165,8 +2165,8 @@ function loadToday(){
         const hayContaminados = comidasLimpias.length !== (r.comidas||[]).length;
         S.comidas=comidasLimpias;
         updateBars();
-        const d2={fecha:getToday(),tipoDia:r.tipo_dia||S.tipoDia,kcalObj:r.kcal_objetivo||S.kcalObj,
-          protObj:r.prot_objetivo||S.prot,chObj:r.ch_objetivo||S.ch,grasaObj:r.grasa_objetivo||S.grasa,
+        const d2={fecha:getToday(),tipoDia:r.tipo_dia||S.tipoDia,kcalObj:S.kcalObj,
+          protObj:S.prot,chObj:S.ch,grasaObj:S.grasa,
           kcalC:S.kcalC,protC:S.protC,chC:S.chC,grasaC:S.grasaC,comidas:S.comidas,updated_at:supaUpdated};
         localStorage.setItem('macroai_dia_'+getToday(),JSON.stringify(d2));
         // Si había items fromMenu contaminados, limpiar también en Supabase
