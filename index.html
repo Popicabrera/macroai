@@ -10415,32 +10415,47 @@ function bibRenderTargetBanner() {
   const pHc    = Math.round(cHc    * 4 / kcalTotal * 100);
   const pGrasa = Math.round(cGrasa * 9 / kcalTotal * 100);
 
-  const pillStyle = 'display:inline-flex;flex-direction:column;align-items:center;font-size:11px;font-weight:700;padding:5px 16px;border-radius:10px;line-height:1.3;';
+  const pillSt = 'display:inline-flex;flex-direction:column;align-items:center;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700;line-height:1.3;min-width:52px;text-align:center;';
+  const pillKcal = (v,id='') => `<span${id?' id="'+id+'"':''} style="${pillSt}background:#F1EFE8;color:#444441;">${v}</span>`;
+  const pillP    = (v,id='') => `<span${id?' id="'+id+'"':''} style="${pillSt}background:#fdecea;color:#7b241c;">${v}</span>`;
+  const pillHC   = (v,id='') => `<span${id?' id="'+id+'"':''} style="${pillSt}background:#fef9e7;color:#7d6608;">${v}</span>`;
+  const pillG    = (v,id='') => `<span${id?' id="'+id+'"':''} style="${pillSt}background:#e8f6f3;color:#0e6655;">${v}</span>`;
+  const pillDif  = (v,id='',raw=0) => {
+    const neg = raw < 0; const pos = raw > 0;
+    const bg  = neg ? '#FCEBEB' : pos ? '#EAF3DE' : '#F1EFE8';
+    const col = neg ? '#A32D2D' : pos ? '#27500A' : '#444441';
+    const sign = pos ? '+' : '';
+    return `<span${id?' id="'+id+'"':''} style="${pillSt}background:${bg};color:${col};">${sign}${v}</span>`;
+  };
+
+  const lblSt = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
+  const hdrSt = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:center;color:var(--muted);';
+  const rowSt = 'display:grid;grid-template-columns:52px 1fr 1fr 1fr 1fr;align-items:center;padding:6px 10px;gap:4px;';
 
   // ¿Hay target para esta celda?
   const target = (_cocEditorCellKey && typeof _menuTargets !== 'undefined' && _menuTargets[_cocEditorCellKey]) ? _menuTargets[_cocEditorCellKey] : null;
 
-  // Banner compacto siempre visible (kcal + pills)
-  // Banner sin target: flex normal con pills
-  const bannerSinTarget =
-    '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">' +
-      '<span style="font-size:20px;font-weight:700;color:#A32D2D;">' + rKcal + ' kcal</span>' +
-      '<div style="display:flex;gap:8px;">' +
-        '<span style="' + pillStyle + 'background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);"><span>P ' + rProt + 'g</span><span style="font-size:10px;opacity:0.75;">' + pProt + '%</span></span>' +
-        '<span style="' + pillStyle + 'background:rgba(186,117,23,0.1);color:#BA7517;border:1px solid rgba(186,117,23,0.2);"><span>HC ' + rHc + 'g</span><span style="font-size:10px;opacity:0.75;">' + pHc + '%</span></span>' +
-        '<span style="' + pillStyle + 'background:rgba(24,95,165,0.1);color:#185FA5;border:1px solid rgba(24,95,165,0.2);"><span>G ' + rGrasa + 'g</span><span style="font-size:10px;opacity:0.75;">' + pGrasa + '%</span></span>' +
-      '</div>' +
-    '</div>';
+  const cabeceraHtml =
+    `<div style="${rowSt}border-bottom:1px solid var(--border);">` +
+      `<span style="${hdrSt}"></span>` +
+      `<span style="${hdrSt}">KCAL</span>` +
+      `<span style="${hdrSt}">PROT</span>` +
+      `<span style="${hdrSt}">HC</span>` +
+      `<span style="${hdrSt}">GRASA</span>` +
+    `</div>`;
 
-  // Banner con target: grid alineado con la tabla (70px kcal + 3 cols pills P/HC/G)
-  const bannerCompacto =
-    '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;align-items:center;padding:8px 10px;background:var(--s2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;">' +
-      '<span style="font-size:18px;font-weight:700;color:#A32D2D;">' + rKcal + '<br><span style="font-size:10px;font-weight:400;">kcal</span></span>' +
-      '<span></span>' +
-      '<span style="' + pillStyle + 'background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);"><span>P ' + rProt + 'g</span><span style="font-size:10px;opacity:0.75;">' + pProt + '%</span></span>' +
-      '<span style="' + pillStyle + 'background:rgba(186,117,23,0.1);color:#BA7517;border:1px solid rgba(186,117,23,0.2);"><span>HC ' + rHc + 'g</span><span style="font-size:10px;opacity:0.75;">' + pHc + '%</span></span>' +
-      '<span style="' + pillStyle + 'background:rgba(24,95,165,0.1);color:#185FA5;border:1px solid rgba(24,95,165,0.2);"><span>G ' + rGrasa + 'g</span><span style="font-size:10px;opacity:0.75;">' + pGrasa + '%</span></span>' +
-    '</div>';
+  // Banner sin target: solo fila ACTUAL con %
+  const bannerSinTarget =
+    `<div style="background:var(--s2);border-radius:10px;border:1px solid var(--border);overflow:hidden;">` +
+      cabeceraHtml +
+      `<div style="${rowSt}">` +
+        `<span style="${lblSt}">Actual</span>` +
+        pillKcal(rKcal) +
+        pillP(`${rProt}g<br><span style="font-size:10px;opacity:.75;">${pProt}%</span>`) +
+        pillHC(`${rHc}g<br><span style="font-size:10px;opacity:.75;">${pHc}%</span>`) +
+        pillG(`${rGrasa}g<br><span style="font-size:10px;opacity:.75;">${pGrasa}%</span>`) +
+      `</div>` +
+    `</div>`;
 
   if (!target) {
     banner.style.display = 'block';
@@ -10448,7 +10463,7 @@ function bibRenderTargetBanner() {
     return;
   }
 
-  // Con target: banner compacto + tabla TARGET / ACTUAL / DIFERENCIA
+  // Con target: tabla TARGET / ACTUAL (con %) / DIF
   const tKcal  = Math.round(target.kcal  || 0);
   const tProt  = Math.round((target.prot  || 0) * 10) / 10;
   const tHc    = Math.round((target.hc    || 0) * 10) / 10;
@@ -10459,53 +10474,29 @@ function bibRenderTargetBanner() {
   const dHc    = Math.round((rHc    - tHc)    * 10) / 10;
   const dGrasa = Math.round((rGrasa - tGrasa) * 10) / 10;
 
-  const difColor = (d) => d > 0 ? '#A32D2D' : d < 0 ? '#185FA5' : '#2d5a2d';
-  const difSign  = (d) => (d > 0 ? '+' : '') + d;
-
-  const rowSt   = 'display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;align-items:center;padding:5px 10px;';
-  const lblSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
-  const cellSt  = 'font-size:13px;font-weight:700;text-align:center;';
-  const hdrSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:center;';
-
-  // Filas ingredientes para ajuste manual
-
   banner.style.display = 'block';
   banner.innerHTML =
-    bannerCompacto +
-    '<div style="background:var(--s2);border-radius:10px;border:1px solid var(--border);overflow:hidden;">' +
-      // Cabecera columnas
-      '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;padding:5px 10px 3px;border-bottom:1px solid var(--border);">' +
-        '<span style="'+lblSt+'"></span>' +
-        '<span style="'+hdrSt+'color:var(--muted);">Kcal</span>' +
-        '<span style="'+hdrSt+'color:#2d5a2d;">Prot</span>' +
-        '<span style="'+hdrSt+'color:#BA7517;">HC</span>' +
-        '<span style="'+hdrSt+'color:#185FA5;">Grasa</span>' +
-      '</div>' +
-      // Fila TARGET
-      '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
-        '<span style="'+lblSt+'">Target</span>' +
-        '<span style="'+cellSt+'color:#A32D2D;">'+tKcal+'</span>' +
-        '<span style="'+cellSt+'color:#0F6E56;">'+tProt+'g</span>' +
-        '<span style="'+cellSt+'color:#BA7517;">'+tHc+'g</span>' +
-        '<span style="'+cellSt+'color:#185FA5;">'+tGrasa+'g</span>' +
-      '</div>' +
-      // Fila ACTUAL
-      '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
-        '<span style="'+lblSt+'">Actual</span>' +
-        '<span id="btb_actual_kcal" style="'+cellSt+'color:#A32D2D;">'+rKcal+'</span>' +
-        '<span id="btb_actual_p" style="'+cellSt+'color:#0F6E56;">'+rProt+'g</span>' +
-        '<span id="btb_actual_hc" style="'+cellSt+'color:#BA7517;">'+rHc+'g</span>' +
-        '<span id="btb_actual_g" style="'+cellSt+'color:#185FA5;">'+rGrasa+'g</span>' +
-      '</div>' +
-      // Fila DIFERENCIA
-      '<div style="'+rowSt+'border-bottom:1px solid var(--border);">' +
-        '<span style="'+lblSt+'">Dif.</span>' +
-        '<span id="btb_dif_kcal" style="'+cellSt+'color:'+difColor(dKcal)+';">'+difSign(dKcal)+'</span>' +
-        '<span id="btb_dif_p" style="'+cellSt+'color:'+difColor(dProt)+';">'+difSign(dProt)+'g</span>' +
-        '<span id="btb_dif_hc" style="'+cellSt+'color:'+difColor(dHc)+';">'+difSign(dHc)+'g</span>' +
-        '<span id="btb_dif_g" style="'+cellSt+'color:'+difColor(dGrasa)+';">'+difSign(dGrasa)+'g</span>' +
-      '</div>' +
-    '</div>';
+    `<div style="background:var(--s2);border-radius:10px;border:1px solid var(--border);overflow:hidden;">` +
+      cabeceraHtml +
+      `<div style="${rowSt}border-bottom:1px solid var(--border);">` +
+        `<span style="${lblSt}">Target</span>` +
+        pillKcal(tKcal) + pillP(tProt+'g') + pillHC(tHc+'g') + pillG(tGrasa+'g') +
+      `</div>` +
+      `<div style="${rowSt}border-bottom:1px solid var(--border);background:var(--s1);">` +
+        `<span style="${lblSt}">Actual</span>` +
+        pillKcal(rKcal,'btb_actual_kcal') +
+        pillP(`${rProt}g<br><span style="font-size:10px;opacity:.75;">${pProt}%</span>`,'btb_actual_p') +
+        pillHC(`${rHc}g<br><span style="font-size:10px;opacity:.75;">${pHc}%</span>`,'btb_actual_hc') +
+        pillG(`${rGrasa}g<br><span style="font-size:10px;opacity:.75;">${pGrasa}%</span>`,'btb_actual_g') +
+      `</div>` +
+      `<div style="${rowSt}">` +
+        `<span style="${lblSt}">Dif.</span>` +
+        pillDif(dKcal,'btb_dif_kcal',dKcal) +
+        pillDif(dProt+'g','btb_dif_p',dProt) +
+        pillDif(dHc+'g','btb_dif_hc',dHc) +
+        pillDif(dGrasa+'g','btb_dif_g',dGrasa) +
+      `</div>` +
+    `</div>`;
 }
 
 // Actualiza gramos desde el banner y recalcula totales
