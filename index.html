@@ -7012,14 +7012,14 @@ async function handleFotoProducto(e) {
 .mc-franja-body.open{display:block;}
 .mc-chevron{font-size:11px;color:var(--muted2);margin-left:4px;transition:transform 0.2s;display:inline-block;transform:rotate(-90deg);}
 .mc-chevron.open{transform:rotate(0deg);}
-.mc-alimento-row{display:flex;align-items:center;padding:7px 12px 7px 14px;gap:8px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.mc-alimento-row{display:flex;align-items:flex-start;padding:7px 12px 7px 14px;gap:8px;border-bottom:1px solid rgba(0,0,0,0.04);}
 .mc-alimento-row:last-child{border-bottom:none;}
-.mc-alimento-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0.4;flex-shrink:0;}
-.mc-alimento-nombre{flex:1;font-size:13px;font-weight:500;color:var(--text);min-width:0;}
-.mc-alimento-macros{font-size:10px;color:var(--muted);margin-top:1px;}
+.mc-alimento-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0.4;flex-shrink:0;margin-top:5px;}
+.mc-alimento-nombre{font-size:13px;font-weight:500;color:var(--text);}
+.mc-alimento-macros{font-size:11px;color:var(--muted);margin-top:2px;}
 .mc-alimento-right{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:1px;}
-.mc-alimento-gramos{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
-.mc-alimento-kcal{font-size:10px;color:var(--muted);}
+.mc-alimento-gramos{font-size:13px;font-weight:400;color:var(--muted);}
+.mc-alimento-kcal{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);}
 /* Expandir hint */
 .mc-expand-hint{text-align:center;padding:5px 0 2px;font-size:10px;color:var(--muted2);letter-spacing:0.3px;}
 
@@ -7271,7 +7271,7 @@ function _renderMenuDia() {
   const labelEl = document.getElementById('menuFechaLabel');
   if (labelEl) {
     const nombre = _MENU_DIAS_NOMBRES[diaNum - 1];
-    labelEl.textContent = esHoy ? `📅 ${nombre} · Hoy` : `📅 ${nombre}`;
+    labelEl.textContent = esHoy ? 'Hoy' : nombre;
   }
 
   // Filtrar celdas del día actual por template (entreno/descanso) — arquitectura actual
@@ -7373,11 +7373,10 @@ function _renderMenuDia() {
           ingredientesHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
             + '<div style="flex:1;min-width:0;">'
-            + '<div class="mc-alimento-nombre">' + escapeHtml(ing.nombre||'') + '</div>'
+            + '<div><span class="mc-alimento-nombre">' + escapeHtml(ing.nombre||'') + '</span> <span class="mc-alimento-gramos">(' + _gramosHtml + ')</span></div>'
             + _macrosHtml
             + '</div>'
             + '<div class="mc-alimento-right">'
-            + '<div class="mc-alimento-gramos">' + _gramosHtml + '</div>'
             + '<div class="mc-alimento-kcal">' + iKcal + ' kcal</div>'
             + '</div>'
             + '</div>';
@@ -7398,11 +7397,10 @@ function _renderMenuDia() {
         ingredientesHtml += '<div class="mc-alimento-row">'
           + '<div class="mc-alimento-dot"></div>'
           + '<div style="flex:1;min-width:0;">'
-          + '<div class="mc-alimento-nombre" style="font-weight:600;">' + escapeHtml(bib.nombre) + '</div>'
+          + '<div class="mc-alimento-nombre" style="font-weight:500;">' + escapeHtml(bib.nombre) + '</div>'
           + _ingListaHtml
           + '</div>'
           + '<div class="mc-alimento-right">'
-          + '<div class="mc-alimento-gramos">' + (cProt>0?'P'+cProt+'g':'') + '</div>'
           + '<div class="mc-alimento-kcal">' + cKcal + ' kcal</div>'
           + '</div>'
           + '</div>';
