@@ -10060,7 +10060,18 @@ function abrirEditorBiblioteca(comida, cellKey) {
       try { _rawIngs = JSON.parse(comida.ingredientes); } catch(e) {}
     }
   }
-  _cocEditorIngs = _rawIngs.map(i => ({...i}));
+  _cocEditorIngs = _rawIngs.map(i => {
+    const ing = {...i};
+    // Si no tiene datos /100g pero sí tiene kcal+gramos, inferirlos
+    if ((!ing.kcal_100 && !ing.p_100) && ing.gramos > 0) {
+      const factor = 100 / ing.gramos;
+      if (ing.kcal  > 0) ing.kcal_100 = Math.round((ing.kcal  || 0) * factor);
+      if (ing.prot  > 0) ing.p_100    = Math.round((ing.prot  || 0) * factor * 10) / 10;
+      if (ing.ch    > 0) ing.hc_100   = Math.round((ing.ch    || 0) * factor * 10) / 10;
+      if (ing.grasa > 0) ing.g_100    = Math.round((ing.grasa || 0) * factor * 10) / 10;
+    }
+    return ing;
+  });
 
   const overlay = document.createElement('div');
   overlay.className = 'bib-overlay';
@@ -10119,8 +10130,7 @@ function abrirEditorBiblioteca(comida, cellKey) {
   // Renderizar filas de ingredientes existentes
   _cocEditorIngs.forEach((ing, idx) => bibRenderIngRow(idx));
   if (!_cocEditorIngs.length) bibAddIngRow(); // siempre al menos 1 fila vacía
-  bibRecalcTotales();
-  bibRenderTargetBanner();
+  setTimeout(() => { bibRecalcTotales(); bibRenderTargetBanner(); }, 0);
 }
 
 function cerrarEditorBib() {
