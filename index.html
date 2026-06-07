@@ -7369,7 +7369,7 @@ function _renderMenuDia() {
           const _gramosHtml = ajustado
             ? gramosAdj + 'g'
             : gramosAdj + 'g';
-          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros"><span style="color:var(--red);">P ' + iProt + 'g</span> · <span style="color:var(--yellow);">CH ' + iHc + 'g</span> · <span style="color:var(--blue);">G ' + iGrasa + 'g</span></div>' : '';
+          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
           ingredientesHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
             + '<div style="flex:1;min-width:0;">'
@@ -10723,9 +10723,14 @@ async function guardarComidaBib() {
 .menu-celda-del:active{color:var(--red);}
 .menu-celda-edit{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;}
 .menu-celda-edit:active{opacity:0.6;}
-.menu-celda-ings{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
-.menu-celda-ing-pill{font-size:10px;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;white-space:nowrap;}
-.menu-celda-ing-pill strong{color:var(--text);font-weight:600;}
+.menu-celda-ings{display:flex;flex-direction:column;gap:2px;margin-top:5px;}
+.menu-celda-ing-row{display:flex;align-items:flex-start;gap:6px;padding:2px 0;}
+.menu-celda-ing-dot{width:4px;height:4px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:5px;}
+.menu-celda-ing-info{flex:1;min-width:0;}
+.menu-celda-ing-nombre{font-size:11px;font-weight:550;color:var(--text);}
+.menu-celda-ing-gramos{font-size:11px;color:var(--muted);}
+.menu-celda-ing-macros{font-size:10px;margin-top:1px;}
+.menu-celda-ing-kcal{font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0;}
 .menu-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
 .menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:80vh;display:flex;flex-direction:column;gap:10px;}
 .menu-selector-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);}
@@ -11537,8 +11542,17 @@ function menuRenderGrid() {
         }
         const ingHtml = ingArr.length
           ? `<div class="menu-celda-ings">${ingArr.map(i => {
-              const g = i.gramos || i.cantidad_g || '';
-              return `<span class="menu-celda-ing-pill">${escapeHtml(i.nombre||'')}${g?' <strong>'+g+'g</strong>':''}</span>`;
+              const g = i.gramos || i.cantidad_g || 0;
+              const factor = g / 100;
+              const iKcal  = g > 0 ? Math.round(((i.p_100||0)*4 + (i.hc_100||0)*4 + (i.g_100||0)*9) * factor) : '';
+              const iProt  = g > 0 ? Math.round((i.p_100||0)  * factor * 10) / 10 : '';
+              const iHc    = g > 0 ? Math.round((i.hc_100||0) * factor * 10) / 10 : '';
+              const iGrasa = g > 0 ? Math.round((i.g_100||0)  * factor * 10) / 10 : '';
+              const hayMacros = i.p_100 > 0 || i.hc_100 > 0 || i.g_100 > 0;
+              const macrosHtml = (hayMacros && g > 0)
+                ? `<div class="menu-celda-ing-macros"><span style="color:var(--red);">P ${iProt}g</span> · <span style="color:var(--yellow);">CH ${iHc}g</span> · <span style="color:var(--blue);">G ${iGrasa}g</span></div>`
+                : '';
+              return `<div class="menu-celda-ing-row"><div class="menu-celda-ing-dot"></div><div class="menu-celda-ing-info"><div><span class="menu-celda-ing-nombre">${escapeHtml(i.nombre||'')}</span>${g?' <span class="menu-celda-ing-gramos">('+g+'g)</span>':''}</div>${macrosHtml}</div>${iKcal!==''?'<div class="menu-celda-ing-kcal">'+iKcal+' kcal</div>':''}</div>`;
             }).join('')}</div>`
           : '';
 
