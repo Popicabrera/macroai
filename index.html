@@ -4606,10 +4606,12 @@ function seleccionarAlimentoBuscadorConGramos(producto, gramos) {
 function cerrarBuscador() {
   if (_buscadorMealId === '__fav_edit__') {
     _buscadorMealId = '';
+    // Solo restaurar overlay si el callback no lo ha gestionado ya
     if(_buscadorFavCallback && _buscadorFavCallback._restoreOverlay) {
       _buscadorFavCallback._restoreOverlay();
     }
     _buscadorFavCallback = null;
+    // No llamar showView aquí: el overlay del editor de favoritos sigue activo
     showView('viewFavoritos');
     return;
   }
@@ -4859,13 +4861,14 @@ function fsmRegistrar() {
   // ── MODO FAVORITO EDIT: añadir ingrediente al editor de favorito ──
   if (_buscadorMealId === '__fav_edit__') {
     fsmCerrar();
-    cerrarBuscador();
+    _buscadorMealId = ''; // limpiar ANTES de cerrarBuscador para que no haga showView
     if(_buscadorFavCallback) {
       if(_buscadorFavCallback._restoreOverlay) _buscadorFavCallback._restoreOverlay();
-      _buscadorFavCallback(p, g);
+      const cb = _buscadorFavCallback;
       _buscadorFavCallback = null;
+      cb(p, g);
     }
-    _buscadorMealId = '';
+    showView('viewFavoritos'); // volver a favoritos (el overlay sigue encima)
     return;
   }
 
