@@ -6991,7 +6991,7 @@ async function handleFotoProducto(e) {
 
 /* ── MENÚ CLIENTE ESTILOS ── */
 .mc-list{display:flex;flex-direction:column;gap:0;padding:0 0 100px;}
-.mc-comida-sec{background:var(--s1);border:none;border-bottom:1px solid var(--border);border-radius:0;overflow:hidden;}
+.mc-comida-sec{background:#fff;border:none;border-bottom:1px solid var(--border);border-radius:0;overflow:hidden;}
 .mc-comida-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;gap:10px;}
 .mc-comida-hdr-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
 .mc-comida-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
@@ -7007,7 +7007,7 @@ async function handleFotoProducto(e) {
 .mc-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--s2);flex-shrink:0;cursor:pointer;transition:all 0.2s;}
 .mc-check.done{background:var(--accent);border-color:var(--accent);color:#f5f0e8;}
 /* Ingredientes */
-.mc-ing-body{border-top:1px solid var(--border);padding:0 0 8px;background:var(--s2);}
+.mc-ing-body{border-top:1px solid var(--border);padding:0 0 8px;background:#fff;}
 .mc-franja-body{display:none;}
 .mc-franja-body.open{display:block;}
 .mc-chevron{font-size:11px;color:var(--muted2);margin-left:4px;transition:transform 0.2s;display:inline-block;transform:rotate(-90deg);}
@@ -7367,7 +7367,7 @@ function _renderMenuDia() {
 
           const ajustado = !esEntreno && gramosAdj !== gramosOrig;
           const _gramosHtml = ajustado
-            ? '<span style="text-decoration:line-through;opacity:0.4;font-size:11px;">' + gramosOrig + 'g</span> <span style="color:var(--blue);">' + gramosAdj + 'g</span>'
+            ? gramosAdj + 'g'
             : gramosAdj + 'g';
           const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
           ingredientesHtml += '<div class="mc-alimento-row">'
