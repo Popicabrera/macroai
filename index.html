@@ -10446,21 +10446,6 @@ function bibRenderTargetBanner() {
   const hdrSt   = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:center;';
 
   // Filas ingredientes para ajuste manual
-  const ingsHtml = _cocEditorIngs.filter(i => i.nombre && i.nombre.trim()).map((ing, idx) => {
-    const g = ing.gramos || 0;
-    const kcalIng = g > 0 ? Math.round((ing.kcal_100||0)*g/100) : 0;
-    const shortName = ing.nombre.length > 14 ? ing.nombre.substring(0,13)+'…' : ing.nombre;
-    return '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 58px;align-items:center;padding:4px 10px;border-top:1px solid var(--border);">' +
-      '<span style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+ing.nombre+'">'+shortName+'</span>' +
-      '<span style="font-size:12px;font-weight:700;color:#A32D2D;text-align:center;" id="btb_kcal_'+idx+'">'+kcalIng+'</span>' +
-      '<span style="font-size:12px;font-weight:700;color:#0F6E56;text-align:center;" id="btb_p_'+idx+'">'+Math.round((ing.p_100||0)*g/100*10)/10+'g</span>' +
-      '<span style="font-size:12px;font-weight:700;color:#BA7517;text-align:center;" id="btb_hc_'+idx+'">'+Math.round((ing.hc_100||0)*g/100*10)/10+'g</span>' +
-      '<span style="font-size:12px;font-weight:700;color:#185FA5;text-align:center;" id="btb_g_'+idx+'">'+Math.round((ing.g_100||0)*g/100*10)/10+'g</span>' +
-      '<input type="number" min="0" value="'+g+'" data-idx="'+idx+'" ' +
-        'onchange="bibBannerGramChange(this)" ' +
-        'style="width:50px;font-size:13px;font-weight:700;text-align:center;padding:3px 4px;border-radius:6px;border:1px solid var(--border);background:var(--s1);color:var(--text);" />' +
-    '</div>';
-  }).join('');
 
   banner.style.display = 'block';
   banner.innerHTML =
@@ -10496,20 +10481,6 @@ function bibRenderTargetBanner() {
         '<span id="btb_dif_p" style="'+cellSt+'color:'+difColor(dProt)+';">'+difSign(dProt)+'g</span>' +
         '<span id="btb_dif_hc" style="'+cellSt+'color:'+difColor(dHc)+';">'+difSign(dHc)+'g</span>' +
         '<span id="btb_dif_g" style="'+cellSt+'color:'+difColor(dGrasa)+';">'+difSign(dGrasa)+'g</span>' +
-      '</div>' +
-      // Cabecera ajuste manual
-      '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 58px;padding:5px 10px 3px;">' +
-        '<span style="'+lblSt+'color:var(--muted);">Ingrediente</span>' +
-        '<span style="'+hdrSt+'color:var(--muted);">Kcal</span>' +
-        '<span style="'+hdrSt+'color:#2d5a2d;">P</span>' +
-        '<span style="'+hdrSt+'color:#BA7517;">HC</span>' +
-        '<span style="'+hdrSt+'color:#185FA5;">G</span>' +
-        '<span style="'+hdrSt+'color:var(--muted);">Gramos</span>' +
-      '</div>' +
-      ingsHtml +
-      // Botón ajuste automático
-      '<div style="padding:8px 10px;">' +
-        '<button onclick="bibAjustarAlTarget()" style="width:100%;padding:9px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.25);border-radius:8px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer>⚡ Ajustar gramos automáticamente al target</button>' +
       '</div>' +
     '</div>';
 }
