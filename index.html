@@ -9982,17 +9982,76 @@ function _bibSheet(c) {
     <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">${escapeHtml(c.nombre||'Sin nombre')}</div>
       <button id="_bibShEdit" style="width:100%;padding:14px;background:rgba(255,211,61,0.08);border:1px solid rgba(255,211,61,0.3);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#a07800;cursor:pointer;margin-bottom:8px;">Editar</button>
+      <button id="_bibShMove" style="width:100%;padding:14px;background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.25);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#185FA5;cursor:pointer;margin-bottom:8px;">📂 Mover a categoría</button>
       <button id="_bibShDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;margin-bottom:8px;">Eliminar</button>
       <button id="_bibShCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
     </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
   ov.querySelector('#_bibShEdit').onclick = () => { ov.remove(); abrirEditorBiblioteca(window._cocBibComidaById(c.id)); };
+  ov.querySelector('#_bibShMove').onclick = () => { ov.remove(); bibMoverCategoria(c); };
   ov.querySelector('#_bibShDel').onclick = () => { ov.remove(); eliminarComidaBib(c.id, c.nombre); };
   ov.querySelector('#_bibShCancel').onclick = () => ov.remove();
 }
 
+// ── MOVER CATEGORÍA ──
+function bibMoverCategoria(comida) {
+  const categorias = [
+    ['desayuno salado', '🍳 Desayuno salado'],
+    ['desayuno dulce',  '🥞 Desayuno dulce'],
+    ['almuerzo',        '🥪 Almuerzo'],
+    ['comida',          '🍽️ Comida'],
+    ['merienda',        '🍎 Merienda'],
+    ['cena',            '🌙 Cena'],
+  ];
+  const actual = (comida.tipo || '').toLowerCase();
+
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;display:flex;align-items:flex-end;';
+  ov.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:4px;">Mover a categoría</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">${escapeHtml(comida.nombre||'Sin nombre')}</div>
+      <div id="_bibMoveList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button onclick="this.closest('[data-bibmove]').remove()" style="width:100%;margin-top:12px;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  ov.dataset.bibmove = '1';
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+
+  const list = ov.querySelector('#_bibMoveList');
+  categorias.forEach(([val, label]) => {
+    const btn = document.createElement('button');
+    const esActual = val === actual;
+    btn.style.cssText = `width:100%;padding:13px 16px;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:${esActual?'default':'pointer'};text-align:left;border:1.5px solid ${esActual?'var(--accent)':'var(--border)'};background:${esActual?'rgba(192,57,43,0.07)':'var(--s2)'};color:${esActual?'var(--accent)':'var(--text)'};`;
+    btn.innerHTML = label + (esActual ? ' <span style="font-size:11px;opacity:0.7;">(actual)</span>' : '');
+    if (!esActual) {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        try {
+          const res = await supaAdmin('/rest/v1/biblioteca_comidas?id=eq.' + comida.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ tipo: val })
+          });
+          if (!res.ok) throw new Error('Error al mover');
+          showToast('✅ Movido a ' + label);
+          ov.remove();
+          await cocCargarBiblioteca();
+        } catch(e) {
+          showToast('❌ ' + e.message);
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
+      });
+    }
+    list.appendChild(btn);
+  });
+}
+
 // ── CONTEXT MENU ──
+
 function mostrarCtxBib(comida, cardEl) {
   cerrarCtxBib();
   const menu = document.createElement('div');
@@ -10001,6 +10060,7 @@ function mostrarCtxBib(comida, cardEl) {
 
   const items = [
     { icon: '✏️', label: 'Editar', action: () => { cerrarCtxBib(); abrirEditorBiblioteca(comida); } },
+    { icon: '📂', label: 'Mover a categoría', action: () => { cerrarCtxBib(); bibMoverCategoria(comida); } },
     { type: 'sep' },
     { icon: '🗑️', label: 'Eliminar', danger: true, action: () => { cerrarCtxBib(); eliminarComidaBib(comida.id, comida.nombre); } }
   ];
