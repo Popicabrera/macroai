@@ -10230,11 +10230,16 @@ function bibRenderIngRow(idx) {
        </div>`
     : `<div class="ing-row-macros" id="bibIngMacros_${idx}" style="display:none;"></div>`;
 
+  const total = _cocEditorIngs.length;
   const row = document.createElement('div');
   row.className = 'ing-row';
   row.id = 'bibIngRow_' + idx;
   row.style.flexWrap = 'wrap';
   row.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">
+      <button onclick="bibMoveIngRow(${idx},-1)" ${idx===0?'disabled':''} style="width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:13px;cursor:${idx===0?'default':'pointer'};opacity:${idx===0?'0.3':'1'};display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">▲</button>
+      <button onclick="bibMoveIngRow(${idx},1)" ${idx===total-1?'disabled':''} style="width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:13px;cursor:${idx===total-1?'default':'pointer'};opacity:${idx===total-1?'0.3':'1'};display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">▼</button>
+    </div>
     <div class="ing-search-wrap" style="flex:2;position:relative;">
       <input type="text" class="bib-input" placeholder="Ingrediente"
         id="bibIngNombre_${idx}"
@@ -10260,6 +10265,17 @@ function bibRenderIngRow(idx) {
   } else {
     container.appendChild(row);
   }
+}
+
+function bibMoveIngRow(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= _cocEditorIngs.length) return;
+  // Intercambiar
+  [_cocEditorIngs[idx], _cocEditorIngs[newIdx]] = [_cocEditorIngs[newIdx], _cocEditorIngs[idx]];
+  const container = document.getElementById('bibIngRows');
+  container.innerHTML = '';
+  _cocEditorIngs.forEach((_, i) => bibRenderIngRow(i));
+  bibRecalcTotales();
 }
 
 function bibDelIngRow(idx) {
