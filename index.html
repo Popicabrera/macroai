@@ -4606,12 +4606,10 @@ function seleccionarAlimentoBuscadorConGramos(producto, gramos) {
 function cerrarBuscador() {
   if (_buscadorMealId === '__fav_edit__') {
     _buscadorMealId = '';
-    // Solo restaurar overlay si el callback no lo ha gestionado ya
     if(_buscadorFavCallback && _buscadorFavCallback._restoreOverlay) {
       _buscadorFavCallback._restoreOverlay();
     }
     _buscadorFavCallback = null;
-    // No llamar showView aquí: el overlay del editor de favoritos sigue activo
     showView('viewFavoritos');
     return;
   }
@@ -4861,14 +4859,13 @@ function fsmRegistrar() {
   // ── MODO FAVORITO EDIT: añadir ingrediente al editor de favorito ──
   if (_buscadorMealId === '__fav_edit__') {
     fsmCerrar();
-    _buscadorMealId = ''; // limpiar ANTES de cerrarBuscador para que no haga showView
+    cerrarBuscador();
     if(_buscadorFavCallback) {
       if(_buscadorFavCallback._restoreOverlay) _buscadorFavCallback._restoreOverlay();
-      const cb = _buscadorFavCallback;
+      _buscadorFavCallback(p, g);
       _buscadorFavCallback = null;
-      cb(p, g);
     }
-    showView('viewFavoritos'); // volver a favoritos (el overlay sigue encima)
+    _buscadorMealId = '';
     return;
   }
 
@@ -7372,7 +7369,7 @@ function _renderMenuDia() {
           const _gramosHtml = ajustado
             ? gramosAdj + 'g'
             : gramosAdj + 'g';
-          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
+          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros"><span style="color:var(--red);">P ' + iProt + 'g</span> · <span style="color:var(--yellow);">CH ' + iHc + 'g</span> · <span style="color:var(--blue);">G ' + iGrasa + 'g</span></div>' : '';
           ingredientesHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
             + '<div style="flex:1;min-width:0;">'
