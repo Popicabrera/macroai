@@ -8589,31 +8589,40 @@ async function cargarMenusGuardados() {
   if (!cont) return;
   cont.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;"><div class="auth-spinner"></div>Cargando menús...</div>`;
   try {
-    const res = await supaAdmin(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&order=created_at.desc&select=*`);
+    const filtroCliente = _adminMenuEmail
+      ? `cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&`
+      : '';
+    const res = await supaAdmin(`/rest/v1/menus_macroai?${filtroCliente}order=created_at.desc&select=*`);
     const menus = await res.json();
     if (!Array.isArray(menus) || !menus.length) {
-      cont.innerHTML = '';
+      cont.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No hay menús guardados${_adminMenuEmail ? ' para este cliente' : ''}.</div>`;
       return;
     }
-    let html = `<div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:16px 0 8px;">Menús guardados</div>`;
+    const verTodos = !_adminMenuEmail;
+    let html = `<div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:16px 0 8px;">${verTodos ? 'Todos los menús' : 'Menús del cliente'}</div>`;
     menus.forEach(m => {
       const fecha = new Date(m.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
       const estadoBg = m.activo ? 'rgba(50,200,100,0.12)' : m.pendiente ? 'rgba(232,168,56,0.15)' : 'var(--s2)';
       const estadoColor = m.activo ? '#2a9d5c' : m.pendiente ? '#b07a00' : 'var(--muted)';
       const estadoLabel = m.activo ? 'Activo' : m.pendiente ? 'Pendiente' : 'Borrador';
-      // Asignar deshabilitado si ya está activo o pendiente
       const canAssign = !m.activo && !m.pendiente;
       const cacheIdx = _menuListCache.length;
       _menuListCache.push(m);
       const btnAsignar = canAssign
         ? `<button onclick="menuAbrirAsignacion('${m.id}',${cacheIdx})" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;background:rgba(91,141,184,0.15);border:1px solid rgba(91,141,184,0.3);color:var(--blue);">👤 Asignar</button>`
         : `<button disabled style="padding:5px 10px;border-radius:8px;font-size:11px;cursor:not-allowed;background:var(--s2);border:1px solid var(--border);color:var(--muted2);opacity:.5;">👤 Asignar</button>`;
+      const clienteTag = verTodos && m.cliente_email
+        ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">👤 ${escapeHtml(m.cliente_email)}</div>`
+        : verTodos && !m.cliente_email
+        ? `<div style="font-size:10px;color:var(--muted2);margin-top:2px;">Sin asignar</div>`
+        : '';
       html += `
         <div style="background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
             <div>
               <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">🥗 ${escapeHtml(m.nombre||'Menú')}</div>
               <div style="font-size:11px;color:var(--muted);margin-top:2px;">${fecha}</div>
+              ${clienteTag}
             </div>
             <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:${estadoBg};color:${estadoColor};flex-shrink:0;">${estadoLabel}</span>
           </div>
@@ -10851,6 +10860,7 @@ async function menuCocAbrirSelectorCliente() {
 window._menuCocLimpiarCliente = function() {
   document.getElementById('_menuCocCliOverlay')?.remove();
   _menuCocClientePerfil = null;
+  _adminMenuEmail = '';
   _menuGrid = {};
   _menuId = null;
   _menuDiasColapsados = {};
@@ -10869,6 +10879,7 @@ window._menuCocSeleccionar = async function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
   const perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail);
   _menuCocClientePerfil = perfil || null;
+  _adminMenuEmail = clienteEmail || '';
   // Grid se resetea al cambiar cliente
   _menuGrid = {};
   _menuId = null;
@@ -12045,10 +12056,13 @@ async function menuMostrarExistentes() {
   }
   btnVer.textContent='Cargando...';
   try {
-    const res  = await supaAdmin('/rest/v1/menus_macroai?select=*&order=created_at.desc&limit=20');
+    const filtroCliente = _adminMenuEmail
+      ? `cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&`
+      : '';
+    const res  = await supaAdmin(`/rest/v1/menus_macroai?${filtroCliente}select=*&order=created_at.desc&limit=50`);
     const rows = await res.json();
     if (!Array.isArray(rows)||!rows.length) {
-      showToast('No hay menús guardados todavía');
+      showToast(_adminMenuEmail ? 'Este cliente no tiene menús guardados' : 'No hay menús guardados todavía');
       btnVer.textContent='📋 Ver / cargar menús guardados';
       return;
     }
@@ -12057,10 +12071,13 @@ async function menuMostrarExistentes() {
     rows.forEach((m,idx)=>{
       const item=document.createElement('div');
       item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:10px 14px;gap:8px;cursor:pointer;';
+      const clienteInfo = !_adminMenuEmail && m.cliente_email
+        ? ` · 👤 ${m.cliente_email}`
+        : !_adminMenuEmail && !m.cliente_email ? ' · Sin asignar' : '';
       item.innerHTML=`
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.nombre||'Sin nombre')}</div>
-          <div style="font-size:11px;color:var(--muted);">${m.activo?'● Activo':'Inactivo'}${m.cliente_email?' · '+m.cliente_email:''}</div>
+          <div style="font-size:11px;color:var(--muted);">${m.activo?'● Activo':m.pendiente?'● Pendiente':'Borrador'}${clienteInfo}</div>
         </div>
         <span style="font-size:18px;color:var(--muted);">›</span>`;
       item.onclick = () => menuAbrirOpciones(m.id, idx);
