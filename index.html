@@ -10412,8 +10412,9 @@ function bibRenderTargetBanner() {
   const target = (_cocEditorCellKey && typeof _menuTargets !== 'undefined' && _menuTargets[_cocEditorCellKey]) ? _menuTargets[_cocEditorCellKey] : null;
 
   // Banner compacto siempre visible (kcal + pills)
-  const bannerCompacto =
-    '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);margin-bottom:' + (target ? '8px' : '0') + '">' +
+  // Banner sin target: flex normal con pills
+  const bannerSinTarget =
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">' +
       '<span style="font-size:20px;font-weight:700;color:#A32D2D;">' + rKcal + ' kcal</span>' +
       '<div style="display:flex;gap:8px;">' +
         '<span style="' + pillStyle + 'background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);"><span>P ' + rProt + 'g</span><span style="font-size:10px;opacity:0.75;">' + pProt + '%</span></span>' +
@@ -10422,9 +10423,19 @@ function bibRenderTargetBanner() {
       '</div>' +
     '</div>';
 
+  // Banner con target: grid alineado con la tabla (70px kcal + 3 cols pills P/HC/G)
+  const bannerCompacto =
+    '<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;align-items:center;padding:8px 10px;background:var(--s2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;">' +
+      '<span style="font-size:18px;font-weight:700;color:#A32D2D;">' + rKcal + '<br><span style="font-size:10px;font-weight:400;">kcal</span></span>' +
+      '<span></span>' +
+      '<span style="' + pillStyle + 'background:rgba(15,110,86,0.1);color:#0F6E56;border:1px solid rgba(15,110,86,0.2);"><span>P ' + rProt + 'g</span><span style="font-size:10px;opacity:0.75;">' + pProt + '%</span></span>' +
+      '<span style="' + pillStyle + 'background:rgba(186,117,23,0.1);color:#BA7517;border:1px solid rgba(186,117,23,0.2);"><span>HC ' + rHc + 'g</span><span style="font-size:10px;opacity:0.75;">' + pHc + '%</span></span>' +
+      '<span style="' + pillStyle + 'background:rgba(24,95,165,0.1);color:#185FA5;border:1px solid rgba(24,95,165,0.2);"><span>G ' + rGrasa + 'g</span><span style="font-size:10px;opacity:0.75;">' + pGrasa + '%</span></span>' +
+    '</div>';
+
   if (!target) {
     banner.style.display = 'block';
-    banner.innerHTML = bannerCompacto;
+    banner.innerHTML = bannerSinTarget;
     return;
   }
 
