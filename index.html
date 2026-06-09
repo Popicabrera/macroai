@@ -4606,12 +4606,10 @@ function seleccionarAlimentoBuscadorConGramos(producto, gramos) {
 function cerrarBuscador() {
   if (_buscadorMealId === '__fav_edit__') {
     _buscadorMealId = '';
-    // Solo restaurar overlay si el callback no lo ha gestionado ya
     if(_buscadorFavCallback && _buscadorFavCallback._restoreOverlay) {
       _buscadorFavCallback._restoreOverlay();
     }
     _buscadorFavCallback = null;
-    // No llamar showView aquí: el overlay del editor de favoritos sigue activo
     showView('viewFavoritos');
     return;
   }
@@ -4861,14 +4859,13 @@ function fsmRegistrar() {
   // ── MODO FAVORITO EDIT: añadir ingrediente al editor de favorito ──
   if (_buscadorMealId === '__fav_edit__') {
     fsmCerrar();
-    _buscadorMealId = ''; // limpiar ANTES de cerrarBuscador para que no haga showView
+    cerrarBuscador();
     if(_buscadorFavCallback) {
       if(_buscadorFavCallback._restoreOverlay) _buscadorFavCallback._restoreOverlay();
-      const cb = _buscadorFavCallback;
+      _buscadorFavCallback(p, g);
       _buscadorFavCallback = null;
-      cb(p, g);
     }
-    showView('viewFavoritos'); // volver a favoritos (el overlay sigue encima)
+    _buscadorMealId = '';
     return;
   }
 
@@ -7935,7 +7932,7 @@ async function renderAdminMenuPerfil(seccion) {
 
   let perfil = null;
   try {
-    const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
+    const res = await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
     const rows = await res.json();
     if (Array.isArray(rows) && rows.length) perfil = rows[0];
   } catch (e) {}
@@ -10708,6 +10705,8 @@ async function guardarComidaBib() {
 ══════════════════════════════════════════ */
 .menu-dia-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;}
 .menu-dia-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.menu-dia-sticky{position:sticky;top:0;z-index:5;background:var(--s1);}
+.menu-dia-scroll{max-height:420px;overflow-y:auto;}
 .menu-dia-label{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
 .menu-dia-kcal{font-size:11px;color:var(--muted);font-weight:500;}
 .menu-dia-body{display:flex;flex-direction:column;}
@@ -10726,9 +10725,14 @@ async function guardarComidaBib() {
 .menu-celda-del:active{color:var(--red);}
 .menu-celda-edit{width:28px;height:28px;border-radius:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;}
 .menu-celda-edit:active{opacity:0.6;}
-.menu-celda-ings{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
-.menu-celda-ing-pill{font-size:10px;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;white-space:nowrap;}
-.menu-celda-ing-pill strong{color:var(--text);font-weight:600;}
+.menu-celda-ings{display:flex;flex-direction:column;gap:2px;margin-top:5px;}
+.menu-celda-ing-row{display:flex;align-items:flex-start;gap:6px;padding:3px 0;}
+.menu-celda-ing-dot{width:4px;height:4px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:6px;}
+.menu-celda-ing-info{flex:1;min-width:0;}
+.menu-celda-ing-nombre{font-size:13px;font-weight:600;color:var(--text);}
+.menu-celda-ing-gramos{font-size:13px;color:var(--muted);}
+.menu-celda-ing-macros{font-size:11px;margin-top:2px;font-weight:500;}
+.menu-celda-ing-kcal{font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;}
 .menu-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
 .menu-selector-sheet{width:100%;max-width:430px;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;max-height:80vh;display:flex;flex-direction:column;gap:10px;}
 .menu-selector-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);}
@@ -11540,8 +11544,17 @@ function menuRenderGrid() {
         }
         const ingHtml = ingArr.length
           ? `<div class="menu-celda-ings">${ingArr.map(i => {
-              const g = i.gramos || i.cantidad_g || '';
-              return `<span class="menu-celda-ing-pill">${escapeHtml(i.nombre||'')}${g?' <strong>'+g+'g</strong>':''}</span>`;
+              const g = i.gramos || i.cantidad_g || 0;
+              const factor = g / 100;
+              const iKcal  = g > 0 ? Math.round(((i.p_100||0)*4 + (i.hc_100||0)*4 + (i.g_100||0)*9) * factor) : '';
+              const iProt  = g > 0 ? Math.round((i.p_100||0)  * factor * 10) / 10 : '';
+              const iHc    = g > 0 ? Math.round((i.hc_100||0) * factor * 10) / 10 : '';
+              const iGrasa = g > 0 ? Math.round((i.g_100||0)  * factor * 10) / 10 : '';
+              const hayMacros = i.p_100 > 0 || i.hc_100 > 0 || i.g_100 > 0;
+              const macrosHtml = (hayMacros && g > 0)
+                ? `<div class="menu-celda-ing-macros"><span style="color:var(--red);">P ${iProt}g</span> · <span style="color:var(--yellow);">CH ${iHc}g</span> · <span style="color:var(--blue);">G ${iGrasa}g</span></div>`
+                : '';
+              return `<div class="menu-celda-ing-row"><div class="menu-celda-ing-dot"></div><div class="menu-celda-ing-info"><div><span class="menu-celda-ing-nombre">${escapeHtml(i.nombre||'')}</span>${g?' <span class="menu-celda-ing-gramos">('+g+'g)</span>':''}</div>${macrosHtml}</div>${iKcal!==''?'<div class="menu-celda-ing-kcal">'+iKcal+' kcal</div>':''}</div>`;
             }).join('')}</div>`
           : '';
 
@@ -11645,9 +11658,15 @@ function menuRenderGrid() {
       body.appendChild(row);
     });
 
-    card.appendChild(header);
-    card.appendChild(macroHeader);
-    card.appendChild(body);
+    const stickyWrap = document.createElement('div');
+    stickyWrap.className = 'menu-dia-sticky';
+    stickyWrap.appendChild(header);
+    stickyWrap.appendChild(macroHeader);
+    card.appendChild(stickyWrap);
+    const scrollWrap = document.createElement('div');
+    scrollWrap.className = 'menu-dia-scroll';
+    scrollWrap.appendChild(body);
+    card.appendChild(scrollWrap);
 
     // ── Barra resumen targets vs objetivo del día ──────────────────────────────
     const esEnt = tipo === 'entreno' || tipo === 'igual';
