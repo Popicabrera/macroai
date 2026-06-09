@@ -2404,7 +2404,8 @@ function showView(id){
   if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
-  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();}
+  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();_menuStartPolling();}
+  if(id!=='viewMiMenu'){_menuStopPolling();}
   if(id==='viewCocina'){
     cocCargarBiblioteca();
     if(window.innerWidth>=900){
@@ -7184,6 +7185,26 @@ function _menuSaveDone(diaNum, obj) {
   try { localStorage.setItem(_menuDoneKey(diaNum), JSON.stringify(obj)); } catch(e) {}
 }
 
+let _menuPollingInterval = null;
+function _menuStartPolling() {
+  _menuStopPolling();
+  _menuPollingInterval = setInterval(async () => {
+    if (_menuActivoCache) return;
+    if (!CURRENT_USER?.email) return;
+    try {
+      const res = await supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&pendiente=eq.true&order=created_at.desc&limit=1&select=id,nombre`);
+      const rows = await res.json();
+      const nuevoPendiente = (Array.isArray(rows) && rows.length) ? rows[0] : false;
+      if (!_menuPendienteCache && nuevoPendiente) {
+        _menuPendienteCache = nuevoPendiente;
+        cargarMiMenu();
+      }
+    } catch(e) {}
+  }, 30000);
+}
+function _menuStopPolling() {
+  if (_menuPollingInterval) { clearInterval(_menuPollingInterval); _menuPollingInterval = null; }
+}
 async function cargarMiMenu() {
   // Inicializar día si no está establecido
   if (!_menuDiaActual) _menuDiaActual = _menuDiaHoy();
@@ -7932,7 +7953,7 @@ async function renderAdminMenuPerfil(seccion) {
 
   let perfil = null;
   try {
-    const res = await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
+    const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
     const rows = await res.json();
     if (Array.isArray(rows) && rows.length) perfil = rows[0];
   } catch (e) {}
