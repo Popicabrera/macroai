@@ -11533,32 +11533,6 @@ function menuRenderGrid() {
       content.className = 'menu-franja-content';
 
       if (cell) {
-        const bibItem = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
-        let ingArr = [];
-        // Primero usar ingredientes guardados en la celda (ajustados manualmente)
-        if (Array.isArray(cell.ingredientes) && cell.ingredientes.length) {
-          ingArr = cell.ingredientes;
-        } else if (bibItem) {
-          const rawIng = bibItem.ingredientes_json || bibItem.ingredientes;
-          if (Array.isArray(rawIng)) ingArr = rawIng;
-          else if (typeof rawIng === 'string') { try { ingArr = JSON.parse(rawIng); } catch(e){} }
-        }
-        const ingHtml = ingArr.length
-          ? `<div class="menu-celda-ings">${ingArr.map(i => {
-              const g = i.gramos || i.cantidad_g || 0;
-              const factor = g / 100;
-              const iKcal  = g > 0 ? Math.round(((i.p_100||0)*4 + (i.hc_100||0)*4 + (i.g_100||0)*9) * factor) : '';
-              const iProt  = g > 0 ? Math.round((i.p_100||0)  * factor * 10) / 10 : '';
-              const iHc    = g > 0 ? Math.round((i.hc_100||0) * factor * 10) / 10 : '';
-              const iGrasa = g > 0 ? Math.round((i.g_100||0)  * factor * 10) / 10 : '';
-              const hayMacros = i.p_100 > 0 || i.hc_100 > 0 || i.g_100 > 0;
-              const macrosHtml = (hayMacros && g > 0)
-                ? `<div class="menu-celda-ing-macros"><span style="color:var(--red);">P ${iProt}g</span> · <span style="color:var(--yellow);">CH ${iHc}g</span> · <span style="color:var(--blue);">G ${iGrasa}g</span></div>`
-                : '';
-              return `<div class="menu-celda-ing-row"><div class="menu-celda-ing-dot"></div><div class="menu-celda-ing-info"><div><span class="menu-celda-ing-nombre">${escapeHtml(i.nombre||'')}</span>${g?' <span class="menu-celda-ing-gramos">('+g+'g)</span>':''}</div>${macrosHtml}</div>${iKcal!==''?'<div class="menu-celda-ing-kcal">'+iKcal+' kcal</div>':''}</div>`;
-            }).join('')}</div>`
-          : '';
-
         content.innerHTML = `
           <div class="menu-celda-asignada">
             <div class="menu-celda-nombre">${escapeHtml(cell.nombre)}</div>
@@ -11571,7 +11545,6 @@ function menuRenderGrid() {
               <span class="mcd-sep">·</span>
               <span style="color:#3a9d5c;">G ${cell.grasa}g</span>
             </div>
-            ${ingHtml}
           </div>`;
 
         // Clic en la comida → bottom sheet Editar / Eliminar
