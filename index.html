@@ -2404,8 +2404,7 @@ function showView(id){
   if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
-  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();_menuStartPolling();}
-  if(id!=='viewMiMenu'){_menuStopPolling();}
+  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();}
   if(id==='viewCocina'){
     cocCargarBiblioteca();
     if(window.innerWidth>=900){
@@ -7185,26 +7184,6 @@ function _menuSaveDone(diaNum, obj) {
   try { localStorage.setItem(_menuDoneKey(diaNum), JSON.stringify(obj)); } catch(e) {}
 }
 
-let _menuPollingInterval = null;
-function _menuStartPolling() {
-  _menuStopPolling();
-  _menuPollingInterval = setInterval(async () => {
-    if (_menuActivoCache) return;
-    if (!CURRENT_USER?.email) return;
-    try {
-      const res = await supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&pendiente=eq.true&order=created_at.desc&limit=1&select=id,nombre`);
-      const rows = await res.json();
-      const nuevoPendiente = (Array.isArray(rows) && rows.length) ? rows[0] : false;
-      if (!_menuPendienteCache && nuevoPendiente) {
-        _menuPendienteCache = nuevoPendiente;
-        cargarMiMenu();
-      }
-    } catch(e) {}
-  }, 30000);
-}
-function _menuStopPolling() {
-  if (_menuPollingInterval) { clearInterval(_menuPollingInterval); _menuPollingInterval = null; }
-}
 async function cargarMiMenu() {
   // Inicializar día si no está establecido
   if (!_menuDiaActual) _menuDiaActual = _menuDiaHoy();
@@ -7295,13 +7274,14 @@ function _renderMenuDia() {
     labelEl.textContent = esHoy ? 'Hoy' : nombre;
   }
 
-  // Filtrar celdas del día actual por template (entreno/descanso) — arquitectura actual
-  // tipoDia ya está calculado arriba via _menuTipoDia(diaNum)
-  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
+  // Filtrar celdas del día actual
+  // Formato nuevo: tipo_dia = dia_1..dia_7 (un registro por dia real)
+  // Formato legacy: tipo_dia = entreno | descanso
+  const diaKey = `dia_${diaNum}`;
+  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
   if (!celdasDia.length) {
-    // Fallback legacy: celdas con key dia_N o columna .dia numérica
-    const diaKey = `dia_${diaNum}`;
-    celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
+    // Fallback legacy: entreno/descanso o columna .dia numerica
+    celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
     if (!celdasDia.length) {
       celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
     }
@@ -7953,7 +7933,7 @@ async function renderAdminMenuPerfil(seccion) {
 
   let perfil = null;
   try {
-    const res = await supaFetch(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
+    const res = await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}&limit=1`);
     const rows = await res.json();
     if (Array.isArray(rows) && rows.length) perfil = rows[0];
   } catch (e) {}
@@ -11553,32 +11533,6 @@ function menuRenderGrid() {
       content.className = 'menu-franja-content';
 
       if (cell) {
-        const bibItem = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
-        let ingArr = [];
-        // Primero usar ingredientes guardados en la celda (ajustados manualmente)
-        if (Array.isArray(cell.ingredientes) && cell.ingredientes.length) {
-          ingArr = cell.ingredientes;
-        } else if (bibItem) {
-          const rawIng = bibItem.ingredientes_json || bibItem.ingredientes;
-          if (Array.isArray(rawIng)) ingArr = rawIng;
-          else if (typeof rawIng === 'string') { try { ingArr = JSON.parse(rawIng); } catch(e){} }
-        }
-        const ingHtml = ingArr.length
-          ? `<div class="menu-celda-ings">${ingArr.map(i => {
-              const g = i.gramos || i.cantidad_g || 0;
-              const factor = g / 100;
-              const iKcal  = g > 0 ? Math.round(((i.p_100||0)*4 + (i.hc_100||0)*4 + (i.g_100||0)*9) * factor) : '';
-              const iProt  = g > 0 ? Math.round((i.p_100||0)  * factor * 10) / 10 : '';
-              const iHc    = g > 0 ? Math.round((i.hc_100||0) * factor * 10) / 10 : '';
-              const iGrasa = g > 0 ? Math.round((i.g_100||0)  * factor * 10) / 10 : '';
-              const hayMacros = i.p_100 > 0 || i.hc_100 > 0 || i.g_100 > 0;
-              const macrosHtml = (hayMacros && g > 0)
-                ? `<div class="menu-celda-ing-macros"><span style="color:var(--red);">P ${iProt}g</span> · <span style="color:var(--yellow);">CH ${iHc}g</span> · <span style="color:var(--blue);">G ${iGrasa}g</span></div>`
-                : '';
-              return `<div class="menu-celda-ing-row"><div class="menu-celda-ing-dot"></div><div class="menu-celda-ing-info"><div><span class="menu-celda-ing-nombre">${escapeHtml(i.nombre||'')}</span>${g?' <span class="menu-celda-ing-gramos">('+g+'g)</span>':''}</div>${macrosHtml}</div>${iKcal!==''?'<div class="menu-celda-ing-kcal">'+iKcal+' kcal</div>':''}</div>`;
-            }).join('')}</div>`
-          : '';
-
         content.innerHTML = `
           <div class="menu-celda-asignada">
             <div class="menu-celda-nombre">${escapeHtml(cell.nombre)}</div>
@@ -11591,7 +11545,6 @@ function menuRenderGrid() {
               <span class="mcd-sep">·</span>
               <span style="color:#3a9d5c;">G ${cell.grasa}g</span>
             </div>
-            ${ingHtml}
           </div>`;
 
         // Clic en la comida → bottom sheet Editar / Eliminar
@@ -11903,17 +11856,14 @@ async function menuGuardarMenuCompleto() {
   const nombre = (menuGetNombreInput()?.value||'').trim();
   if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
 
-  // Construir celdas deduplicadas por tipo_dia+franja (el menú es un template, no 7 días independientes)
-  const celdasMap = {};
+  // Construir celdas por día real (dia_1..dia_7) para preservar variedad entre días
+  const celdas = [];
   MENU_TEMPLATES.forEach(tpl => {
-    const tipoDiaReal = _menuTplTipo(tpl, _menuCocClientePerfil);
-    const tipoDiaGuardar = (tipoDiaReal === 'igual') ? 'entreno' : tipoDiaReal;
     MENU_FRANJAS.forEach((franja,fi)=>{
       const cell = _menuGrid[`${tpl.key}-f${fi}`];
-      if (cell) celdasMap[tipoDiaGuardar + '|' + franja] = { tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null };
+      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null });
     });
   });
-  const celdas = Object.values(celdasMap);
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
 
   const clientePerfil = _menuCocClientePerfil;
