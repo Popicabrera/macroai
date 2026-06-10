@@ -7274,13 +7274,14 @@ function _renderMenuDia() {
     labelEl.textContent = esHoy ? 'Hoy' : nombre;
   }
 
-  // Filtrar celdas del día actual por template (entreno/descanso) — arquitectura actual
-  // tipoDia ya está calculado arriba via _menuTipoDia(diaNum)
-  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
+  // Filtrar celdas del día actual
+  // Formato nuevo: tipo_dia = dia_1..dia_7 (un registro por dia real)
+  // Formato legacy: tipo_dia = entreno | descanso
+  const diaKey = `dia_${diaNum}`;
+  let celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
   if (!celdasDia.length) {
-    // Fallback legacy: celdas con key dia_N o columna .dia numérica
-    const diaKey = `dia_${diaNum}`;
-    celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === diaKey);
+    // Fallback legacy: entreno/descanso o columna .dia numerica
+    celdasDia = _menuCeldasCache.filter(c => c.tipo_dia === tipoDia);
     if (!celdasDia.length) {
       celdasDia = _menuCeldasCache.filter(c => c.dia === diaNum);
     }
@@ -11882,17 +11883,14 @@ async function menuGuardarMenuCompleto() {
   const nombre = (menuGetNombreInput()?.value||'').trim();
   if (!nombre) { showToast('❌ Escribe un nombre para el menú'); return; }
 
-  // Construir celdas deduplicadas por tipo_dia+franja (el menú es un template, no 7 días independientes)
-  const celdasMap = {};
+  // Construir celdas por día real (dia_1..dia_7) para preservar variedad entre días
+  const celdas = [];
   MENU_TEMPLATES.forEach(tpl => {
-    const tipoDiaReal = _menuTplTipo(tpl, _menuCocClientePerfil);
-    const tipoDiaGuardar = (tipoDiaReal === 'igual') ? 'entreno' : tipoDiaReal;
     MENU_FRANJAS.forEach((franja,fi)=>{
       const cell = _menuGrid[`${tpl.key}-f${fi}`];
-      if (cell) celdasMap[tipoDiaGuardar + '|' + franja] = { tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null };
+      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null });
     });
   });
-  const celdas = Object.values(celdasMap);
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
 
   const clientePerfil = _menuCocClientePerfil;
