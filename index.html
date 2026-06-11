@@ -9388,6 +9388,9 @@ async function guardarDiasEntreno() {
   _menuPerfilMacros = null;
   _menuTipoDiaOverride = {};
   _menuSaveOverrides({});
+  // Repintar diario inmediatamente con los macros del nuevo tipo de día
+  updateBars();
+  renderMFPDiario();
 }
 
 // ══ ADMIN: toggle Modo Menú / Macros ══
