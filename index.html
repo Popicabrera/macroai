@@ -1507,6 +1507,21 @@ let CFG=loadCFG();
 function getToday(){return new Date().toISOString().split('T')[0];}
 const TODAY=getToday();
 
+// ── CACHE TTL GLOBAL ────────────────────────────────────────────────────────
+// Evita que los clientes tengan que cerrar sesión para ver datos actualizados.
+// Cualquier caché de Supabase que lleve más de CACHE_TTL_MS sin refrescarse
+// se invalida automáticamente la próxima vez que se accede a esa sección.
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutos
+const _cacheTs = {};  // { clave: timestamp }
+
+function _cacheIsStale(key) {
+  if (!_cacheTs[key]) return true;
+  return (Date.now() - _cacheTs[key]) > CACHE_TTL_MS;
+}
+function _cacheMark(key) { _cacheTs[key] = Date.now(); }
+function _cacheInvalidate(key) { delete _cacheTs[key]; }
+// ────────────────────────────────────────────────────────────────────────────
+
 // ── NAVEGACIÓN DÍAS DIARIO ──
 let _diarioOffset=0;
 let _diarioFecha=getToday();
@@ -1514,8 +1529,20 @@ let _diarioFecha=getToday();
 // ── RESET MEDIANOCHE ──
 // Detectar nuevo día cuando el usuario vuelve a la app — cero gasto
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&getToday()!==TODAY){
-    window.location.reload();
+  if(document.visibilityState==='visible'){
+    // Si cambió el día → reload completo
+    if(getToday()!==TODAY){ window.location.reload(); return; }
+    // Si los datos de menú del cliente están stale → refrescar silenciosamente
+    if(CURRENT_USER && CURRENT_USER.email !== ADMIN_EMAIL){
+      if(_cacheIsStale('miMenu')){
+        _menuActivoCache=null;_menuCeldasCache=null;
+        _menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;
+        _cacheInvalidate('miMenu');
+        // Solo recargar si el tab de menú está activo
+        const viewMenu=document.getElementById('viewMiMenu');
+        if(viewMenu&&viewMenu.classList.contains('active')) cargarMiMenu();
+      }
+    }
   }
 });
 const S={
@@ -2404,7 +2431,7 @@ function showView(id){
   if(id==='viewChat'){setTimeout(()=>initChatView(),50);}
   if(id==='viewHistorial')renderHistorial();
   if(id==='viewFavoritos')renderFavoritos();
-  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};cargarMiMenu();}
+  if(id==='viewMiMenu'){_menuActivoCache=null;_menuCeldasCache=null;_menuBibCache=null;_menuPerfilMacros=null;_menuPendienteCache=null;_menuDiaActual=0;_menuTipoDiaOverride={};_cacheInvalidate('miMenu');cargarMiMenu();}
   if(id==='viewCocina'){
     cocCargarBiblioteca();
     if(window.innerWidth>=900){
@@ -7188,6 +7215,13 @@ async function cargarMiMenu() {
   // Inicializar día si no está establecido
   if (!_menuDiaActual) _menuDiaActual = _menuDiaHoy();
 
+  // Invalidar caché si ha pasado el TTL (ej. app en background toda la noche)
+  if (_cacheIsStale('miMenu')) {
+    _menuActivoCache = null; _menuCeldasCache = null;
+    _menuBibCache = null; _menuPerfilMacros = null; _menuPendienteCache = null;
+    _cacheMark('miMenu');
+  }
+
   // Cargar overrides manuales de tipo de día
   _menuTipoDiaOverride = _menuLoadOverrides();
 
@@ -7251,6 +7285,7 @@ async function cargarMiMenu() {
       if (Array.isArray(rows)) rows.forEach(r => { _menuBibCache[r.id] = r; });
     }
 
+    _cacheMark('miMenu');
     _renderMenuDia();
 
   } catch(e) {
@@ -9841,6 +9876,9 @@ async function cocCargarBiblioteca() {
     if (!res.ok) throw new Error((rows.message || rows.error || JSON.stringify(rows)));
     if (!Array.isArray(rows)) throw new Error('Respuesta inesperada: ' + JSON.stringify(rows).slice(0,80));
     _cocBibComidas = rows;
+    _cacheMark('cocBib');
+    // Si el cliente tiene _menuBibCache cargado, invalidarlo para que se refresque
+    _menuBibCache = null; _cacheInvalidate('miMenu');
     cocRenderBiblioteca(_cocBibComidas);
   } catch(e) {
     lista.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--red);font-size:12px;max-width:300px;margin:0 auto;line-height:1.6;">❌ Error al cargar la biblioteca.<br><span style="color:var(--muted);font-size:11px;">${e.message}</span></div>`;
