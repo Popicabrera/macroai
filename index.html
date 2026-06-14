@@ -7896,7 +7896,7 @@ async function guardarMacros(silent=false, modoApp=null) {
     modo_macros:   _amModoDesktop
   };
   try {
-    const res = await supaAdmin('/rest/v1/perfiles_macroai', {
+    const res = await supaAdmin('/rest/v1/perfiles_macroai?on_conflict=cliente_email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify(payload)
@@ -7906,21 +7906,7 @@ async function guardarMacros(silent=false, modoApp=null) {
     } else {
       const err = await res.text();
       console.error('guardarMacros error:', res.status, err);
-      // Si falla upsert, intentar PATCH
-      try {
-        const patchRes = await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(email), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify(payload)
-        });
-        if(patchRes.ok || patchRes.status === 204) {
-          if(!silent) showToast('✅ Macros guardados');
-        } else {
-          showToast('❌ Error guardando macros');
-        }
-      } catch(e2) {
-        showToast('❌ Error guardando macros');
-      }
+      showToast('❌ Error guardando macros');
     }
   } catch(e) {
     console.error('guardarMacros catch:', e);
