@@ -6922,6 +6922,9 @@ async function handleFotoProducto(e) {
   <div class="header">
     <div class="logo">Macro<em>AI</em></div>
     <div class="hbtns">
+      <button id="menuListaCompraBtn" onclick="menuAbrirListaCompra()" style="display:none;align-items:center;gap:5px;padding:5px 10px;background:none;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;color:var(--muted);font-family:'Space Grotesk',sans-serif;">
+        🛒 <span>Lista</span>
+      </button>
       <div class="day-pill" style="cursor:pointer;" id="menuTipoBadge" onclick="menuToggleTipoDia(_menuDiaActual)">
         <div class="pdot" id="menuPillDot"></div>
         <span id="menuTipoLabel">Cargando...</span>
@@ -6930,7 +6933,7 @@ async function handleFotoProducto(e) {
   </div>
 
   <!-- NAVEGACIÓN DÍAS SEMANA (1=Lun … 7=Dom) -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div id="menuNavDias" style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;">
     <button onclick="menuNavegar(-1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8249;</button>
     <div id="menuFechaLabel" onclick="menuIrHoy()" style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;padding:4px 12px;border-radius:8px;user-select:none;">Hoy</div>
     <button onclick="menuNavegar(1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8250;</button>
@@ -6964,6 +6967,23 @@ async function handleFotoProducto(e) {
   </div>
 
 
+
+  <!-- LISTA DE LA COMPRA (pantalla completa, oculta por defecto) -->
+  <div id="menuListaCompraPanel" style="display:none;flex-direction:column;flex:1;overflow:hidden;background:var(--bg);">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--s1);">
+      <div>
+        <div style="font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text);">Lista de la compra</div>
+        <div id="lcProgreso" style="font-size:11px;color:var(--muted);margin-top:1px;">Generando lista...</div>
+      </div>
+      <button onclick="lcReiniciar()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;">Reiniciar</button>
+    </div>
+    <div id="lcContenido" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;">
+      <button onclick="lcCopiar()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+        📋 Copiar lista
+      </button>
+    </div>
+  </div>
 
   <!-- COMIDAS -->
   <div class="main-scroll-area">
@@ -7208,6 +7228,204 @@ function _menuDiaHoy() {
   const d = new Date().getDay(); // 0=Dom, 1=Lun…6=Sab
   return d === 0 ? 7 : d;
 }
+
+
+// ── LISTA DE LA COMPRA ──────────────────────────────────────────────────────
+
+let _lcItems = []; // [{nombre, gramos, unidad}] — estado actual
+
+const LC_CATEGORIAS = {
+  carnes:     { label: 'Carnes y aves',      keys: ['pollo','pechuga','muslo','ternera','cerdo','pavo','carne picada','solomillo','lomo','jamón','chorizo','salchich'] },
+  pescados:   { label: 'Pescados y mariscos', keys: ['salmón','atún','merluza','lubina','sardina','bacalao','gamba','sepia','calamar','dorada','trucha','pescad'] },
+  huevos:     { label: 'Lácteos y huevos',   keys: ['huevo','leche','yogur','queso','requesón','kefir','nata','mantequilla'] },
+  verduras:   { label: 'Verduras',            keys: ['tomate','cebolla','pimiento','lechuga','espinaca','brócoli','zanahoria','pepino','calabacín','judía','espárrago','apio','acelga','col','berenjena','champiñón','seta','ajo'] },
+  frutas:     { label: 'Frutas',              keys: ['plátano','manzana','naranja','fresa','uva','pera','mango','kiwi','melón','sandía','arándano','frambuesa','limón'] },
+  cereales:   { label: 'Cereales y pan',      keys: ['arroz','pasta','espagueti','avena','pan','tostada','tortita','quinoa','cuscús','maíz','harina','granola','muesli','copos'] },
+  legumbres:  { label: 'Legumbres',           keys: ['lenteja','garbanzo','alubia','guisante','frijol','soja','edamame'] },
+  aceites:    { label: 'Aceites y salsas',    keys: ['aceite','vinagre','salsa','ketchup','mostaza','mahonesa','tahini','hummus'] },
+  otros:      { label: 'Otros',               keys: [] }
+};
+
+function _lcCategoria(nombre) {
+  const n = nombre.toLowerCase();
+  for (const [key, cat] of Object.entries(LC_CATEGORIAS)) {
+    if (key === 'otros') continue;
+    if (cat.keys.some(k => n.includes(k))) return key;
+  }
+  return 'otros';
+}
+
+function _lcExtraerIngredientes() {
+  if (!_menuCeldasCache || !_menuBibCache) return [];
+  const acum = {}; // nombre_lower → { nombre, gramos }
+
+  _menuCeldasCache.forEach(celda => {
+    const bib = _menuBibCache[celda.comida_id];
+    if (!bib) return;
+    const ingredientes = celda.ingredientes || bib.ingredientes || [];
+    const ingArr = Array.isArray(ingredientes) ? ingredientes
+      : (typeof ingredientes === 'string' ? (() => { try { return JSON.parse(ingredientes); } catch(e) { return []; } })() : []);
+
+    if (ingArr.length && ingArr.some(i => i.gramos)) {
+      ingArr.forEach(ing => {
+        if (!ing.nombre || !ing.gramos) return;
+        const key = ing.nombre.toLowerCase().trim();
+        if (acum[key]) {
+          acum[key].gramos += ing.gramos;
+        } else {
+          acum[key] = { nombre: ing.nombre.trim(), gramos: ing.gramos };
+        }
+      });
+    } else {
+      // Comida sin ingredientes desglosados — añadir el nombre del plato
+      const key = bib.nombre.toLowerCase().trim();
+      if (!acum[key]) acum[key] = { nombre: bib.nombre.trim(), gramos: 0 };
+    }
+  });
+
+  return Object.values(acum).sort((a,b) => a.nombre.localeCompare(b.nombre));
+}
+
+function _lcFormatCantidad(gramos) {
+  if (!gramos) return '';
+  if (gramos >= 1000) return (Math.round(gramos / 100) / 10).toFixed(1) + ' kg';
+  return Math.round(gramos) + ' g';
+}
+
+function _lcRenderPanel(items) {
+  const total = items.length;
+  document.getElementById('lcProgreso').textContent = '0 de ' + total + ' comprados';
+
+  // Agrupar por categoría
+  const grupos = {};
+  items.forEach((item, idx) => {
+    const cat = _lcCategoria(item.nombre);
+    if (!grupos[cat]) grupos[cat] = [];
+    grupos[cat].push({ ...item, idx });
+  });
+
+  let html = '';
+  const orden = ['carnes','pescados','huevos','verduras','frutas','cereales','legumbres','aceites','otros'];
+  orden.forEach(catKey => {
+    if (!grupos[catKey] || !grupos[catKey].length) return;
+    const catLabel = LC_CATEGORIAS[catKey].label;
+    html += '<div style="padding:7px 16px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">' + catLabel + '</div>';
+    grupos[catKey].forEach(item => {
+      const cantStr = _lcFormatCantidad(item.gramos);
+      html += '<div class="lc-item" data-idx="' + item.idx + '" onclick="lcToggle(this)">'
+        + '<div class="lc-check"><span class="lc-chk-icon" style="display:none;">✓</span></div>'
+        + '<span class="lc-nombre">' + item.nombre + '</span>'
+        + (cantStr ? '<span class="lc-cant">' + cantStr + '</span>' : '')
+        + '</div>';
+    });
+  });
+
+  document.getElementById('lcContenido').innerHTML = html;
+  _lcItems = items;
+}
+
+function menuAbrirListaCompra() {
+  const panel = document.getElementById('menuListaCompraPanel');
+  const scrollArea = document.querySelector('#viewMiMenu .main-scroll-area');
+  const btn = document.getElementById('menuListaCompraBtn');
+  if (!panel) return;
+
+  const estaAbierta = panel.style.display === 'flex';
+  if (estaAbierta) {
+    // Toggle: cerrar y volver al menú
+    menuCerrarListaCompra();
+    return;
+  }
+
+  // Abrir vista lista — ocultar navegación días y panel macros
+  panel.style.display = 'flex';
+  if (scrollArea) scrollArea.style.display = 'none';
+  const navDias = document.getElementById('menuNavDias');
+  const macroPanel = document.getElementById('menuMacroPanel');
+  if (navDias) navDias.style.display = 'none';
+  if (macroPanel) macroPanel.style.display = 'none';
+  if (btn) { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; btn.style.background = 'rgba(192,57,43,0.07)'; }
+
+  // Si ya hay contenido renderizado no regenerar
+  if (document.querySelectorAll('.lc-item').length > 0) return;
+
+  document.getElementById('lcProgreso').textContent = 'Calculando...';
+  document.getElementById('lcContenido').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Calculando ingredientes...</div>';
+
+  const items = _lcExtraerIngredientes();
+  if (!items.length) {
+    document.getElementById('lcProgreso').textContent = 'Sin ingredientes';
+    document.getElementById('lcContenido').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">No hay ingredientes en el menú.</div>';
+    return;
+  }
+  _lcRenderPanel(items);
+}
+
+function menuCerrarListaCompra() {
+  const panel = document.getElementById('menuListaCompraPanel');
+  const scrollArea = document.querySelector('#viewMiMenu .main-scroll-area');
+  const btn = document.getElementById('menuListaCompraBtn');
+  if (panel) panel.style.display = 'none';
+  if (scrollArea) scrollArea.style.display = '';
+  const navDias = document.getElementById('menuNavDias');
+  const macroPanel = document.getElementById('menuMacroPanel');
+  if (navDias) navDias.style.display = '';
+  if (macroPanel) macroPanel.style.display = '';
+  if (btn) { btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--muted)'; btn.style.background = 'none'; }
+}
+
+function lcToggle(el) {
+  el.classList.toggle('lc-done');
+  const total = document.querySelectorAll('.lc-item').length;
+  const done  = document.querySelectorAll('.lc-item.lc-done').length;
+  document.getElementById('lcProgreso').textContent = done + ' de ' + total + ' comprados';
+}
+
+function lcReiniciar() {
+  document.querySelectorAll('.lc-item.lc-done').forEach(el => el.classList.remove('lc-done'));
+  const total = document.querySelectorAll('.lc-item').length;
+  document.getElementById('lcProgreso').textContent = '0 de ' + total + ' comprados';
+}
+
+function lcCopiar() {
+  const lines = [];
+  const orden = ['carnes','pescados','huevos','verduras','frutas','cereales','legumbres','aceites','otros'];
+  const grupos = {};
+  _lcItems.forEach(item => {
+    const cat = _lcCategoria(item.nombre);
+    if (!grupos[cat]) grupos[cat] = [];
+    grupos[cat].push(item);
+  });
+  orden.forEach(catKey => {
+    if (!grupos[catKey] || !grupos[catKey].length) return;
+    lines.push('\n' + LC_CATEGORIAS[catKey].label.toUpperCase());
+    grupos[catKey].forEach(item => {
+      const cant = _lcFormatCantidad(item.gramos);
+      lines.push('• ' + item.nombre + (cant ? ' — ' + cant : ''));
+    });
+  });
+  navigator.clipboard.writeText(lines.join('\n').trim())
+    .then(() => showToast('✅ Lista copiada al portapapeles'))
+    .catch(() => showToast('❌ No se pudo copiar'));
+}
+
+// CSS para los items de la lista
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .lc-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);}
+    .lc-item:last-child{border-bottom:none;}
+    .lc-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#fff;}
+    .lc-item.lc-done .lc-check{background:var(--accent);border-color:var(--accent);}
+    .lc-item.lc-done .lc-chk-icon{display:block!important;}
+    .lc-item.lc-done .lc-nombre{color:var(--muted);text-decoration:line-through;}
+    .lc-nombre{flex:1;font-size:13px;color:var(--text);}
+    .lc-cant{font-size:12px;color:var(--muted);}
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── FIN LISTA DE LA COMPRA ──────────────────────────────────────────────────
 
 function menuNavegar(delta) {
   _menuDiaActual = ((_menuDiaActual - 1 + delta + 7) % 7) + 1;
@@ -7492,6 +7710,10 @@ function _renderMenuDia() {
   });
 
   document.getElementById('menuComidas').innerHTML = html;
+
+  // Mostrar botón lista de la compra
+  const lcBtn = document.getElementById('menuListaCompraBtn');
+  if (lcBtn) lcBtn.style.display = 'flex';
 
   // Badge tipo día
   const dotEl = document.getElementById('menuPillDot');
