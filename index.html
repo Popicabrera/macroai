@@ -6933,7 +6933,7 @@ async function handleFotoProducto(e) {
   </div>
 
   <!-- NAVEGACIÓN DÍAS SEMANA (1=Lun … 7=Dom) -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div id="menuNavDias" style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px 6px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;">
     <button onclick="menuNavegar(-1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8249;</button>
     <div id="menuFechaLabel" onclick="menuIrHoy()" style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer;padding:4px 12px;border-radius:8px;user-select:none;">Hoy</div>
     <button onclick="menuNavegar(1)" style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8250;</button>
@@ -7337,9 +7337,13 @@ function menuAbrirListaCompra() {
     return;
   }
 
-  // Abrir vista lista
+  // Abrir vista lista — ocultar navegación días y panel macros
   panel.style.display = 'flex';
   if (scrollArea) scrollArea.style.display = 'none';
+  const navDias = document.getElementById('menuNavDias');
+  const macroPanel = document.getElementById('menuMacroPanel');
+  if (navDias) navDias.style.display = 'none';
+  if (macroPanel) macroPanel.style.display = 'none';
   if (btn) { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; btn.style.background = 'rgba(192,57,43,0.07)'; }
 
   // Si ya hay contenido renderizado no regenerar
@@ -7363,6 +7367,10 @@ function menuCerrarListaCompra() {
   const btn = document.getElementById('menuListaCompraBtn');
   if (panel) panel.style.display = 'none';
   if (scrollArea) scrollArea.style.display = '';
+  const navDias = document.getElementById('menuNavDias');
+  const macroPanel = document.getElementById('menuMacroPanel');
+  if (navDias) navDias.style.display = '';
+  if (macroPanel) macroPanel.style.display = '';
   if (btn) { btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--muted)'; btn.style.background = 'none'; }
 }
 
