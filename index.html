@@ -4058,6 +4058,50 @@ function initApp(){
     }, 2 * 60 * 1000);
   }
 
+  // Polling silencioso de menú cada 60 seg: detecta menú nuevo/pendiente sin recargar
+  if (!window._menuPollingInterval) {
+    window._menuPollingInterval = setInterval(async () => {
+      if (!CURRENT_USER || CURRENT_USER.email === ADMIN_EMAIL) return;
+      try {
+        const [resActivo, resPendiente] = await Promise.all([
+          supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&activo=eq.true&order=created_at.desc&limit=1&select=id,nombre`),
+          supaFetch(`/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(CURRENT_USER.email)}&pendiente=eq.true&order=created_at.desc&limit=1&select=id,nombre`)
+        ]);
+        const rowsActivo    = await resActivo.json();
+        const rowsPendiente = await resPendiente.json();
+        const nuevoActivo    = (Array.isArray(rowsActivo)    && rowsActivo.length)    ? rowsActivo[0]    : null;
+        const nuevoPendiente = (Array.isArray(rowsPendiente) && rowsPendiente.length) ? rowsPendiente[0] : null;
+        const activoCambio    = nuevoActivo?.id !== _menuActivoCache?.id;
+        const pendienteCambio = nuevoPendiente?.id !== (_menuPendienteCache?.id || null);
+        if (activoCambio || pendienteCambio) {
+          _menuActivoCache = null; _menuCeldasCache = null; _menuBibCache = null;
+          _menuPerfilMacros = null; _menuPendienteCache = null;
+          const viendoMenu = document.getElementById('viewMiMenu')?.classList.contains('active');
+          if (viendoMenu) {
+            cargarMiMenu();
+          } else {
+            if (nuevoPendiente && pendienteCambio) {
+              showToast('📅 Tu entrenador te ha preparado un nuevo menú');
+            }
+          }
+        }
+      } catch(e) {}
+    }, 60 * 1000);
+  }
+
+  // Refresco al volver a la pestaña/app desde background (móvil)
+  if (!window._menuVisibilityBound) {
+    window._menuVisibilityBound = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && CURRENT_USER && CURRENT_USER.email !== ADMIN_EMAIL) {
+        _menuActivoCache = null; _menuCeldasCache = null; _menuBibCache = null;
+        _menuPerfilMacros = null; _menuPendienteCache = null;
+        const viendoMenu = document.getElementById('viewMiMenu')?.classList.contains('active');
+        if (viendoMenu) cargarMiMenu();
+      }
+    });
+  }
+
   // Renderizar diario MFP
   renderMFPDiario();
 
