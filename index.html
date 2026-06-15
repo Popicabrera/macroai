@@ -7232,7 +7232,7 @@ async function cargarMiMenu() {
       _menuPerfilMacros = (Array.isArray(rows) && rows.length) ? rows[0] : {};
       // Sincronizar WEEK_DAYS con dias_entreno del perfil para que _menuTipoDia sea correcto
       if (_menuPerfilMacros.dias_entreno && Array.isArray(_menuPerfilMacros.dias_entreno) && _menuPerfilMacros.dias_entreno.length) {
-        WEEK_DAYS = _menuPerfilMacros.dias_entreno.map(d => parseInt(d));
+        WEEK_DAYS = _normDiasEntreno(_menuPerfilMacros.dias_entreno).map(d => d === 7 ? 0 : d);
       }
     }
 
@@ -7996,7 +7996,7 @@ async function renderAdminMenuPerfil(seccion) {
     <div id="amDiasEntrenoSection" style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;display:${modoMacros==='ed'?'block':'none'};">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c0392b;margin-bottom:10px;">Días de entreno</div>
       <div id="amDiasBtns" style="display:flex;gap:6px;justify-content:space-between;"></div>
-      <input type="hidden" id="amDiasEntrenoVal" value="${perfil?.dias_entreno ? JSON.stringify(perfil.dias_entreno.map(Number)) : '[1,2,4,6]'}">
+      <input type="hidden" id="amDiasEntrenoVal" value="${JSON.stringify(_normDiasEntreno(perfil?.dias_entreno))}">
     </div>
 
     <!-- CONFIG -->
@@ -8136,6 +8136,24 @@ function amRecalcKcal() {
     validaD.style.background = cuadra ? 'rgba(50,180,100,0.1)' : 'rgba(192,57,43,0.08)';
     validaD.style.color = cuadra ? '#1a7a40' : '#c0392b';
   }
+}
+
+// Normaliza dias_entreno a ISO (1=Lun…7=Dom) sea cual sea el formato de entrada
+function _normDiasEntreno(arr) {
+  const LETRA_MAP = { L:1, M:2, X:3, J:4, V:5, S:6, D:7 };
+  if (!Array.isArray(arr) || !arr.length) return [1,2,4,5];
+  return arr
+    .map(d => {
+      if (d === null || d === undefined) return null;
+      if (typeof d === 'string' && LETRA_MAP[d.toUpperCase()]) return LETRA_MAP[d.toUpperCase()];
+      const n = parseInt(d);
+      if (isNaN(n)) return null;
+      if (n === 0) return 7; // getDay Dom(0) → ISO Dom(7)
+      return n; // 1-6 ya están bien en ISO
+    })
+    .filter(d => d !== null && d >= 1 && d <= 7)
+    .filter((d, i, a) => a.indexOf(d) === i) // deduplicar
+    .sort((a, b) => a - b);
 }
 
 function amRenderDiasBtns() {
@@ -10771,10 +10789,9 @@ const MENU_TEMPLATES = [
 function _menuTplTipo(tpl, perfil) {
   if (!perfil) return 'entreno'; // sin cliente: asumimos entreno
   if (perfil.modo_macros === 'igual') return 'igual';
-  const dias = Array.isArray(perfil.dias_entreno) ? perfil.dias_entreno.map(Number) : [1,2,3,4,5];
-  // dias_entreno usa getDay() nativo (0=Dom,1=Lun…6=Sab); diaISO usa 1=Lun…7=Dom
-  const getdayVal = tpl.diaISO === 7 ? 0 : tpl.diaISO;
-  return dias.includes(getdayVal) ? 'entreno' : 'descanso';
+  const dias = _normDiasEntreno(perfil.dias_entreno); // ISO: 1=Lun…7=Dom
+  // diaISO ya viene en ISO (1=Lun…7=Dom), comparar directamente
+  return dias.includes(tpl.diaISO) ? 'entreno' : 'descanso';
 }
 const MENU_FRANJAS = ['Desayuno','Almuerzo','Comida','Merienda','Cena'];
 
