@@ -6968,23 +6968,18 @@ async function handleFotoProducto(e) {
 
 
 
-  <!-- LISTA DE LA COMPRA (panel oculto) -->
-  <div id="menuListaCompraPanel" style="display:none;margin:10px 14px 0;background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:16px;">🛒</span>
-        <span style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text);">Lista de la compra</span>
-        <span style="font-size:11px;color:var(--muted);background:var(--s2);padding:2px 8px;border-radius:10px;">semana</span>
+  <!-- LISTA DE LA COMPRA (pantalla completa, oculta por defecto) -->
+  <div id="menuListaCompraPanel" style="display:none;flex-direction:column;flex:1;overflow:hidden;background:var(--bg);">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--s1);">
+      <div>
+        <div style="font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text);">Lista de la compra</div>
+        <div id="lcProgreso" style="font-size:11px;color:var(--muted);margin-top:1px;">Generando lista...</div>
       </div>
-      <button onclick="menuCerrarListaCompra()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);line-height:1;padding:0;">×</button>
+      <button onclick="lcReiniciar()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;">Reiniciar</button>
     </div>
-    <div style="padding:6px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-      <span id="lcProgreso" style="font-size:12px;color:var(--muted);">Generando lista...</span>
-      <button onclick="lcReiniciar()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Reiniciar</button>
-    </div>
-    <div id="lcContenido" style="max-height:55vh;overflow-y:auto;padding:4px 0;"></div>
-    <div style="padding:10px 16px;border-top:1px solid var(--border);">
-      <button onclick="lcCopiar()" style="width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <div id="lcContenido" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;">
+      <button onclick="lcCopiar()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
         📋 Copiar lista
       </button>
     </div>
@@ -7331,21 +7326,32 @@ function _lcRenderPanel(items) {
 
 function menuAbrirListaCompra() {
   const panel = document.getElementById('menuListaCompraPanel');
+  const scrollArea = document.querySelector('#viewMiMenu .main-scroll-area');
+  const btn = document.getElementById('menuListaCompraBtn');
   if (!panel) return;
-  panel.style.display = 'block';
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const estaAbierta = panel.style.display === 'flex';
+  if (estaAbierta) {
+    // Toggle: cerrar y volver al menú
+    menuCerrarListaCompra();
+    return;
+  }
+
+  // Abrir vista lista
+  panel.style.display = 'flex';
+  if (scrollArea) scrollArea.style.display = 'none';
+  if (btn) { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; btn.style.background = 'rgba(192,57,43,0.07)'; }
 
   // Si ya hay contenido renderizado no regenerar
   if (document.querySelectorAll('.lc-item').length > 0) return;
 
-  document.getElementById('lcProgreso').textContent = 'Generando lista...';
-  document.getElementById('lcContenido').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Calculando ingredientes...</div>';
+  document.getElementById('lcProgreso').textContent = 'Calculando...';
+  document.getElementById('lcContenido').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Calculando ingredientes...</div>';
 
-  // Extraer ingredientes directamente de la caché (sin IA — lista exacta del menú)
   const items = _lcExtraerIngredientes();
   if (!items.length) {
     document.getElementById('lcProgreso').textContent = 'Sin ingredientes';
-    document.getElementById('lcContenido').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No hay ingredientes en el menú.</div>';
+    document.getElementById('lcContenido').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">No hay ingredientes en el menú.</div>';
     return;
   }
   _lcRenderPanel(items);
@@ -7353,7 +7359,11 @@ function menuAbrirListaCompra() {
 
 function menuCerrarListaCompra() {
   const panel = document.getElementById('menuListaCompraPanel');
+  const scrollArea = document.querySelector('#viewMiMenu .main-scroll-area');
+  const btn = document.getElementById('menuListaCompraBtn');
   if (panel) panel.style.display = 'none';
+  if (scrollArea) scrollArea.style.display = '';
+  if (btn) { btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--muted)'; btn.style.background = 'none'; }
 }
 
 function lcToggle(el) {
