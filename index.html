@@ -4089,6 +4089,29 @@ function initApp(){
     }, 60 * 1000);
   }
 
+  // Realtime: detecta cambios en menus_macroai al instante
+  if (!window._menuRealtimeChannel && db && CURRENT_USER?.email !== ADMIN_EMAIL) {
+    window._menuRealtimeChannel = db
+      .channel(`menu-cliente-${CURRENT_USER.email}`)
+      .on(`postgres_changes`, {
+        event: `*`,
+        schema: `public`,
+        table: `menus_macroai`,
+        filter: `cliente_email=eq.${CURRENT_USER.email}`
+      }, () => {
+        _menuActivoCache = null; _menuCeldasCache = null;
+        _menuBibCache = null; _menuPendienteCache = null;
+        _menuPerfilMacros = null;
+        const viendoMenu = document.getElementById(`viewMiMenu`)?.classList.contains(`active`);
+        if (viendoMenu) {
+          cargarMiMenu();
+        } else {
+          showToast(`📅 Tu entrenador ha actualizado tu menú`);
+        }
+      })
+      .subscribe();
+  }
+
   // Refresco al volver a la pestaña/app desde background (móvil)
   if (!window._menuVisibilityBound) {
     window._menuVisibilityBound = true;
