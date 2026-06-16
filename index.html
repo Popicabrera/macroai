@@ -8481,6 +8481,9 @@ async function amGuardarPerfilNuevo() {
       body:JSON.stringify(payload)
     });
     showToast('✅ Perfil guardado');
+    // Invalidar caché de Cocina para que recargue el perfil actualizado
+    _menuCocClientes = [];
+    if (_menuCocClientePerfil?.cliente_email === _adminMenuEmail) _menuCocClientePerfil = null;
   } catch(e){ showToast('❌ Error guardando perfil'); }
 }
 
@@ -8732,6 +8735,9 @@ async function guardarPerfil() {
     });
     if (res.ok || res.status === 201 || res.status === 204) {
       showToast('✅ Perfil guardado');
+      // Invalidar caché de Cocina para que recargue el perfil actualizado
+      _menuCocClientes = [];
+      if (_menuCocClientePerfil?.cliente_email === _adminMenuEmail) _menuCocClientePerfil = null;
     } else {
       const err = await res.text();
       console.error('guardarPerfil error:', err);
@@ -11133,8 +11139,20 @@ window._menuCocLimpiarCliente = function() {
 
 window._menuCocSeleccionar = async function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
-  const perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail);
-  _menuCocClientePerfil = perfil || null;
+  // Recargar perfil fresco desde Supabase (el cliente puede haber cambiado sus días)
+  let perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail) || null;
+  try {
+    const res = await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&select=cliente_email,kcal_objetivo,p_objetivo,hc_objetivo,g_objetivo,kcal_descanso,p_descanso,hc_descanso,g_descanso,dias_entreno,modo_macros&limit=1`);
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows[0]) {
+      const p = rows[0];
+      perfil = { ...p, nombre: perfil?.nombre || p.cliente_email };
+      // Actualizar en cache local
+      const idx = _menuCocClientes.findIndex(c => c.cliente_email === clienteEmail);
+      if (idx >= 0) _menuCocClientes[idx] = perfil; else _menuCocClientes.push(perfil);
+    }
+  } catch(e) { console.warn('No se pudo recargar perfil fresco:', e); }
+  _menuCocClientePerfil = perfil;
   _adminMenuEmail = clienteEmail || '';
   // Grid se resetea al cambiar cliente
   _menuGrid = {};
