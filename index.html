@@ -11296,13 +11296,11 @@ function menuRenderDiaHeader(tpl) {
   const excesoG    = restG    < 0 ? Math.abs(restG)    * 9 : 0;
   const excesoPorMacros = Math.round(excesoCh + excesoP + excesoG);
 
-  const negativo     = restKcal < 0 || excesoPorMacros > 0;
+  const negativo     = restKcal < 0;
   const kcalColor    = negativo ? accentDark : accentColor;
   const kcalDisplay  = restKcal < 0
     ? `−${Math.abs(restKcal)}`
-    : excesoPorMacros > 0
-      ? `−${excesoPorMacros}`
-      : `${restKcal}`;
+    : `${restKcal}`;
 
   // Colores macros individuales (rojo oscuro si negativo, color habitual si ok)
   const RED_DARK = '#a02020';
