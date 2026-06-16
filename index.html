@@ -11252,9 +11252,30 @@ window._menuCocSeleccionar = async function(clienteEmail) {
 // ── Calcula acumulado de un día desde _menuGrid ──
 function menuCalcDiaAcum(templateKey) {
   let k=0,p=0,c=0,g=0;
+  const perfil      = _menuCocClientePerfil;
+  const diasEntreno = perfil ? _normDiasEntreno(perfil.dias_entreno) : [];
+  const tpl         = (typeof MENU_TEMPLATES !== 'undefined' ? MENU_TEMPLATES : []).find(t => t.key === templateKey);
+  const diaISO      = tpl ? tpl.diaISO : null;
+  const esEntreno   = !diaISO || diasEntreno.includes(diaISO);
+  const tipoDia     = esEntreno ? 'entreno' : 'descanso';
+
   MENU_FRANJAS.forEach((_,fi)=>{
     const cell = _menuGrid[`${templateKey}-f${fi}`];
-    if(cell){k+=cell.kcal||0;p+=cell.prot||0;c+=cell.ch||0;g+=cell.grasa||0;}
+    if (!cell) return;
+    const ingArr = Array.isArray(cell.ingredientes) ? cell.ingredientes : null;
+    if (ingArr && ingArr.length && perfil && tipoDia === 'descanso') {
+      ingArr.forEach(ing => {
+        if (!ing.gramos) return;
+        const gramosAdj = _menuAjustarGramos(ing.gramos, ing, tipoDia, perfil);
+        const factor = gramosAdj / 100;
+        k += ((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9) * factor;
+        p += (ing.p_100||0)  * factor;
+        c += (ing.hc_100||0) * factor;
+        g += (ing.g_100||0)  * factor;
+      });
+    } else {
+      k+=cell.kcal||0; p+=cell.prot||0; c+=cell.ch||0; g+=cell.grasa||0;
+    }
   });
   return {kcal:Math.round(k),prot:Math.round(p*10)/10,ch:Math.round(c*10)/10,grasa:Math.round(g*10)/10};
 }
@@ -11863,17 +11884,34 @@ function menuRenderGrid() {
       content.className = 'menu-franja-content';
 
       if (cell) {
+        // Calcular macros ajustados si es día de descanso
+        let dispKcal = Math.round(cell.kcal), dispProt = cell.prot, dispCh = cell.ch, dispGrasa = cell.grasa;
+        const _perfCoc = _menuCocClientePerfil;
+        const _diasEnt = _perfCoc ? _normDiasEntreno(_perfCoc.dias_entreno) : [];
+        const _tplCoc  = (typeof MENU_TEMPLATES !== 'undefined' ? MENU_TEMPLATES : []).find(t => t.key === key);
+        const _esEnt   = !_tplCoc || _diasEnt.includes(_tplCoc.diaISO);
+        if (!_esEnt && Array.isArray(cell.ingredientes) && cell.ingredientes.length && _perfCoc) {
+          let ak=0,ap=0,ac=0,ag=0;
+          cell.ingredientes.forEach(ing => {
+            if (!ing.gramos) return;
+            const gadj = _menuAjustarGramos(ing.gramos, ing, 'descanso', _perfCoc);
+            const f = gadj/100;
+            ak += ((ing.p_100||0)*4+(ing.hc_100||0)*4+(ing.g_100||0)*9)*f;
+            ap += (ing.p_100||0)*f; ac += (ing.hc_100||0)*f; ag += (ing.g_100||0)*f;
+          });
+          dispKcal=Math.round(ak); dispProt=Math.round(ap*10)/10; dispCh=Math.round(ac*10)/10; dispGrasa=Math.round(ag*10)/10;
+        }
         content.innerHTML = `
           <div class="menu-celda-asignada">
             <div class="menu-celda-nombre">${escapeHtml(cell.nombre)}</div>
             <div class="menu-celda-macros">
-              <span style="color:var(--red);font-weight:600;">${Math.round(cell.kcal)} kcal</span>
+              <span style="color:var(--red);font-weight:600;">${dispKcal} kcal</span>
               <span class="mcd-sep">·</span>
-              <span style="color:var(--blue);">P ${cell.prot}g</span>
+              <span style="color:var(--blue);">P ${dispProt}g</span>
               <span class="mcd-sep">·</span>
-              <span style="color:var(--yellow);">CH ${cell.ch}g</span>
+              <span style="color:var(--yellow);">CH ${dispCh}g</span>
               <span class="mcd-sep">·</span>
-              <span style="color:#3a9d5c;">G ${cell.grasa}g</span>
+              <span style="color:#3a9d5c;">G ${dispGrasa}g</span>
             </div>
           </div>`;
 
