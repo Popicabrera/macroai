@@ -10893,6 +10893,38 @@ async function guardarComidaBib() {
   const categoria = document.getElementById('bibEdCat')?.value || 'General';
 
   // Calcular macros desde ingredientes
+  // ── Si se abrió desde el grid → solo actualizar esa celda, NO tocar biblioteca_comidas ──
+  if (_cocEditorCellKey) {
+    let kcal=0, prot=0, ch=0, grasa=0;
+    _cocEditorIngs.forEach(ing => {
+      const g = ing.gramos || 0;
+      if (g > 0) {
+        kcal  += (ing.kcal_100||0)*g/100;
+        prot  += (ing.p_100   ||0)*g/100;
+        ch    += (ing.hc_100  ||0)*g/100;
+        grasa += (ing.g_100   ||0)*g/100;
+      }
+    });
+    const ingredientes = _cocEditorIngs.filter(i => i.nombre && i.nombre.trim()).map(i => ({
+      nombre: i.nombre.trim(), gramos: i.gramos||0,
+      kcal_100: i.kcal_100||0, p_100: i.p_100||0, hc_100: i.hc_100||0, g_100: i.g_100||0
+    }));
+    _menuGrid[_cocEditorCellKey] = {
+      ...(_menuGrid[_cocEditorCellKey] || {}),
+      kcal:  Math.round(kcal),
+      prot:  Math.round(prot*10)/10,
+      ch:    Math.round(ch*10)/10,
+      grasa: Math.round(grasa*10)/10,
+      ingredientes,
+    };
+    cerrarEditorBib();
+    showToast('✅ Gramos actualizados');
+    if (typeof menuRenderGrid === 'function') menuRenderGrid();
+    if (typeof menuActualizarTotales === 'function') menuActualizarTotales();
+    return; // no tocar biblioteca_comidas
+  }
+
+  // Calcular macros desde ingredientes
   let kcalI=0, protI=0, chI=0, grasaI=0;
   _cocEditorIngs.forEach(ing => {
     const g = ing.gramos || 0;
@@ -11864,7 +11896,10 @@ function menuRenderGrid() {
           ov.querySelector('#_csEdit').onclick = () => {
             ov.remove();
             const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
-            if (comidaBib) abrirEditorBiblioteca(comidaBib, cellKey);
+            if (comidaBib) {
+              const comidaParaEditor = cell.ingredientes && cell.ingredientes.length ? { ...comidaBib, ingredientes: cell.ingredientes } : comidaBib;
+              abrirEditorBiblioteca(comidaParaEditor, cellKey);
+            }
             else showToast('Comida no encontrada en biblioteca');
           };
           ov.querySelector('#_csDel').onclick = () => {
