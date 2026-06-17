@@ -1,13 +1,4 @@
-<!DOCTYPE  html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MacroAI</title>
-<meta name="theme-color" content="#f5f0e8">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-statu
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1277,6 +1268,7 @@ async function doLogin(){
       if(chkData&&chkData[0]&&chkData[0].nombre)CURRENT_USER.nombre=chkData[0].nombre;
     }
     localStorage.setItem('macroai_token',SUPA_TOKEN);
+    localStorage.setItem('macroai_refresh',data.session.refresh_token);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
     enterApp();
   }catch(e){showMsg('loginMsg','Error: '+e.message);}
@@ -1312,6 +1304,7 @@ async function doRegistro(){
       await supaAdmin('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,activo:true})});
     }
     localStorage.setItem('macroai_token',SUPA_TOKEN);
+    localStorage.setItem('macroai_refresh',data.session.refresh_token);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
     enterApp();
   }catch(e){showMsg('registroMsg','Error: '+e.message);}
@@ -4031,6 +4024,60 @@ function initChatView(){
     .catch(() => { removeTyping(); addMsg('ai',`¡Hola${nombreUsuario?' '+nombreUsuario:''}! Hoy tienes ${S.kcalObj} kcal. ¿Qué comemos?`,[],[]); saveChatHistory(); });
 }
 
+// Suscripción realtime al menú del cliente. Reintenta si `db` aún no está
+// inicializado (puede tardar unos cientos de ms tras un boot desde localStorage,
+// a diferencia de un login fresco que sí espera a `db`). Sin este reintento,
+// la suscripción fallaba silenciosamente en casi todas las reaperturas de la app.
+function _iniciarRealtimeMenu(retries){
+  retries = retries || 0;
+  if (window._menuRealtimeChannel || CURRENT_USER?.email === ADMIN_EMAIL) return;
+  if (!db) {
+    if (retries < 20) setTimeout(() => _iniciarRealtimeMenu(retries + 1), 300);
+    return;
+  }
+  // Debounce: el guardado admin hace DELETE + INSERT de celdas en ráfaga rápida.
+  // Sin esperar, el cliente podía recargar justo a mitad de ese guardado y
+  // quedarse con un estado intermedio hasta cambiar de día. Agrupamos toda
+  // la ráfaga de eventos en una sola recarga, ~1.2s tras el último evento.
+  let _menuRtTimer = null;
+  const invalidarYRecargar = () => {
+    clearTimeout(_menuRtTimer);
+    _menuRtTimer = setTimeout(() => {
+      _menuActivoCache = null; _menuCeldasCache = null;
+      _menuBibCache = null; _menuPendienteCache = null;
+      _menuPerfilMacros = null;
+      const viendoMenu = document.getElementById('viewMiMenu')?.classList.contains('active');
+      if (viendoMenu) {
+        cargarMiMenu();
+      } else {
+        showToast('📅 Tu entrenador ha actualizado tu menú');
+      }
+    }, 1200);
+  };
+  window._menuRealtimeChannel = db
+    .channel(`menu-cliente-${CURRENT_USER.email}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'menus_macroai',
+      filter: `cliente_email=eq.${CURRENT_USER.email}`
+    }, invalidarYRecargar)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'menu_celdas'
+    }, (payload) => {
+      // menu_celdas no tiene cliente_email propio: solo invalidar si afecta
+      // al menú activo o pendiente que ya tenemos cargado para este cliente.
+      const menuId = payload?.new?.menu_id || payload?.old?.menu_id;
+      if (!menuId) return;
+      if (menuId === _menuActivoCache?.id || menuId === _menuPendienteCache?.id) {
+        invalidarYRecargar();
+      }
+    })
+    .subscribe();
+}
+
 // ── INIT ──
 function initApp(){
   loadToday(); applyMacros(S.tipoDia); updateBars();
@@ -4090,27 +4137,8 @@ function initApp(){
   }
 
   // Realtime: detecta cambios en menus_macroai al instante
-  if (!window._menuRealtimeChannel && db && CURRENT_USER?.email !== ADMIN_EMAIL) {
-    window._menuRealtimeChannel = db
-      .channel(`menu-cliente-${CURRENT_USER.email}`)
-      .on(`postgres_changes`, {
-        event: `*`,
-        schema: `public`,
-        table: `menus_macroai`,
-        filter: `cliente_email=eq.${CURRENT_USER.email}`
-      }, () => {
-        _menuActivoCache = null; _menuCeldasCache = null;
-        _menuBibCache = null; _menuPendienteCache = null;
-        _menuPerfilMacros = null;
-        const viendoMenu = document.getElementById(`viewMiMenu`)?.classList.contains(`active`);
-        if (viendoMenu) {
-          cargarMiMenu();
-        } else {
-          showToast(`📅 Tu entrenador ha actualizado tu menú`);
-        }
-      })
-      .subscribe();
-  }
+  _iniciarRealtimeMenu();
+
 
   // Refresco al volver a la pestaña/app desde background (móvil)
   if (!window._menuVisibilityBound) {
@@ -6158,6 +6186,26 @@ function futurMfpMoverItem(fecha,mealId,idx,newMealId){
 
 
 let _buscadorFechaFutura = null;
+
+// Restaura la sesión real en el cliente db.auth (no solo la variable SUPA_TOKEN suelta).
+// Esto es lo que permite que el canal de realtime quede correctamente autenticado
+// al reabrir la app desde localStorage, en vez de solo tras un login fresco.
+function _restaurarSesionDb(){
+  if(!db) return;
+  // Mantener SUPA_TOKEN (usado por supaFetch) sincronizado con cualquier refresh automático del SDK
+  db.auth.onAuthStateChange((event,session)=>{
+    if(session&&session.access_token){
+      SUPA_TOKEN=session.access_token;
+      localStorage.setItem('macroai_token',SUPA_TOKEN);
+      if(session.refresh_token) localStorage.setItem('macroai_refresh',session.refresh_token);
+    }
+  });
+  const savedRefresh=localStorage.getItem('macroai_refresh');
+  const savedToken=localStorage.getItem('macroai_token');
+  if(savedRefresh&&savedToken){
+    db.auth.setSession({access_token:savedToken,refresh_token:savedRefresh}).catch(()=>{});
+  }
+}
 // ── BOOT ──
 window.addEventListener('load',()=>{
   // Inicializar SDK Supabase
@@ -6166,6 +6214,7 @@ window.addEventListener('load',()=>{
     attempts++;
     if(window.supabase&&window.supabase.createClient){
       db=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+      _restaurarSesionDb();
     } else if(attempts<10){setTimeout(tryInitDb,300);}
   }
   setTimeout(tryInitDb,200);
@@ -6175,7 +6224,7 @@ window.addEventListener('load',()=>{
   const savedUser=localStorage.getItem('macroai_user');
   if(savedToken&&savedUser){
     try{SUPA_TOKEN=savedToken;CURRENT_USER=JSON.parse(savedUser);enterApp();return;}
-    catch(e){localStorage.removeItem('macroai_token');localStorage.removeItem('macroai_user');}
+    catch(e){localStorage.removeItem('macroai_token');localStorage.removeItem('macroai_refresh');localStorage.removeItem('macroai_user');}
   }
   showAuth('screenLogin');
 });
