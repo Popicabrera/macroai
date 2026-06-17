@@ -4044,16 +4044,24 @@ function _iniciarRealtimeMenu(retries){
     if (retries < 20) setTimeout(() => _iniciarRealtimeMenu(retries + 1), 300);
     return;
   }
+  // Debounce: el guardado admin hace DELETE + INSERT de celdas en ráfaga rápida.
+  // Sin esperar, el cliente podía recargar justo a mitad de ese guardado y
+  // quedarse con un estado intermedio hasta cambiar de día. Agrupamos toda
+  // la ráfaga de eventos en una sola recarga, ~1.2s tras el último evento.
+  let _menuRtTimer = null;
   const invalidarYRecargar = () => {
-    _menuActivoCache = null; _menuCeldasCache = null;
-    _menuBibCache = null; _menuPendienteCache = null;
-    _menuPerfilMacros = null;
-    const viendoMenu = document.getElementById('viewMiMenu')?.classList.contains('active');
-    if (viendoMenu) {
-      cargarMiMenu();
-    } else {
-      showToast('📅 Tu entrenador ha actualizado tu menú');
-    }
+    clearTimeout(_menuRtTimer);
+    _menuRtTimer = setTimeout(() => {
+      _menuActivoCache = null; _menuCeldasCache = null;
+      _menuBibCache = null; _menuPendienteCache = null;
+      _menuPerfilMacros = null;
+      const viendoMenu = document.getElementById('viewMiMenu')?.classList.contains('active');
+      if (viendoMenu) {
+        cargarMiMenu();
+      } else {
+        showToast('📅 Tu entrenador ha actualizado tu menú');
+      }
+    }, 1200);
   };
   window._menuRealtimeChannel = db
     .channel(`menu-cliente-${CURRENT_USER.email}`)
