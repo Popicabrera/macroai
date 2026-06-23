@@ -7157,6 +7157,8 @@ async function handleFotoProducto(e) {
 .mc-alimento-right{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:1px;}
 .mc-alimento-gramos{font-size:13px;font-weight:400;color:var(--muted);}
 .mc-alimento-kcal{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);}
+.mc-plato-titulo{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);padding:10px 14px 6px;}
+.mc-plato-titulo::before{content:'';width:3px;height:16px;background:var(--accent);flex-shrink:0;}
 /* Expandir hint */
 .mc-expand-hint{text-align:center;padding:5px 0 2px;font-size:10px;color:var(--muted2);letter-spacing:0.3px;}
 
@@ -7674,6 +7676,8 @@ function _renderMenuDia() {
 
       // Ajustar gramos por tipo de día (WLS) si es descanso
       if (ingArr.length && ingArr.some(i => i.gramos)) {
+        // Nombre del plato (tal y como aparece en cocina) antes de sus ingredientes
+        ingredientesHtml += '<div class="mc-plato-titulo">' + escapeHtml(bib.nombre||'') + '</div>';
         ingArr.forEach(ing => {
           if (!ing.gramos) return;
           const gramosOrig = ing.gramos;
@@ -11175,6 +11179,15 @@ let _menuCocClientes = [];
 async function menuCocCargarClientes() {
   if (_menuCocClientes.length > 0) return _menuCocClientes;
   try {
+    // Asegurar que tenemos los nombres de los clientes, sin depender de haber
+    // visitado antes la pestaña Clientes (que es lo que rellena _adminUsersData)
+    if (!_adminUsersData.length) {
+      try {
+        const resU = await supaAdmin('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
+        const users = await resU.json();
+        if (Array.isArray(users)) _adminUsersData = users;
+      } catch(e) {}
+    }
     const res = await supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,kcal_objetivo,p_objetivo,hc_objetivo,g_objetivo,kcal_descanso,p_descanso,hc_descanso,g_descanso,dias_entreno,modo_macros&order=cliente_email.asc');
     const perfiles = await res.json();
     if (!Array.isArray(perfiles)) { _menuCocClientes = []; return []; }
@@ -11207,7 +11220,7 @@ async function menuCocAbrirSelectorCliente() {
   const lista = opcionSinCliente + _menuCocClientes.map(c => `
     <div onclick="_menuCocSeleccionar('${escapeHtml(c.cliente_email||'').replace(/'/g,"\\'")}')"
       style="padding:11px 14px;background:var(--s1);border:1px solid var(--border);border-radius:11px;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
-      <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||c.cliente_email||'Sin nombre')}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||'Sin nombre')}</div>
       <div style="font-size:11px;color:var(--muted);">${escapeHtml(c.cliente_email||'')} · ${c.kcal_objetivo||'—'} kcal E / ${c.kcal_descanso||'—'} kcal D</div>
     </div>`).join('');
 
