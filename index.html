@@ -11179,6 +11179,15 @@ let _menuCocClientes = [];
 async function menuCocCargarClientes() {
   if (_menuCocClientes.length > 0) return _menuCocClientes;
   try {
+    // Asegurar que tenemos los nombres de los clientes, sin depender de haber
+    // visitado antes la pestaña Clientes (que es lo que rellena _adminUsersData)
+    if (!_adminUsersData.length) {
+      try {
+        const resU = await supaAdmin('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
+        const users = await resU.json();
+        if (Array.isArray(users)) _adminUsersData = users;
+      } catch(e) {}
+    }
     const res = await supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,kcal_objetivo,p_objetivo,hc_objetivo,g_objetivo,kcal_descanso,p_descanso,hc_descanso,g_descanso,dias_entreno,modo_macros&order=cliente_email.asc');
     const perfiles = await res.json();
     if (!Array.isArray(perfiles)) { _menuCocClientes = []; return []; }
