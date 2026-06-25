@@ -2384,10 +2384,20 @@ async function saveComidaSupabase(comida){
 }
 
 // ── VISTAS ──
+// Vistas "principales" que tiene sentido recordar y restaurar al reabrir la app
+// (no incluye pantallas de detalle/edición que dependen de variables en memoria
+// que se perderían si el móvil descarga la página en segundo plano).
+const VISTAS_RESTAURABLES = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig','viewAdmin','viewCocina'];
+
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   closeContextMenu();
+  // Recordar dónde estaba el usuario para poder volver aquí si el móvil
+  // apaga la pantalla y la app se reinicia al encenderla de nuevo.
+  if (VISTAS_RESTAURABLES.includes(id)) {
+    try { localStorage.setItem('macroai_lastView', id); } catch(e) {}
+  }
   // Sincronizar bottom nav
   const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes',viewCocina:'cocina'};
   const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
@@ -4081,7 +4091,18 @@ function _iniciarRealtimeMenu(retries){
 // ── INIT ──
 function initApp(){
   loadToday(); applyMacros(S.tipoDia); updateBars();
-  showView('viewMain');
+  // Volver a donde estaba el usuario (p.ej. si el móvil apagó la pantalla y
+  // la app se reinició al encenderla). Si no hay nada guardado o no es válido
+  // para este usuario, se va al Diario como siempre.
+  let vistaInicial = 'viewMain';
+  try {
+    const vistaGuardada = localStorage.getItem('macroai_lastView');
+    const esVistaAdmin = vistaGuardada === 'viewAdmin' || vistaGuardada === 'viewCocina';
+    if (vistaGuardada && VISTAS_RESTAURABLES.includes(vistaGuardada) && (!esVistaAdmin || CURRENT_USER?.email === ADMIN_EMAIL)) {
+      vistaInicial = vistaGuardada;
+    }
+  } catch(e) {}
+  showView(vistaInicial);
   showBottomNav();
   if (window.innerWidth >= 900) initDesktopSidebar();
   const adminItem = document.getElementById('navAdminItem');
