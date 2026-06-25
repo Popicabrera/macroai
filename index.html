@@ -7938,16 +7938,24 @@ function abrirAdminMenu(email, nombre, seccion) {
   renderAdminMenuPerfil(seccion);
 }
 
-function abrirPerfilAdmin(id, nombre, email) {
+function abrirPerfilAdmin(id, nombre, email, volverA) {
   _adminMacrosEmail = email;
   _adminMacrosNombre = nombre || email;
+  _amVolverView = volverA || 'viewAdmin';
   document.getElementById('adminMacrosTitle').textContent = nombre || email;
   showView('viewAdminMacros');
   renderAdminMacros();
 }
 
+function amVolver() {
+  const v = _amVolverView || 'viewAdmin';
+  _amVolverView = 'viewAdmin';
+  showView(v);
+}
+
 let _adminMacrosEmail = '';
 let _adminMacrosNombre = '';
+let _amVolverView = 'viewAdmin';
 
 
 // ══ DRUM PICKER — MACROS ADMIN ══
@@ -8553,8 +8561,12 @@ async function amGuardarPerfilNuevo() {
     modo_app: 'menu'
   };
   try {
-    await supaAdmin(`/rest/v1/perfiles_macroai?cliente_email=eq.${encodeURIComponent(_adminMenuEmail)}`, {
-      method:'PATCH', headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
+    // IMPORTANTE: usamos UPSERT (POST + on_conflict) y no PATCH.
+    // Un PATCH no crea fila si el cliente todavía no tiene perfil guardado
+    // (p.ej. recién creado y aún no se ha dado de alta) — simplemente no hace nada
+    // aunque Supabase responda OK, dejando al entrenador creyendo que se guardó.
+    await supaAdmin(`/rest/v1/perfiles_macroai?on_conflict=cliente_email`, {
+      method:'POST', headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify(payload)
     });
     showToast('✅ Perfil guardado');
@@ -11176,6 +11188,20 @@ let _menuEraActivo = false; // true si el menú cargado en el editor era el acti
 // ── COCINA: Selector de cliente ──
 let _menuCocClientes = [];
 
+// Valores por defecto para un cliente que todavía no tiene perfil de macros guardado
+// (recién creado por el entrenador, aún no se ha dado de alta o el admin no le ha pautado nada).
+// Son los mismos valores por defecto que usa el editor de macros (renderAdminMacros / drumVals).
+function _menuCocPerfilPorDefecto(email, nombre) {
+  return {
+    cliente_email: email,
+    nombre: nombre || email,
+    kcal_objetivo: 2200, p_objetivo: 160, hc_objetivo: 220, g_objetivo: 65,
+    kcal_descanso: 1900, p_descanso: 150, hc_descanso: 170, g_descanso: 60,
+    dias_entreno: [1,2,4,5], modo_macros: 'ed',
+    _sinPerfil: true
+  };
+}
+
 async function menuCocCargarClientes() {
   if (_menuCocClientes.length > 0) return _menuCocClientes;
   try {
@@ -11190,11 +11216,17 @@ async function menuCocCargarClientes() {
     }
     const res = await supaAdmin('/rest/v1/perfiles_macroai?select=cliente_email,kcal_objetivo,p_objetivo,hc_objetivo,g_objetivo,kcal_descanso,p_descanso,hc_descanso,g_descanso,dias_entreno,modo_macros&order=cliente_email.asc');
     const perfiles = await res.json();
-    if (!Array.isArray(perfiles)) { _menuCocClientes = []; return []; }
-    // Enriquecer con nombre desde _adminUsersData si está disponible
-    _menuCocClientes = perfiles.map(p => {
-      const u = (_adminUsersData||[]).find(u => u.email === p.cliente_email);
-      return { ...p, nombre: u?.nombre || p.cliente_email };
+    const perfilesPorEmail = {};
+    if (Array.isArray(perfiles)) perfiles.forEach(p => { perfilesPorEmail[p.cliente_email] = p; });
+    // Partimos de TODOS los clientes (usuarios_macroai), no solo de los que ya tienen
+    // perfil de macros guardado. Así un cliente recién creado (que aún no se ha dado de
+    // alta) ya aparece en el selector, con valores por defecto que el entrenador puede
+    // ajustar antes de mandarle el enlace de registro.
+    const clientesBase = (_adminUsersData||[]).filter(u => u.email !== ADMIN_EMAIL);
+    _menuCocClientes = clientesBase.map(u => {
+      const p = perfilesPorEmail[u.email];
+      if (p) return { ...p, nombre: u.nombre || p.cliente_email, _sinPerfil: false };
+      return _menuCocPerfilPorDefecto(u.email, u.nombre);
     }).sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
   } catch(e) { _menuCocClientes = []; }
   return _menuCocClientes;
@@ -11221,13 +11253,17 @@ async function menuCocAbrirSelectorCliente() {
     <div onclick="_menuCocSeleccionar('${escapeHtml(c.cliente_email||'').replace(/'/g,"\\'")}')"
       style="padding:11px 14px;background:var(--s1);border:1px solid var(--border);border-radius:11px;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
       <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.nombre||'Sin nombre')}</div>
-      <div style="font-size:11px;color:var(--muted);">${escapeHtml(c.cliente_email||'')} · ${c.kcal_objetivo||'—'} kcal E / ${c.kcal_descanso||'—'} kcal D</div>
+      <div style="font-size:11px;color:var(--muted);">${escapeHtml(c.cliente_email||'')} · ${
+        c._sinPerfil
+          ? '⚠️ Sin macros pautados aún (se usarán valores por defecto)'
+          : `${c.kcal_objetivo||'—'} kcal E / ${c.kcal_descanso||'—'} kcal D`
+      }</div>
     </div>`).join('');
 
   overlay.innerHTML = `
     <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px 40px;width:100%;max-width:500px;max-height:70vh;display:flex;flex-direction:column;gap:10px;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;text-align:center;">👤 Seleccionar cliente</div>
-      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch;">${lista||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No hay clientes con perfil</div>'}</div>
+      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch;">${lista||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No hay clientes creados todavía</div>'}</div>
       <button onclick="document.getElementById('_menuCocCliOverlay').remove()"
         style="width:100%;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">
         Cancelar
