@@ -2384,10 +2384,20 @@ async function saveComidaSupabase(comida){
 }
 
 // ── VISTAS ──
+// Vistas "principales" que tiene sentido recordar y restaurar al reabrir la app
+// (no incluye pantallas de detalle/edición que dependen de variables en memoria
+// que se perderían si el móvil descarga la página en segundo plano).
+const VISTAS_RESTAURABLES = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig','viewAdmin','viewCocina'];
+
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   closeContextMenu();
+  // Recordar dónde estaba el usuario para poder volver aquí si el móvil
+  // apaga la pantalla y la app se reinicia al encenderla de nuevo.
+  if (VISTAS_RESTAURABLES.includes(id)) {
+    try { localStorage.setItem('macroai_lastView', id); } catch(e) {}
+  }
   // Sincronizar bottom nav
   const bnMap = {viewMain:'diario',viewMiMenu:'menu',viewChat:'chat',viewFavoritos:'favoritos',viewConfig:'perfil',viewAdmin:'clientes',viewAdminMenu:'clientes',viewAdminMacros:'clientes',viewCocina:'cocina'};
   const bnViews = ['viewMain','viewMiMenu','viewChat','viewFavoritos','viewConfig'];
@@ -4081,7 +4091,18 @@ function _iniciarRealtimeMenu(retries){
 // ── INIT ──
 function initApp(){
   loadToday(); applyMacros(S.tipoDia); updateBars();
-  showView('viewMain');
+  // Volver a donde estaba el usuario (p.ej. si el móvil apagó la pantalla y
+  // la app se reinició al encenderla). Si no hay nada guardado o no es válido
+  // para este usuario, se va al Diario como siempre.
+  let vistaInicial = 'viewMain';
+  try {
+    const vistaGuardada = localStorage.getItem('macroai_lastView');
+    const esVistaAdmin = vistaGuardada === 'viewAdmin' || vistaGuardada === 'viewCocina';
+    if (vistaGuardada && VISTAS_RESTAURABLES.includes(vistaGuardada) && (!esVistaAdmin || CURRENT_USER?.email === ADMIN_EMAIL)) {
+      vistaInicial = vistaGuardada;
+    }
+  } catch(e) {}
+  showView(vistaInicial);
   showBottomNav();
   if (window.innerWidth >= 900) initDesktopSidebar();
   const adminItem = document.getElementById('navAdminItem');
@@ -7511,6 +7532,17 @@ function _menuSaveDone(diaNum, obj) {
   try { localStorage.setItem(_menuDoneKey(diaNum), JSON.stringify(obj)); } catch(e) {}
 }
 
+// Clave localStorage para estado "desplegada/plegada" de cada franja, por día fijo de semana.
+// Así si el cliente tiene el Desayuno desplegado y se apaga la pantalla del móvil, al volver
+// a abrir la app (que vuelve a renderizar el menú) sigue viéndose desplegado.
+function _menuAbiertasKey(diaNum) { return 'macroai_mopen_d' + diaNum; }
+function _menuLoadAbiertas(diaNum) {
+  try { return JSON.parse(localStorage.getItem(_menuAbiertasKey(diaNum)) || '{}'); } catch(e) { return {}; }
+}
+function _menuSaveAbiertas(diaNum, obj) {
+  try { localStorage.setItem(_menuAbiertasKey(diaNum), JSON.stringify(obj)); } catch(e) {}
+}
+
 async function cargarMiMenu() {
   // Inicializar día si no está establecido
   if (!_menuDiaActual) _menuDiaActual = _menuDiaHoy();
@@ -7743,7 +7775,8 @@ function _renderMenuDia() {
     totalGrasa += franjaGrasa;
 
     const bodyId = `mc-body-${diaNum}-${idx}`;
-    const inicialAbierto = false;
+    const abiertasState = _menuLoadAbiertas(diaNum);
+    const inicialAbierto = !!abiertasState[franja];
     html += '<div class="mc-comida-sec">'
       + '<div class="mc-comida-hdr" data-body="' + bodyId + '" data-chev="mc-chev-' + diaNum + '-' + idx + '" onclick="mcToggleComida(this)">'
       + '<div class="mc-comida-hdr-left">'
@@ -7765,10 +7798,10 @@ function _renderMenuDia() {
       + ' onclick="event.stopPropagation();mcToggleDoneMenuEl(this)">'
       + (isDone ? '✓' : '')
       + '</div>'
-      + '<span class="mc-chevron" id="mc-chev-' + diaNum + '-' + idx + '">▾</span>'
+      + '<span class="mc-chevron' + (inicialAbierto ? ' open' : '') + '" id="mc-chev-' + diaNum + '-' + idx + '">▾</span>'
       + '</div>'
       + '</div>'
-      + '<div class="mc-franja-body" id="' + bodyId + '">'
+      + '<div class="mc-franja-body' + (inicialAbierto ? ' open' : '') + '" id="' + bodyId + '" data-franja="' + escapeHtml(franja) + '" data-dia="' + diaNum + '">'
       + '<div class="mc-ing-body">'
       + (ingredientesHtml || '<div style="font-size:12px;color:var(--muted);padding:10px 14px;">Sin ingredientes detallados.</div>')
       + '</div>'
@@ -7906,6 +7939,14 @@ function mcToggleComida(hdr) {
   const open = el.classList.toggle('open');
   const chev = chevId ? document.getElementById(chevId) : hdr.querySelector('.mc-chevron');
   if (chev) chev.classList.toggle('open', open);
+  // Persistir para que siga desplegada/plegada si la app se reinicia (p.ej. al apagar/encender la pantalla)
+  const diaNum = parseInt(el.dataset.dia);
+  const franja = el.dataset.franja;
+  if (diaNum && franja) {
+    const abiertasState = _menuLoadAbiertas(diaNum);
+    if (open) abiertasState[franja] = true; else delete abiertasState[franja];
+    _menuSaveAbiertas(diaNum, abiertasState);
+  }
 }
 
 function mcToggleDoneMenuEl(checkEl) {
