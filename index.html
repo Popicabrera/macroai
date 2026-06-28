@@ -10092,6 +10092,10 @@ function dsbUpdateActive() {
             <span id="menuCocClienteLabel" style="flex:1;font-size:12px;color:var(--text);font-family:'Inter',sans-serif;font-weight:500;">Seleccionar cliente para ver macros objetivo</span>
             <span style="font-size:11px;color:var(--muted);">▾</span>
           </div>
+          <button onclick="event.stopPropagation();abrirPreferenciasCliente()"
+            style="width:100%;margin-bottom:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;">
+            ⚙️ Preferencias del cliente
+          </button>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
             <button onclick="menuAbrirPantallaCrear()" id="menuBtnNuevoDesktop"
               style="padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;
@@ -10145,6 +10149,10 @@ function dsbUpdateActive() {
         <span id="menuCocClienteLabelMobile" style="flex:1;font-size:12px;color:var(--text);font-family:'Inter',sans-serif;font-weight:500;">Seleccionar cliente para ver macros objetivo</span>
         <span style="font-size:11px;color:var(--muted);">▾</span>
       </div>
+      <button onclick="event.stopPropagation();abrirPreferenciasCliente()"
+        style="width:100%;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;">
+        ⚙️ Preferencias del cliente
+      </button>
       <div style="display:flex;gap:8px;align-items:center;">
         <button onclick="menuAbrirPantallaCrear()" id="menuBtnNuevoMobile"
           style="padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;
@@ -10511,10 +10519,12 @@ async function eliminarComidaBib(id, nombre) {
 let _cocEditorIngs = [];   // [{nombre, gramos, kcal_100, p_100, hc_100, g_100}]
 let _cocEditorCellKey = null; // cellKey del grid si se abre desde franja con target
 let _cocEditorId   = null; // null = nueva, string = editar
+let _cocEditorSoloCelda = false; // true = comida generada por IA, no se guarda en Biblioteca al editar
 
 function abrirEditorBiblioteca(comida, cellKey) {
   cerrarCtxBib();
   _cocEditorId = comida ? comida.id : null;
+  _cocEditorSoloCelda = !!(comida && comida._soloEnCelda);
   _cocEditorCellKey = cellKey || null;
   let _rawIngs = [];
   if (comida) {
@@ -11075,7 +11085,10 @@ async function guardarComidaBib() {
   if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
 
   try {
-    if (_cocEditorId) {
+    if (_cocEditorSoloCelda) {
+      // Comida generada por IA: solo actualizar esta celda del menú, NO tocar la Biblioteca
+      showToast('✅ Comida actualizada');
+    } else if (_cocEditorId) {
       // Editar
       await supaAdmin('/rest/v1/biblioteca_comidas?id=eq.' + _cocEditorId, {
         method: 'PATCH',
@@ -11101,6 +11114,23 @@ async function guardarComidaBib() {
       showToast('✅ Comida guardada en biblioteca');
     }
     cerrarEditorBib();
+    if (_cocEditorSoloCelda) {
+      // Para comidas IA: no recargamos Biblioteca, solo actualizamos la celda directamente
+      if (_cocEditorCellKey && typeof _menuGrid !== 'undefined') {
+        _menuGrid[_cocEditorCellKey] = {
+          ...(typeof _menuGrid[_cocEditorCellKey] === 'object' ? _menuGrid[_cocEditorCellKey] : {}),
+          nombre: nombre,
+          kcal:  kcal_total,
+          prot:  prot_total,
+          ch:    ch_total,
+          grasa: grasa_total,
+          ingredientes: ingredientes,
+        };
+        if (typeof menuRenderGrid === 'function') menuRenderGrid();
+        if (typeof menuActualizarTotales === 'function') menuActualizarTotales();
+      }
+      return;
+    }
     await new Promise(r => setTimeout(r, 300)); // pequeña espera para que Supabase commitee
     await cocCargarBiblioteca();
     // Si se abrió desde una celda del grid, actualizar esa celda con los macros recalculados
@@ -11959,6 +11989,126 @@ function msdBorrarTarget(cellKey) {
   menuActualizarTotales();
 }
 
+// ── Generar menú del día con las preferencias guardadas del cliente ──
+async function iaGenerarDiaCocina(key, tipo) {
+  if (!_menuCocClientePerfil) { showToast('Selecciona un cliente primero'); return; }
+  const email = _menuCocClientePerfil.cliente_email;
+  const esEntreno = tipo === 'entreno' || tipo === 'igual';
+  const macros = {
+    kcal:  esEntreno ? (_menuCocClientePerfil.kcal_objetivo || 2200) : (_menuCocClientePerfil.kcal_descanso || 1900),
+    prot:  esEntreno ? (_menuCocClientePerfil.p_objetivo    || 160)  : (_menuCocClientePerfil.p_descanso    || 150),
+    hc:    esEntreno ? (_menuCocClientePerfil.hc_objetivo   || 220)  : (_menuCocClientePerfil.hc_descanso   || 170),
+    grasa: esEntreno ? (_menuCocClientePerfil.g_objetivo    || 65)   : (_menuCocClientePerfil.g_descanso    || 60),
+  };
+  const franjas = MENU_FRANJAS; // todas las franjas del día
+
+  showToast('🤖 Generando con tus preferencias...');
+  try {
+    const res = await fetch(WORKER_URL + '/generate-menu-cocina', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cliente_email: email, tipo_dia: esEntreno ? 'entreno' : 'descanso', macros, franjas }),
+    });
+    const data = await res.json();
+    if (!data.ok) { showToast('❌ ' + (data.error || 'Error generando')); return; }
+
+    Object.entries(data.dia).forEach(([franja, plato]) => {
+      const fi = MENU_FRANJAS.indexOf(franja);
+      if (fi < 0) return;
+      _menuGrid[`${key}-f${fi}`] = {
+        comida_id: null,
+        nombre: plato.nombre,
+        kcal: plato.kcal, prot: plato.prot, ch: plato.ch, grasa: plato.grasa,
+        ingredientes: plato.ingredientes,
+        _generadoIA: true,
+      };
+    });
+
+    menuRenderGrid();
+    menuActualizarTotales();
+
+    if (data.sin_match && data.sin_match.length) {
+      showToast('⚠️ No encontrados en tu BD: ' + data.sin_match.join(', '));
+    } else {
+      showToast('✅ Menú generado con IA');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('❌ Error de conexión generando menú');
+  }
+}
+
+// ── Modal simple para guardar preferencias del cliente ──
+async function abrirPreferenciasCliente() {
+  if (!_menuCocClientePerfil) { showToast('Selecciona un cliente primero'); return; }
+  const email = _menuCocClientePerfil.cliente_email;
+
+  let prefs = {};
+  try {
+    const res = await supaAdmin(`/rest/v1/preferencias_cliente?cliente_email=eq.${encodeURIComponent(email)}&select=*&limit=1`);
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows[0]) prefs = rows[0];
+  } catch (e) {}
+
+  const franjaField = f => (Array.isArray(prefs[f]) ? prefs[f].join(', ') : '');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'prefClienteOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 18px 30px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;">Preferencias — ${escapeHtml(_menuCocClientePerfil.nombre || email)}</div>
+
+      ${['desayuno','almuerzo','comida','merienda','cena'].map(f => `
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">${f}</label>
+          <input type="text" id="pref_${f}" value="${franjaField(f)}" placeholder="ej: yogur natural, almendras"
+            style="width:100%;margin-top:4px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;">
+        </div>
+      `).join('')}
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Notas (estilo, alergias, gustos...)</label>
+        <input type="text" id="pref_notas" value="${escapeHtml(prefs.notas || '')}" placeholder="ej: le encanta el queso, casi no chocolate"
+          style="width:100%;margin-top:4px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;">
+      </div>
+
+      <button onclick="guardarPreferenciasCliente('${email}')" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:8px;">💾 Guardar preferencias</button>
+      <button onclick="document.getElementById('prefClienteOverlay').remove()" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function guardarPreferenciasCliente(email) {
+  const split = v => v.split(',').map(s => s.trim()).filter(Boolean);
+  const payload = {
+    cliente_email: email,
+    desayuno: split(document.getElementById('pref_desayuno')?.value || ''),
+    almuerzo: split(document.getElementById('pref_almuerzo')?.value || ''),
+    comida:   split(document.getElementById('pref_comida')?.value   || ''),
+    merienda: split(document.getElementById('pref_merienda')?.value || ''),
+    cena:     split(document.getElementById('pref_cena')?.value     || ''),
+    notas:    document.getElementById('pref_notas')?.value || '',
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    const res = await supaAdmin('/rest/v1/preferencias_cliente', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok || res.status === 201 || res.status === 204) {
+      showToast('✅ Preferencias guardadas');
+      document.getElementById('prefClienteOverlay')?.remove();
+    } else {
+      showToast('❌ Error guardando preferencias');
+    }
+  } catch (e) {
+    showToast('❌ Error de conexión');
+  }
+}
+
 
 function menuRenderGrid() {
   const container = menuGetGridContainer();
@@ -11994,6 +12144,7 @@ function menuRenderGrid() {
       <div style="display:flex;align-items:center;gap:6px;">
         ${badgeHtml}
         <button class="mch-sugerir" title="Sugerir reparto de macros con IA" style="opacity:${perfil?'1':'0.4'};" onclick="event.stopPropagation();menuSugerirDia('${key}','${tipo}')">✨ Sugerir</button>
+        <button class="mch-sugerir" title="Generar con las preferencias guardadas del cliente" style="opacity:${perfil?'1':'0.4'};" onclick="event.stopPropagation();iaGenerarDiaCocina('${key}','${tipo}')">🤖 IA</button>
         <span style="color:var(--muted);font-size:13px;margin-left:2px;">${colapsado ? '▸' : '▾'}</span>
       </div>`;
     header.addEventListener('click', () => {
@@ -12071,10 +12222,13 @@ function menuRenderGrid() {
           document.body.appendChild(ov);
           ov.querySelector('#_csEdit').onclick = () => {
             ov.remove();
-            const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
+            const comidaBib = cell.comida_id ? (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id)) : null;
             if (comidaBib) {
               const comidaParaEditor = cell.ingredientes && cell.ingredientes.length ? { ...comidaBib, ingredientes: cell.ingredientes } : comidaBib;
               abrirEditorBiblioteca(comidaParaEditor, cellKey);
+            } else if (cell.ingredientes && cell.ingredientes.length) {
+              // Comida generada con IA (sin comida_id de Biblioteca): editar con sus propios ingredientes
+              abrirEditorBiblioteca({ id: null, nombre: cell.nombre, ingredientes: cell.ingredientes, _soloEnCelda: true }, cellKey);
             }
             else showToast('Comida no encontrada en biblioteca');
           };
