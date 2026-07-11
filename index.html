@@ -9151,11 +9151,13 @@ Reglas:
       body: JSON.stringify({
         system: 'Devuelves únicamente JSON válido, nunca texto adicional ni markdown.',
         messages: [{ role: 'user', content }],
-        model: 'claude-sonnet-4-6'
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096
       })
     });
     const data = await res.json();
     const raw = data.content?.[0]?.text || '';
+    window._ifLastRaw = raw;
     const clean = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
@@ -9163,8 +9165,8 @@ Reglas:
     msg.textContent = JSON.stringify(parsed, null, 2);
     showToast('✅ ' + (parsed.comidas?.length || 0) + ' comida(s) detectadas. Revisa el JSON.');
   } catch (err) {
-    msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);font-size:12px;';
-    msg.textContent = 'Error analizando las fotos: ' + err.message;
+    msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow-y:auto;';
+    msg.textContent = 'Error: ' + err.message + '\n\n--- Respuesta cruda ---\n' + (window._ifLastRaw || '(sin respuesta)');
   }
   btn.disabled = false; btn.textContent = 'Continuar'; btn.style.cursor = 'pointer';
 }
