@@ -9117,10 +9117,56 @@ function menuAbrirImportarFoto() {
     e.target.value = '';
   });
 
-  ov.querySelector('#_ifContinuar').addEventListener('click', () => {
-    if (_importarFotoImgs.length === 0) return;
-    showToast('✅ ' + _importarFotoImgs.length + ' foto(s) listas. Siguiente paso: extracción con IA.');
-  });
+  ov.querySelector('#_ifContinuar').addEventListener('click', () => _lanzarExtraccionMenuFoto(ov));
+}
+
+const _IF_DIAS = {lunes:1, martes:2, miercoles:3, jueves:4, viernes:5, sabado:6, domingo:7};
+const _IF_FRANJAS = {desayuno:0, almuerzo:1, comida:2, merienda:3, cena:4};
+
+async function _lanzarExtraccionMenuFoto(ov) {
+  if (_importarFotoImgs.length === 0) return;
+  const btn = ov.querySelector('#_ifContinuar');
+  const msg = ov.querySelector('#_ifMsg');
+  btn.disabled = true; btn.textContent = 'Analizando...'; btn.style.cursor = 'wait';
+
+  const promptExtraccion = `Analiza esta foto/fotos de un menú semanal. Extrae cada comida que veas con su día, franja e ingredientes.
+Devuelve ÚNICAMENTE JSON válido, sin texto adicional, sin markdown, con esta estructura exacta:
+{"comidas":[{"dia":"lunes","franja":"desayuno","nombre":"nombre de la comida","ingredientes":[{"nombre":"nombre ingrediente","cantidad_g":60}]}]}
+Reglas:
+- "dia" debe ser exactamente uno de: lunes, martes, miercoles, jueves, viernes, sabado, domingo (minúsculas, sin tildes).
+- "franja" debe ser exactamente uno de: desayuno, almuerzo, comida, merienda, cena (minúsculas).
+- "cantidad_g" es la cantidad en gramos o mililitros si aparece en la foto. Si NO aparece cantidad para ese ingrediente, pon null. No inventes cantidades.
+- Si la foto no especifica franja u orden claro, usa tu mejor criterio según el tipo de comida.
+- Incluye todas las comidas que veas en todas las fotos.`;
+
+  const content = [
+    ..._importarFotoImgs.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.b64 } })),
+    { type: 'text', text: promptExtraccion }
+  ];
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: 'Devuelves únicamente JSON válido, nunca texto adicional ni markdown.',
+        messages: [{ role: 'user', content }],
+        model: 'claude-sonnet-4-6'
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.25);color:var(--text);font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow-y:auto;';
+    msg.textContent = JSON.stringify(parsed, null, 2);
+    showToast('✅ ' + (parsed.comidas?.length || 0) + ' comida(s) detectadas. Revisa el JSON.');
+  } catch (err) {
+    msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);font-size:12px;';
+    msg.textContent = 'Error analizando las fotos: ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'Continuar'; btn.style.cursor = 'pointer';
 }
 
 function _renderImportarFotoPreviews(ov) {
