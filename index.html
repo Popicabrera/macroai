@@ -9058,7 +9058,7 @@ function menuAbrirImportarFoto() {
     <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.5;">
-        Sube una o varias fotos del menú (capturas, tablas, fotos de papel).
+        Sube una o varias fotos del menú (capturas, tablas, fotos de papel), o pega una captura directamente con Ctrl+V.
       </div>
       <label id="_ifDropzone" style="border:1.5px dashed rgba(192,57,43,0.35);border-radius:12px;padding:26px 14px;text-align:center;background:rgba(192,57,43,0.05);cursor:pointer;">
         <div style="font-size:20px;color:var(--accent);margin-bottom:6px;">⬆️</div>
@@ -9080,6 +9080,27 @@ function menuAbrirImportarFoto() {
     </div>`;
   ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
+
+  const _pasteHandler = (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItems = items.filter(it => it.type.startsWith('image/'));
+    if (imgItems.length === 0) return;
+    e.preventDefault();
+    imgItems.forEach(item => {
+      const file = item.getAsFile();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const b64 = ev.target.result.split(',')[1];
+        _importarFotoImgs.push({ b64, mediaType: file.type, previewUrl: ev.target.result });
+        _renderImportarFotoPreviews(ov);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  document.addEventListener('paste', _pasteHandler);
+  const _origRemove = ov.remove.bind(ov);
+  ov.remove = () => { document.removeEventListener('paste', _pasteHandler); _origRemove(); };
 
   const input = ov.querySelector('#_ifInput');
   input.addEventListener('change', (e) => {
