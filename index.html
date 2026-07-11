@@ -9235,7 +9235,102 @@ function _renderChecklistComidas(ov) {
     const idxsSeleccionados = Array.from(cont.querySelectorAll('._ifChk:checked')).map(chk => parseInt(chk.dataset.idx));
     const seleccionadas = idxsSeleccionados.map(i => _importarComidasDetectadas[i]);
     if (seleccionadas.length === 0) return;
-    showToast('✅ ' + seleccionadas.length + ' comida(s) seleccionadas. Siguiente paso: cruzar contra Biblioteca.');
+    _renderMatchingComidas(ov, seleccionadas);
+  });
+}
+
+const _IF_FRANJA_CATEGORIA_HINT = {
+  desayuno: ['desayuno salado','desayuno dulce'],
+  almuerzo: ['almuerzo'],
+  comida: ['comida'],
+  merienda: ['merienda'],
+  cena: ['cena']
+};
+
+function _normTexto(s) {
+  return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+
+function _similitudNombres(a, b) {
+  const wa = new Set(_normTexto(a).split(/\s+/).filter(w => w.length > 2));
+  const wb = new Set(_normTexto(b).split(/\s+/).filter(w => w.length > 2));
+  if (wa.size === 0 || wb.size === 0) return 0;
+  let inter = 0;
+  wa.forEach(w => { if (wb.has(w)) inter++; });
+  const union = new Set([...wa, ...wb]).size;
+  return inter / union;
+}
+
+function _buscarCandidataBiblioteca(comida) {
+  const catsHint = _IF_FRANJA_CATEGORIA_HINT[comida.franja] || [];
+  let mejor = null, mejorScore = 0;
+  (_cocBibComidas || []).forEach(row => {
+    let score = _similitudNombres(comida.nombre, row.nombre || '');
+    if (catsHint.includes(_normTexto(row.categoria))) score += 0.08;
+    if (score > mejorScore) { mejorScore = score; mejor = row; }
+  });
+  return mejorScore >= 0.34 ? { row: mejor, score: Math.min(mejorScore, 1) } : null;
+}
+
+function _renderMatchingComidas(ov, seleccionadasONull) {
+  const cont = ov.querySelector('.dialog-inner');
+  let decisiones;
+  if (seleccionadasONull) {
+    decisiones = seleccionadasONull.map(comida => {
+      const match = _buscarCandidataBiblioteca(comida);
+      return { comida, match, usarExistente: !!match && match.score >= 0.55 };
+    });
+    window._ifDecisiones = decisiones;
+  } else {
+    decisiones = window._ifDecisiones;
+  }
+
+  const filas = decisiones.map((d, i) => {
+    const { comida, match } = d;
+    if (!match) {
+      return `
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);">${_IF_DIA_LABEL[comida.dia]} · ${_IF_FRANJA_LABEL[comida.franja]}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">${comida.nombre}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Sin coincidencias · se creará como nueva</div>
+      </div>`;
+    }
+    const pct = Math.round(match.score * 100);
+    return `
+    <div style="background:rgba(91,141,184,0.06);border:1px solid rgba(91,141,184,0.22);border-radius:10px;padding:10px 12px;margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text);">${_IF_DIA_LABEL[comida.dia]} · ${_IF_FRANJA_LABEL[comida.franja]}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${comida.nombre}</div>
+      <div style="font-size:10px;color:var(--blue);margin-top:4px;">Parecido a "${match.row.nombre}" (${pct}% match)</div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button data-idx="${i}" data-choice="existente" class="_ifChoiceBtn" style="flex:1;padding:6px;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid rgba(91,141,184,0.35);background:${d.usarExistente?'#5b8db8':'transparent'};color:${d.usarExistente?'#fff':'#5b8db8'};">Usar existente</button>
+        <button data-idx="${i}" data-choice="nueva" class="_ifChoiceBtn" style="flex:1;padding:6px;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:${!d.usarExistente?'var(--accent)':'transparent'};color:${!d.usarExistente?'#fff':'var(--muted)'};">Crear nueva</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">Revisa las coincidencias con tu Biblioteca.</div>
+    <div style="max-height:360px;overflow-y:auto;padding-right:2px;">${filas}</div>
+    <div style="display:flex;gap:8px;">
+      <button id="_ifSiguientePaso6" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+        Continuar a revisión final
+      </button>
+      <button onclick="this.closest('#importarFotoOverlay').remove()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">
+        Cancelar
+      </button>
+    </div>`;
+
+  cont.querySelectorAll('._ifChoiceBtn').forEach(b => {
+    b.addEventListener('click', () => {
+      const idx = parseInt(b.dataset.idx);
+      window._ifDecisiones[idx].usarExistente = (b.dataset.choice === 'existente');
+      _renderMatchingComidas(ov, null);
+    });
+  });
+
+  cont.querySelector('#_ifSiguientePaso6').addEventListener('click', () => {
+    showToast('✅ Decisiones guardadas. Siguiente paso: revisión final y guardado real.');
   });
 }
 
