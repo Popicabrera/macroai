@@ -9047,23 +9047,78 @@ async function verMenuGuardado(menuId) {
 }
 
 // ── Asignar directamente desde la barra principal ──
+let _importarFotoImgs = [];
+
 function menuAbrirImportarFoto() {
+  _importarFotoImgs = [];
   const ov = document.createElement('div');
   ov.id = 'importarFotoOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   ov.innerHTML = `
-    <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;">
+    <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.5;">
-        Aquí irá la subida de foto(s) del menú. Próximo paso.
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;">
+        Sube una o varias fotos del menú (capturas, tablas, fotos de papel).
       </div>
-      <button onclick="this.closest('#importarFotoOverlay').remove()"
-        style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">
-        Cerrar
-      </button>
+      <label id="_ifDropzone" style="border:1.5px dashed rgba(192,57,43,0.35);border-radius:12px;padding:26px 14px;text-align:center;background:rgba(192,57,43,0.05);cursor:pointer;">
+        <div style="font-size:20px;color:var(--accent);margin-bottom:6px;">⬆️</div>
+        <div style="font-size:12px;color:var(--muted);">Toca para elegir foto o hacer captura</div>
+        <input id="_ifInput" type="file" accept="image/*" multiple capture="environment" style="display:none;">
+      </label>
+      <div id="_ifPreviews" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+      <div id="_ifMsg" style="display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="_ifContinuar" disabled
+          style="flex:1;padding:12px;background:var(--accent);opacity:0.5;border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:not-allowed;">
+          Continuar
+        </button>
+        <button onclick="this.closest('#importarFotoOverlay').remove()"
+          style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">
+          Cancelar
+        </button>
+      </div>
     </div>`;
   ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
+
+  const input = ov.querySelector('#_ifInput');
+  input.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const b64 = ev.target.result.split(',')[1];
+        _importarFotoImgs.push({ b64, mediaType: file.type, previewUrl: ev.target.result });
+        _renderImportarFotoPreviews(ov);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  });
+
+  ov.querySelector('#_ifContinuar').addEventListener('click', () => {
+    if (_importarFotoImgs.length === 0) return;
+    showToast('✅ ' + _importarFotoImgs.length + ' foto(s) listas. Siguiente paso: extracción con IA.');
+  });
+}
+
+function _renderImportarFotoPreviews(ov) {
+  const cont = ov.querySelector('#_ifPreviews');
+  cont.innerHTML = _importarFotoImgs.map((img, i) => `
+    <div style="position:relative;aspect-ratio:1;border-radius:9px;overflow:hidden;border:1px solid var(--border);">
+      <img src="${img.previewUrl}" style="width:100%;height:100%;object-fit:cover;display:block;">
+      <div onclick="_quitarImportarFoto(${i}, this)" style="position:absolute;top:4px;right:4px;width:20px;height:20px;background:rgba(0,0,0,0.6);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;cursor:pointer;line-height:1;">✕</div>
+    </div>`).join('');
+  const btn = ov.querySelector('#_ifContinuar');
+  const hay = _importarFotoImgs.length > 0;
+  btn.disabled = !hay;
+  btn.style.opacity = hay ? '1' : '0.5';
+  btn.style.cursor = hay ? 'pointer' : 'not-allowed';
+}
+
+function _quitarImportarFoto(idx, el) {
+  _importarFotoImgs.splice(idx, 1);
+  _renderImportarFotoPreviews(el.closest('#importarFotoOverlay'));
 }
 
 async function menuAbrirAsignarDirecto() {
