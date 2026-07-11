@@ -9129,46 +9129,99 @@ async function _lanzarExtraccionMenuFoto(ov) {
   const msg = ov.querySelector('#_ifMsg');
   btn.disabled = true; btn.textContent = 'Analizando...'; btn.style.cursor = 'wait';
 
-  const promptExtraccion = `Analiza esta foto/fotos de un menú semanal. Extrae cada comida que veas con su día, franja e ingredientes.
-Devuelve ÚNICAMENTE JSON válido, sin texto adicional, sin markdown, con esta estructura exacta:
+  const promptExtraccion = `Analiza esta foto/fotos de un menú semanal. Extrae CADA comida que veas con su día, franja e ingredientes. No te dejes ninguna comida ni ningún ingrediente visible sin extraer.
+Devuelve ÚNICAMENTE JSON válido, sin texto adicional, sin explicaciones, sin markdown, con esta estructura exacta:
 {"comidas":[{"dia":"lunes","franja":"desayuno","nombre":"nombre de la comida","ingredientes":[{"nombre":"nombre ingrediente","cantidad_g":60}]}]}
-Reglas:
-- "dia" debe ser exactamente uno de: lunes, martes, miercoles, jueves, viernes, sabado, domingo (minúsculas, sin tildes).
-- "franja" debe ser exactamente uno de: desayuno, almuerzo, comida, merienda, cena (minúsculas).
-- "cantidad_g" es la cantidad en gramos o mililitros si aparece en la foto. Si NO aparece cantidad para ese ingrediente, pon null. No inventes cantidades.
-- Si la foto no especifica franja u orden claro, usa tu mejor criterio según el tipo de comida.
-- Incluye todas las comidas que veas en todas las fotos.`;
+Reglas estrictas:
+- "dia" debe ser EXACTAMENTE uno de: lunes, martes, miercoles, jueves, viernes, sabado, domingo (minúsculas, sin tildes, sin variantes).
+- "franja" debe ser EXACTAMENTE uno de: desayuno, almuerzo, comida, merienda, cena (minúsculas, sin variantes). Si la foto usa otro nombre (ej "comida 1", "snack"), tradúcelo al más parecido de esta lista según el contexto (hora del día, tipo de alimento).
+- "cantidad_g" es la cantidad en gramos o mililitros SOLO si aparece explícitamente en la foto. Si NO aparece, pon null. Nunca inventes ni estimes una cantidad que no esté escrita.
+- Si una foto no tiene texto legible o no es un menú, devuelve {"comidas":[]}.
+- No agrupes varias comidas distintas en una sola entrada.
+- Termina siempre el JSON correctamente, con todas las llaves y corchetes cerrados. Si te falta espacio, prioriza cerrar el JSON de forma válida antes que incluir la última comida.`;
 
   const content = [
     ..._importarFotoImgs.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.b64 } })),
     { type: 'text', text: promptExtraccion }
   ];
 
-  try {
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: 'Devuelves únicamente JSON válido, nunca texto adicional ni markdown.',
-        messages: [{ role: 'user', content }],
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096
-      })
-    });
-    const data = await res.json();
-    const raw = data.content?.[0]?.text || '';
-    window._ifLastRaw = raw;
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+  const body = JSON.stringify({
+    system: 'Devuelves únicamente JSON válido, nunca texto adicional ni markdown.',
+    messages: [{ role: 'user', content }],
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192
+  });
 
+  let parsed = null, lastErr = null, raw = '';
+  for (let intento = 1; intento <= 2 && !parsed; intento++) {
+    try {
+      if (intento === 2) { btn.textContent = 'Reintentando...'; }
+      const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      const data = await res.json();
+      raw = data.content?.[0]?.text || '';
+      window._ifLastRaw = raw;
+      const clean = raw.replace(/```json|```/g, '').trim();
+      try {
+        parsed = JSON.parse(clean);
+      } catch (parseErr) {
+        parsed = _repararJsonComidas(clean);
+        if (!parsed) throw parseErr;
+      }
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+
+  if (parsed) {
+    parsed.comidas = _normalizarComidas(parsed.comidas || []);
     msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.25);color:var(--text);font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow-y:auto;';
     msg.textContent = JSON.stringify(parsed, null, 2);
-    showToast('✅ ' + (parsed.comidas?.length || 0) + ' comida(s) detectadas. Revisa el JSON.');
-  } catch (err) {
+    const nDescartadas = (parsed._descartadas || 0);
+    showToast('✅ ' + parsed.comidas.length + ' comida(s) detectadas' + (nDescartadas ? ' (' + nDescartadas + ' descartada(s) por datos incompletos)' : '') + '.');
+  } else {
     msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow-y:auto;';
-    msg.textContent = 'Error: ' + err.message + '\n\n--- Respuesta cruda ---\n' + (window._ifLastRaw || '(sin respuesta)');
+    msg.textContent = 'No se pudo interpretar la respuesta tras 2 intentos: ' + (lastErr?.message||'') + '\n\n--- Respuesta cruda ---\n' + (raw || '(sin respuesta)');
   }
   btn.disabled = false; btn.textContent = 'Continuar'; btn.style.cursor = 'pointer';
+}
+
+function _repararJsonComidas(clean) {
+  const idx = clean.indexOf('"comidas"');
+  if (idx === -1) return null;
+  const arrStart = clean.indexOf('[', idx);
+  if (arrStart === -1) return null;
+  let depth = 0, lastGoodEnd = -1;
+  for (let i = arrStart; i < clean.length; i++) {
+    if (clean[i] === '{') depth++;
+    if (clean[i] === '}') { depth--; if (depth === 0) lastGoodEnd = i; }
+  }
+  if (lastGoodEnd === -1) return null;
+  const truncatedArr = clean.slice(arrStart, lastGoodEnd + 1) + ']';
+  try {
+    const comidas = JSON.parse(truncatedArr);
+    return { comidas, _descartadas: 0 };
+  } catch (e) { return null; }
+}
+
+function _normalizarComidas(comidas) {
+  const diasValidos = Object.keys(_IF_DIAS);
+  const franjasValidas = Object.keys(_IF_FRANJAS);
+  const quitarTildes = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const out = [];
+  comidas.forEach(c => {
+    const dia = quitarTildes(c.dia);
+    const franja = quitarTildes(c.franja);
+    if (!diasValidos.includes(dia) || !franjasValidas.includes(franja)) return;
+    out.push({
+      dia, franja,
+      nombre: (c.nombre || 'Comida sin nombre').toString().trim(),
+      ingredientes: Array.isArray(c.ingredientes) ? c.ingredientes.map(ing => ({
+        nombre: (ing.nombre || '').toString().trim(),
+        cantidad_g: (typeof ing.cantidad_g === 'number' && ing.cantidad_g > 0) ? ing.cantidad_g : null
+      })).filter(ing => ing.nombre.length > 0) : []
+    });
+  });
+  return out;
 }
 
 function _renderImportarFotoPreviews(ov) {
