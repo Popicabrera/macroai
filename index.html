@@ -9055,7 +9055,7 @@ function menuAbrirImportarFoto() {
   ov.id = 'importarFotoOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   ov.innerHTML = `
-    <div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;">
+    <div class="dialog-inner" style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.5;">
         Sube una o varias fotos del menú (capturas, tablas, fotos de papel), o pega una captura directamente con Ctrl+V.
@@ -9173,16 +9173,70 @@ Reglas estrictas:
   }
 
   if (parsed) {
-    parsed.comidas = _normalizarComidas(parsed.comidas || []);
-    msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.25);color:var(--text);font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow-y:auto;';
-    msg.textContent = JSON.stringify(parsed, null, 2);
-    const nDescartadas = (parsed._descartadas || 0);
-    showToast('✅ ' + parsed.comidas.length + ' comida(s) detectadas' + (nDescartadas ? ' (' + nDescartadas + ' descartada(s) por datos incompletos)' : '') + '.');
+    _importarComidasDetectadas = _normalizarComidas(parsed.comidas || []);
+    window._ifLastRaw = raw;
+    _renderChecklistComidas(ov);
   } else {
     msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow-y:auto;';
     msg.textContent = 'No se pudo interpretar la respuesta tras 2 intentos: ' + (lastErr?.message||'') + '\n\n--- Respuesta cruda ---\n' + (raw || '(sin respuesta)');
+    btn.disabled = false; btn.textContent = 'Continuar'; btn.style.cursor = 'pointer';
   }
-  btn.disabled = false; btn.textContent = 'Continuar'; btn.style.cursor = 'pointer';
+}
+
+let _importarComidasDetectadas = [];
+const _IF_DIA_LABEL = {lunes:'Lunes', martes:'Martes', miercoles:'Miércoles', jueves:'Jueves', viernes:'Viernes', sabado:'Sábado', domingo:'Domingo'};
+const _IF_FRANJA_LABEL = {desayuno:'Desayuno', almuerzo:'Almuerzo', comida:'Comida', merienda:'Merienda', cena:'Cena'};
+
+function _renderChecklistComidas(ov) {
+  const cont = ov.querySelector('.dialog-inner') || ov.firstElementChild;
+  if (_importarComidasDetectadas.length === 0) {
+    cont.innerHTML = `
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;">No se ha detectado ninguna comida válida en la(s) foto(s). Prueba con otra imagen más clara.</div>
+      <button onclick="this.closest('#importarFotoOverlay').remove()" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">Cerrar</button>`;
+    return;
+  }
+  const filas = _importarComidasDetectadas.map((c, i) => `
+    <label style="display:flex;align-items:flex-start;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;">
+      <input type="checkbox" checked data-idx="${i}" class="_ifChk" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:var(--accent);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);">${_IF_DIA_LABEL[c.dia]} · ${_IF_FRANJA_LABEL[c.franja]}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">${c.nombre}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${c.ingredientes.length} ingrediente(s)${c.ingredientes.some(x=>x.cantidad_g===null)?' · algunas cantidades estimadas':''}</div>
+      </div>
+    </label>`).join('');
+
+  cont.innerHTML = `
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">${_importarComidasDetectadas.length} comida(s) detectadas. Desmarca las que no quieras importar.</div>
+    <div style="max-height:340px;overflow-y:auto;padding-right:2px;">${filas}</div>
+    <div id="_ifChecklistMsg" style="display:none;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="_ifImportarSel" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+        Importar seleccionadas (${_importarComidasDetectadas.length})
+      </button>
+      <button onclick="this.closest('#importarFotoOverlay').remove()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">
+        Cancelar
+      </button>
+    </div>`;
+
+  cont.querySelectorAll('._ifChk').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const n = cont.querySelectorAll('._ifChk:checked').length;
+      const btn = cont.querySelector('#_ifImportarSel');
+      btn.textContent = 'Importar seleccionadas (' + n + ')';
+      btn.disabled = n === 0;
+      btn.style.opacity = n === 0 ? '0.5' : '1';
+      btn.style.cursor = n === 0 ? 'not-allowed' : 'pointer';
+    });
+  });
+
+  cont.querySelector('#_ifImportarSel').addEventListener('click', () => {
+    const idxsSeleccionados = Array.from(cont.querySelectorAll('._ifChk:checked')).map(chk => parseInt(chk.dataset.idx));
+    const seleccionadas = idxsSeleccionados.map(i => _importarComidasDetectadas[i]);
+    if (seleccionadas.length === 0) return;
+    showToast('✅ ' + seleccionadas.length + ' comida(s) seleccionadas. Siguiente paso: cruzar contra Biblioteca.');
+  });
 }
 
 function _repararJsonComidas(clean) {
