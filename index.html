@@ -10575,6 +10575,10 @@ function abrirEditorBiblioteca(comida, cellKey) {
 
         <div id="bibIngRows" style="margin-bottom:12px;"></div>
 
+        <div class="bib-field-label">Receta / Preparación (opcional)</div>
+        <textarea id="bibEdReceta" class="bib-input" rows="5" placeholder="Ej: 1. Cocer el arroz 15 min...&#10;2. Marcar el pollo en la sartén...&#10;3. Mezclar todo y servir."
+          style="width:100%;resize:vertical;font-family:inherit;line-height:1.5;margin-bottom:16px;">${escapeHtml(comida?.receta || '')}</textarea>
+
         <button onclick="abrirNuevoAlimentoDesdeModal()" style="width:100%;padding:11px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.35);border-radius:11px;color:var(--accent);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
           + Nuevo alimento
         </button>
@@ -10998,6 +11002,7 @@ async function guardarComidaBib() {
   if (!nombre) { showToast('❌ Escribe un nombre'); return; }
 
   const categoria = document.getElementById('bibEdCat')?.value || 'General';
+  const receta = (document.getElementById('bibEdReceta')?.value || '').trim();
 
   // Calcular macros desde ingredientes
   // ── Si se abrió desde el grid → solo actualizar esa celda, NO tocar biblioteca_comidas ──
@@ -11064,6 +11069,7 @@ async function guardarComidaBib() {
     nombre,
     tipo: (categoria||'').toLowerCase(),
     ingredientes: ingredientes,
+    receta: receta || null,
     kcal:      kcal_total,
     proteina:  prot_total,
     hc:        ch_total,
