@@ -7604,7 +7604,7 @@ async function cargarMiMenu() {
 
     // 4. Biblioteca de comidas (necesaria para resolver nombres/macros)
     if (!_menuBibCache) {
-      const res = await supaFetch(`/rest/v1/biblioteca_comidas?select=id,nombre,kcal,proteina,hc,grasa,ingredientes&order=nombre.asc`);
+      const res = await supaFetch(`/rest/v1/biblioteca_comidas?select=id,nombre,kcal,proteina,hc,grasa,ingredientes,receta&order=nombre.asc`);
       const rows = await res.json();
       _menuBibCache = {};
       if (Array.isArray(rows)) rows.forEach(r => { _menuBibCache[r.id] = r; });
@@ -7616,6 +7616,12 @@ async function cargarMiMenu() {
     console.error('cargarMiMenu:', e);
     comidasEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);font-size:13px;">Error cargando el menú.</div>`;
   }
+}
+
+function mcToggleReceta(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function _renderMenuDia() {
@@ -7691,7 +7697,7 @@ function _renderMenuDia() {
     let franjaKcal=0, franjaProt=0, franjaHc=0, franjaGrasa=0;
     let ingredientesHtml = '';
 
-    celdas.forEach(celda => {
+    celdas.forEach((celda, ci) => {
       const bib = _menuBibCache[celda.comida_id];
       if (!bib) return;
 
@@ -7765,6 +7771,17 @@ function _renderMenuDia() {
           + '<div class="mc-alimento-right">'
           + '<div class="mc-alimento-kcal">' + cKcal + ' kcal</div>'
           + '</div>'
+          + '</div>';
+      }
+
+      // Botón receta (si el plato tiene receta guardada en Biblioteca)
+      if (bib.receta && bib.receta.trim()) {
+        const recId = 'mc-rec-' + diaNum + '-' + idx + '-' + ci;
+        ingredientesHtml += '<div class="mc-receta-toggle" onclick="mcToggleReceta(\'' + recId + '\')" style="display:flex;align-items:center;gap:6px;margin:6px 14px 4px;padding:8px 10px;background:rgba(192,57,43,0.06);border-radius:10px;cursor:pointer;">'
+          + '<span style="font-size:12px;font-weight:700;color:var(--accent);">📖 Ver receta</span>'
+          + '</div>'
+          + '<div id="' + recId + '" style="display:none;font-size:12px;color:var(--muted);line-height:1.7;padding:2px 14px 12px;white-space:pre-line;">'
+          + escapeHtml(bib.receta)
           + '</div>';
       }
     });
@@ -10575,6 +10592,10 @@ function abrirEditorBiblioteca(comida, cellKey) {
 
         <div id="bibIngRows" style="margin-bottom:12px;"></div>
 
+        <div class="bib-field-label">Receta / Preparación (opcional)</div>
+        <textarea id="bibEdReceta" class="bib-input" rows="5" placeholder="Ej: 1. Cocer el arroz 15 min...&#10;2. Marcar el pollo en la sartén...&#10;3. Mezclar todo y servir."
+          style="width:100%;resize:vertical;font-family:inherit;line-height:1.5;margin-bottom:16px;">${escapeHtml(comida?.receta || '')}</textarea>
+
         <button onclick="abrirNuevoAlimentoDesdeModal()" style="width:100%;padding:11px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.35);border-radius:11px;color:var(--accent);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
           + Nuevo alimento
         </button>
@@ -10998,6 +11019,7 @@ async function guardarComidaBib() {
   if (!nombre) { showToast('❌ Escribe un nombre'); return; }
 
   const categoria = document.getElementById('bibEdCat')?.value || 'General';
+  const receta = (document.getElementById('bibEdReceta')?.value || '').trim();
 
   // Calcular macros desde ingredientes
   // ── Si se abrió desde el grid → solo actualizar esa celda, NO tocar biblioteca_comidas ──
@@ -11064,6 +11086,7 @@ async function guardarComidaBib() {
     nombre,
     tipo: (categoria||'').toLowerCase(),
     ingredientes: ingredientes,
+    receta: receta || null,
     kcal:      kcal_total,
     proteina:  prot_total,
     hc:        ch_total,
