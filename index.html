@@ -7618,6 +7618,12 @@ async function cargarMiMenu() {
   }
 }
 
+function mcToggleReceta(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
 function _renderMenuDia() {
   if (!_menuActivoCache || !_menuCeldasCache || !_menuBibCache) return;
 
@@ -7691,7 +7697,7 @@ function _renderMenuDia() {
     let franjaKcal=0, franjaProt=0, franjaHc=0, franjaGrasa=0;
     let ingredientesHtml = '';
 
-    celdas.forEach(celda => {
+    celdas.forEach((celda, ci) => {
       const bib = _menuBibCache[celda.comida_id];
       if (!bib) return;
 
@@ -7765,6 +7771,17 @@ function _renderMenuDia() {
           + '<div class="mc-alimento-right">'
           + '<div class="mc-alimento-kcal">' + cKcal + ' kcal</div>'
           + '</div>'
+          + '</div>';
+      }
+
+      // Botón receta (si el plato tiene receta guardada en Biblioteca)
+      if (bib.receta && bib.receta.trim()) {
+        const recId = 'mc-rec-' + diaNum + '-' + idx + '-' + ci;
+        ingredientesHtml += '<div class="mc-receta-toggle" onclick="mcToggleReceta(\'' + recId + '\')" style="display:flex;align-items:center;gap:6px;margin:6px 14px 4px;padding:8px 10px;background:rgba(192,57,43,0.06);border-radius:10px;cursor:pointer;">'
+          + '<span style="font-size:12px;font-weight:700;color:var(--accent);">📖 Ver receta</span>'
+          + '</div>'
+          + '<div id="' + recId + '" style="display:none;font-size:12px;color:var(--muted);line-height:1.7;padding:2px 14px 12px;white-space:pre-line;">'
+          + escapeHtml(bib.receta)
           + '</div>';
       }
     });
