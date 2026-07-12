@@ -9266,7 +9266,7 @@ function _buscarCandidataBiblioteca(comida) {
   let mejor = null, mejorScore = 0;
   (_cocBibComidas || []).forEach(row => {
     let score = _similitudNombres(comida.nombre, row.nombre || '');
-    if (catsHint.includes(_normTexto(row.categoria))) score += 0.08;
+    if (catsHint.includes(_normTexto(row.tipo))) score += 0.08;
     if (score > mejorScore) { mejorScore = score; mejor = row; }
   });
   return mejorScore >= 0.34 ? { row: mejor, score: Math.min(mejorScore, 1) } : null;
@@ -9330,8 +9330,189 @@ function _renderMatchingComidas(ov, seleccionadasONull) {
   });
 
   cont.querySelector('#_ifSiguientePaso6').addEventListener('click', () => {
-    showToast('✅ Decisiones guardadas. Siguiente paso: revisión final y guardado real.');
+    _prepararRevisionFinal(ov);
   });
+}
+
+async function _buscarAlimentoBD(nombre) {
+  try {
+    const res = await supaAdmin(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&nombre=ilike.*${encodeURIComponent(nombre.trim())}*&limit=8`);
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) return null;
+    let mejor = rows[0], mejorScore = -1;
+    rows.forEach(r => { const s = _similitudNombres(nombre, r.nombre); if (s > mejorScore) { mejorScore = s; mejor = r; } });
+    return mejor;
+  } catch (e) { return null; }
+}
+
+function _inferirTipoDesayuno(comida) {
+  const texto = _normTexto(comida.nombre + ' ' + comida.ingredientes.map(i => i.nombre).join(' '));
+  const salado = ['jamon','huevo','queso','bacon','pavo','tostada integral','aguacate','atun','pollo'];
+  const dulce = ['avena','miel','fruta','cacao','leche','platano','manzana','yogur','cereales','mermelada'];
+  let s = 0, d = 0;
+  salado.forEach(w => { if (texto.includes(w)) s++; });
+  dulce.forEach(w => { if (texto.includes(w)) d++; });
+  return s > d ? 'desayuno salado' : 'desayuno dulce';
+}
+
+async function _prepararRevisionFinal(ov) {
+  const cont = ov.querySelector('.dialog-inner');
+  cont.innerHTML = `
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
+    <div style="text-align:center;padding:30px 10px;">
+      <div style="width:30px;height:30px;border-radius:50%;border:3px solid var(--s2);border-top-color:var(--accent);margin:0 auto 14px;animation:_ifSpin 0.9s linear infinite;"></div>
+      <div style="font-size:12px;color:var(--muted);">Cruzando ingredientes contra tu base de datos...</div>
+    </div>
+    <style>@keyframes _ifSpin{to{transform:rotate(360deg);}}</style>`;
+
+  const decisiones = window._ifDecisiones;
+  for (const d of decisiones) {
+    if (d.usarExistente && d.match) { d.ingredientesResueltos = null; continue; }
+    d.ingredientesResueltos = [];
+    for (const ing of d.comida.ingredientes) {
+      const bd = await _buscarAlimentoBD(ing.nombre);
+      d.ingredientesResueltos.push({
+        nombre: bd ? bd.nombre : ing.nombre,
+        gramos: ing.cantidad_g ?? 100,
+        kcal_100: bd?.kcal_100 || 0, p_100: bd?.p_100 || 0, hc_100: bd?.hc_100 || 0, g_100: bd?.g_100 || 0,
+        estimado: ing.cantidad_g === null,
+        noEncontrado: !bd
+      });
+    }
+  }
+  _renderRevisionFinal(ov);
+}
+
+function _renderRevisionFinal(ov) {
+  const cont = ov.querySelector('.dialog-inner');
+  const decisiones = window._ifDecisiones;
+
+  const bloques = decisiones.map((d, di) => {
+    const { comida } = d;
+    if (d.usarExistente && d.match) {
+      return `
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px;">${_IF_DIA_LABEL[comida.dia]} · ${_IF_FRANJA_LABEL[comida.franja]}</div>
+        <div style="font-size:11px;color:var(--blue);">Se usará tu comida existente "${d.match.row.nombre}" (sin cambios)</div>
+      </div>`;
+    }
+    const filasIng = d.ingredientesResueltos.map(ing => {
+      if (ing.noEncontrado) {
+        return `<div style="font-size:11px;padding:5px 8px;background:rgba(192,57,43,0.08);border-left:2.5px solid var(--accent);border-radius:6px;margin-bottom:3px;color:var(--accent);">${ing.nombre} · no encontrado en BD</div>`;
+      }
+      if (ing.estimado) {
+        return `<div style="font-size:11px;padding:5px 8px;background:var(--s3);border-left:2.5px solid #e8a838;border-radius:6px;margin-bottom:3px;color:#9a6f00;">${ing.nombre} · ~${ing.gramos}g estimado</div>`;
+      }
+      return `<div style="font-size:11px;padding:5px 8px;background:var(--s3);border-radius:6px;margin-bottom:3px;color:var(--text);">${ing.nombre} · ${ing.gramos}g</div>`;
+    }).join('');
+    return `
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px;">${_IF_DIA_LABEL[comida.dia]} · ${_IF_FRANJA_LABEL[comida.franja]}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${comida.nombre} · nueva en Biblioteca</div>
+      ${filasIng}
+    </div>`;
+  }).join('');
+
+  const hayEstimados = decisiones.some(d => d.ingredientesResueltos?.some(i => i.estimado));
+  const hayNoEncontrados = decisiones.some(d => d.ingredientesResueltos?.some(i => i.noEncontrado));
+
+  cont.innerHTML = `
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">📷 Importar menú</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">Revisión final antes de guardar.</div>
+    <div style="max-height:320px;overflow-y:auto;padding-right:2px;">${bloques}</div>
+    ${(hayEstimados || hayNoEncontrados) ? `
+    <div style="display:flex;gap:10px;font-size:10px;color:var(--muted);">
+      ${hayEstimados ? '<span><span style="display:inline-block;width:7px;height:7px;background:#e8a838;border-radius:2px;margin-right:4px;"></span>Cantidad estimada (editable después)</span>' : ''}
+      ${hayNoEncontrados ? '<span><span style="display:inline-block;width:7px;height:7px;background:var(--accent);border-radius:2px;margin-right:4px;"></span>No encontrado en BD</span>' : ''}
+    </div>` : ''}
+    <div id="_ifSaveMsg" style="display:none;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="_ifGuardarFinal" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+        Guardar en Biblioteca y planificador
+      </button>
+      <button onclick="this.closest('#importarFotoOverlay').remove()" style="padding:12px 16px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-size:13px;color:var(--muted);cursor:pointer;">
+        Cancelar
+      </button>
+    </div>`;
+
+  cont.querySelector('#_ifGuardarFinal').addEventListener('click', () => _guardarImportacionFinal(ov));
+}
+
+async function _guardarImportacionFinal(ov) {
+  const cont = ov.querySelector('.dialog-inner');
+  const btn = cont.querySelector('#_ifGuardarFinal');
+  const msg = cont.querySelector('#_ifSaveMsg');
+  btn.disabled = true; btn.textContent = 'Guardando...'; btn.style.cursor = 'wait';
+
+  const decisiones = window._ifDecisiones;
+  let guardadas = 0;
+  const errores = [];
+
+  for (const d of decisiones) {
+    try {
+      const dia = _IF_DIAS[d.comida.dia];
+      const franja = _IF_FRANJAS[d.comida.franja];
+      const cellKey = `dia_${dia}-f${franja}`;
+
+      if (d.usarExistente && d.match) {
+        const row = d.match.row;
+        _menuGrid[cellKey] = {
+          kcal: Math.round(row.kcal || 0),
+          prot: Math.round((row.proteina || 0) * 10) / 10,
+          ch: Math.round((row.hc || 0) * 10) / 10,
+          grasa: Math.round((row.grasa || 0) * 10) / 10,
+          ingredientes: row.ingredientes || []
+        };
+      } else {
+        let kcal = 0, prot = 0, ch = 0, grasa = 0;
+        d.ingredientesResueltos.forEach(ing => {
+          kcal  += (ing.kcal_100 || 0) * ing.gramos / 100;
+          prot  += (ing.p_100    || 0) * ing.gramos / 100;
+          ch    += (ing.hc_100   || 0) * ing.gramos / 100;
+          grasa += (ing.g_100    || 0) * ing.gramos / 100;
+        });
+        const ingredientesPayload = d.ingredientesResueltos.map(i => ({
+          nombre: i.nombre, gramos: i.gramos, kcal_100: i.kcal_100, p_100: i.p_100, hc_100: i.hc_100, g_100: i.g_100
+        }));
+        const tipo = d.comida.franja === 'desayuno' ? _inferirTipoDesayuno(d.comida) : d.comida.franja;
+        const payload = {
+          nombre: d.comida.nombre,
+          tipo,
+          ingredientes: ingredientesPayload,
+          kcal: Math.round(kcal),
+          proteina: Math.round(prot * 10) / 10,
+          hc: Math.round(ch * 10) / 10,
+          grasa: Math.round(grasa * 10) / 10,
+          creado_por: CURRENT_USER?.id || null
+        };
+        const res = await supaAdmin('/rest/v1/biblioteca_comidas', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) { const errBody = await res.text(); throw new Error('HTTP ' + res.status + ': ' + errBody); }
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows[0]) _cocBibComidas.push(rows[0]);
+
+        _menuGrid[cellKey] = { kcal: payload.kcal, prot: payload.proteina, ch: payload.hc, grasa: payload.grasa, ingredientes: ingredientesPayload };
+      }
+      guardadas++;
+    } catch (e) {
+      errores.push(_IF_DIA_LABEL[d.comida.dia] + ' · ' + _IF_FRANJA_LABEL[d.comida.franja] + ': ' + e.message);
+    }
+  }
+
+  if (typeof menuRenderGrid === 'function') menuRenderGrid();
+  if (typeof menuActualizarTotales === 'function') menuActualizarTotales();
+
+  if (errores.length === 0) {
+    ov.remove();
+    showToast('✅ ' + guardadas + ' comida(s) importadas al menú');
+  } else {
+    msg.style.cssText = 'display:block;padding:10px 12px;border-radius:9px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);color:var(--accent);font-size:11px;white-space:pre-wrap;';
+    msg.textContent = guardadas + ' guardadas, ' + errores.length + ' con error:\n' + errores.join('\n');
+    btn.disabled = false; btn.textContent = 'Reintentar'; btn.style.cursor = 'pointer';
+  }
 }
 
 function _repararJsonComidas(clean) {
