@@ -4974,12 +4974,11 @@ function fsmRegistrar() {
 
   // ── MODO FAVORITO EDIT: añadir ingrediente al editor de favorito ──
   if (_buscadorMealId === '__fav_edit__') {
+    const _favCb = _buscadorFavCallback; // capturar ANTES de cerrarBuscador(), que la anula a null
     fsmCerrar();
     cerrarBuscador();
-    if(_buscadorFavCallback) {
-      if(_buscadorFavCallback._restoreOverlay) _buscadorFavCallback._restoreOverlay();
-      _buscadorFavCallback(p, g);
-      _buscadorFavCallback = null;
+    if(_favCb) {
+      _favCb(p, g);
     }
     _buscadorMealId = '';
     return;
