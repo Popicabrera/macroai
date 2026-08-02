@@ -2073,7 +2073,7 @@ function editarFavorito(id){
   }
 
   // MODO LEGACY
-  let ingInputs=f.ingredientes&&f.ingredientes.length?f.ingredientes:[];
+  let ingInputs=f.ingredientes&&f.ingredientes.length?[...f.ingredientes.map(i=>({...i}))]:[];
   const renderIngInputs=()=>ingInputs.map((ing,i)=>`
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
       <input data-ing-nombre="${i}" value="${escapeHtml(ing.nombre)}" placeholder="Ingrediente"
@@ -2083,6 +2083,34 @@ function editarFavorito(id){
       <button onclick="this.closest('[data-fav-edit]').dispatchEvent(new CustomEvent('del-ing',{detail:${i}}))"
         style="padding:6px 10px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:var(--red);font-size:13px;">✕</button>
     </div>`).join('');
+  // Abre el buscador real de alimentos y añade el resultado como ingrediente + suma sus macros a los totales
+  const abrirBuscadorFavLegacy=()=>{
+    overlay.style.display='none';
+    _buscadorFavCallback=(producto,gramos)=>{
+      const kcal=Math.round((producto.kcal_100||0)*gramos/100);
+      const prot=Math.round((producto.p_100||0)*gramos/100*10)/10;
+      const ch=Math.round((producto.hc_100||0)*gramos/100*10)/10;
+      const grasa=Math.round((producto.g_100||0)*gramos/100*10)/10;
+      ingInputs.push({nombre:producto.nombre,cantidad:gramos+'g'});
+      overlay.style.display='flex';
+      overlay.querySelector('#favEditIngs').innerHTML=renderIngInputs();
+      const kcalInp=overlay.querySelector('#favEditKcal');
+      const protInp=overlay.querySelector('#favEditProt');
+      const chInp=overlay.querySelector('#favEditCh');
+      const grasaInp=overlay.querySelector('#favEditGrasa');
+      if(kcalInp)kcalInp.value=Math.round((parseFloat(kcalInp.value)||0)+kcal);
+      if(protInp)protInp.value=Math.round(((parseFloat(protInp.value)||0)+prot)*10)/10;
+      if(chInp)chInp.value=Math.round(((parseFloat(chInp.value)||0)+ch)*10)/10;
+      if(grasaInp)grasaInp.value=Math.round(((parseFloat(grasaInp.value)||0)+grasa)*10)/10;
+    };
+    const backBtn=document.querySelector('#viewBuscador .back-btn');
+    const origOnclick=backBtn?backBtn.onclick:null;
+    const patchedClose=()=>{overlay.style.display='flex';window.cerrarBuscador=origCB;origCB();};
+    const origCB=window.cerrarBuscador;
+    if(backBtn)backBtn.onclick=patchedClose;
+    _buscadorFavCallback._restoreOverlay=()=>{overlay.style.display='flex';if(backBtn&&origOnclick!==null)backBtn.onclick=origOnclick;};
+    abrirBuscador('__fav_edit__','➕ Añadir alimento');
+  };
   overlay.innerHTML=`
     <div data-fav-edit style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:85vh;overflow-y:auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;">✏️ Editar favorito</div>
@@ -2102,7 +2130,7 @@ function editarFavorito(id){
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">Ingredientes y cantidades</div>
       <div id="favEditIngs">${renderIngInputs()}</div>
-      <button id="favAddIng" style="width:100%;padding:9px;background:rgba(192,57,43,0.08);border:1px dashed rgba(192,57,43,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:16px;cursor:pointer;">+ Añadir ingrediente</button>
+      <button id="favAddIng" style="width:100%;padding:9px;background:rgba(192,57,43,0.08);border:1px dashed rgba(192,57,43,0.3);border-radius:10px;color:var(--accent);font-size:13px;margin-bottom:16px;cursor:pointer;">➕ Añadir alimento</button>
       <div style="display:flex;gap:10px;">
         <button id="favEditCancel" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--fg);font-size:14px;cursor:pointer;">Cancelar</button>
         <button id="favEditSave" style="flex:2;padding:12px;background:var(--accent);border:none;border-radius:12px;color:#080810;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Guardar cambios</button>
@@ -2110,7 +2138,7 @@ function editarFavorito(id){
     </div>`;
   document.body.appendChild(overlay);
   const panel=overlay.querySelector('[data-fav-edit]');
-  overlay.querySelector('#favAddIng').addEventListener('click',()=>{ingInputs.push({nombre:'',cantidad:''});overlay.querySelector('#favEditIngs').innerHTML=renderIngInputs();});
+  overlay.querySelector('#favAddIng').addEventListener('click',()=>abrirBuscadorFavLegacy());
   panel.addEventListener('del-ing',(e)=>{ingInputs.splice(e.detail,1);overlay.querySelector('#favEditIngs').innerHTML=renderIngInputs();});
   overlay.querySelector('#favEditCancel').addEventListener('click',()=>overlay.remove());
   overlay.addEventListener('click',(e)=>{if(e.target===overlay)overlay.remove();});
