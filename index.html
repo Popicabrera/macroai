@@ -3492,6 +3492,7 @@ function fsmCerrar() {
   document.getElementById('fsmOverlay').classList.remove('open');
   _fsmProductoSeleccionado = null;
   _mfpEditandoIdx = -1;
+  _futEditandoFecha = null; _futEditandoMealId = null; _futEditandoIdx = -1;
   const _ner = document.getElementById('fsmNameEditRow');
   if (_ner) _ner.style.display = 'none';
 }
@@ -5039,6 +5040,29 @@ function fsmRegistrar() {
     return;
   }
 
+  // ── MODO EDICIÓN (DÍA FUTURO): reemplazar item existente en el plan de ese día ──
+  if (_futEditandoIdx >= 0 && _futEditandoFecha) {
+    const keyFut = 'macroai_dia_' + _futEditandoFecha;
+    const dFut = JSON.parse(localStorage.getItem(keyFut) || 'null') || { fecha: _futEditandoFecha, comidas: [] };
+    const itemsFut = dFut.comidas.filter(c => c.mealId === _futEditandoMealId);
+    const itemFut = itemsFut[_futEditandoIdx];
+    if (itemFut) {
+      const realIdx = dFut.comidas.indexOf(itemFut);
+      dFut.comidas[realIdx] = {
+        ...itemFut,
+        nombre, kcal, prot, ch: hc, grasa, ingredientes: ingTexto,
+        kcal_100: p.kcal_100, p_100: p.p_100, hc_100: p.hc_100, g_100: p.g_100,
+      };
+      saveDiaFecha(_futEditandoFecha, dFut);
+    }
+    const _fechaFutEditada = _futEditandoFecha;
+    _futEditandoFecha = null; _futEditandoMealId = null; _futEditandoIdx = -1;
+    fsmCerrar();
+    cargarDiarioPorFecha(_fechaFutEditada);
+    showToast(`✅ Actualizado · ${kcal} kcal`);
+    return;
+  }
+
   // ── MODO NORMAL: añadir nuevo item ──
   const mealId = _buscadorMealId || '';
 
@@ -5997,6 +6021,8 @@ function _diarioFavModal(nombreDefault, macros, ingRaw) {
 }
 
 
+let _futEditandoFecha = null, _futEditandoMealId = null, _futEditandoIdx = -1;
+
 function _diarioRenderFuturo(fecha) {
   // Actualizar pill y macros según el día de la semana
   const mFut = getMacrosParaFecha(fecha);
@@ -6046,7 +6072,7 @@ function _diarioRenderFuturo(fecha) {
         ontouchmove="futurMfpTouchEnd()"
         oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
-        <div style="flex:1;min-width:0;">
+        <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
         </div>
@@ -6216,6 +6242,54 @@ function futurMfpMenuItem(fecha,mealId,idx,e){
     overlay.remove();
     _diarioFavModal(nombreItem, itemMacros, '');
   };
+}
+
+function futurMfpEditarItem(fecha, mealId, idx) {
+  let item = null;
+  try {
+    const d = JSON.parse(localStorage.getItem('macroai_dia_' + fecha) || 'null');
+    if (d && d.comidas) item = d.comidas.filter(c => c.mealId === mealId)[idx];
+  } catch (e) {}
+  if (!item) return;
+
+  // Extraer nombre base y gramos actuales del nombre "Pollo (200g)"
+  const gramMatch = (item.nombre||'').match(/^(.+?)\s*\((\d+(?:\.\d+)?)g\)$/);
+  const nombreBase = gramMatch ? gramMatch[1].trim() : (item.nombre||'');
+  const gramosActuales = gramMatch ? gramMatch[2] : '';
+
+  const producto = {
+    nombre: nombreBase,
+    kcal_100: item.kcal_100 || (gramosActuales ? Math.round(item.kcal / (parseFloat(gramosActuales)/100)) : item.kcal),
+    p_100:    item.p_100    || (gramosActuales ? Math.round((item.prot  / (parseFloat(gramosActuales)/100))*10)/10 : item.prot),
+    hc_100:   item.hc_100   || (gramosActuales ? Math.round((item.ch    / (parseFloat(gramosActuales)/100))*10)/10 : item.ch),
+    g_100:    item.g_100    || (gramosActuales ? Math.round((item.grasa / (parseFloat(gramosActuales)/100))*10)/10 : item.grasa),
+    fuente: item.fuente || 'supabase',
+  };
+
+  _futEditandoFecha = fecha; _futEditandoMealId = mealId; _futEditandoIdx = idx;
+  _fsmProductoSeleccionado = producto;
+  document.getElementById('fsmTitle').textContent = '✏️ Editar cantidad';
+  document.getElementById('fsmSubtitle').textContent = nombreBase;
+  document.getElementById('fsmList').innerHTML = `
+    <div class="fsm-item fsm-selected">
+      <div class="fsm-item-info">
+        <div class="fsm-item-name">${escapeHtml(nombreBase)}</div>
+        <div class="fsm-item-macros">
+          <span class="fsm-macro k">${producto.kcal_100} kcal</span>
+          <span class="fsm-macro p">P ${producto.p_100}g</span>
+          <span class="fsm-macro c">HC ${producto.hc_100}g</span>
+          <span class="fsm-macro g">G ${producto.g_100}g</span>
+        </div>
+        <div class="fsm-source">por 100g</div>
+      </div>
+    </div>`;
+  document.getElementById('fsmSelectedName').textContent = nombreBase;
+  document.getElementById('fsmPer100').textContent = `· ${producto.kcal_100} kcal / 100g`;
+  document.getElementById('fsmGramStep').style.display = 'flex';
+  document.getElementById('fsmGramos').value = gramosActuales;
+  fsmActualizarPreview();
+  document.getElementById('fsmOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fsmGramos').focus(), 200);
 }
 
 function futurMfpMoverItem(fecha,mealId,idx,newMealId){
