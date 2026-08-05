@@ -4787,11 +4787,8 @@ function buscadorOnInput(val) {
   _buscadorTimer = setTimeout(() => buscarAlimentoMFP(val.trim()), 1200);
 }
 
-async function buscarAlimentoMFP(query) {
-  if (!query || query.length < 2) return;
-  const res = document.getElementById('buscadorResultados');
-  res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
-
+// ── Motor de búsqueda compartido: Diario y Cocina usan la misma función y el mismo orden ──
+async function buscarAlimentosOrdenados(query) {
   const resultados = [];
 
   // 1. Worker (Supabase → OFF → IA)
@@ -4895,6 +4892,14 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
     return 0;
   });
 
+  return resultadosConPrioridad;
+}
+
+async function buscarAlimentoMFP(query) {
+  if (!query || query.length < 2) return;
+  const res = document.getElementById('buscadorResultados');
+  res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
+  const resultadosConPrioridad = await buscarAlimentosOrdenados(query);
   renderResultadosBuscador(resultadosConPrioridad, query);
 }
 
@@ -5018,11 +5023,11 @@ function fsmRegistrar() {
 
   // ── MODO BIBLIOTECA: añadir ingrediente al editor de biblioteca ──
   if (_buscadorMealId === '__bib__') {
+    const _bibCb = _buscadorBibCallback; // capturar ANTES de cerrarBuscador(), que la anula a null
     fsmCerrar();
     cerrarBuscador();
-    if(_buscadorBibCallback) {
-      _buscadorBibCallback(p, g);
-      _buscadorBibCallback = null;
+    if(_bibCb) {
+      _bibCb(p, g);
     }
     _buscadorMealId = '';
     return;
@@ -10815,7 +10820,7 @@ function bibDelIngRow(idx) {
   bibRecalcTotales();
 }
 
-// ── Búsqueda de ingrediente en BD ──
+// ── Búsqueda de ingrediente en BD — mismo motor y orden que el buscador de Diario ──
 let _cocIngSearchTimers = {};
 async function bibIngBuscar(idx, q) {
   _cocEditorIngs[idx] = _cocEditorIngs[idx] || {};
@@ -10825,16 +10830,22 @@ async function bibIngBuscar(idx, q) {
   if (!q || q.length < 2) { drop.style.display = 'none'; return; }
 
   clearTimeout(_cocIngSearchTimers[idx]);
+  drop.innerHTML = '<div style="padding:9px 12px;font-size:12px;color:var(--muted);">Buscando...</div>';
+  drop.style.display = 'block';
   _cocIngSearchTimers[idx] = setTimeout(async () => {
     try {
-      const res = await supaAdmin(`/rest/v1/alimentos_macroai?select=nombre,kcal_100,p_100,hc_100,g_100&nombre=ilike.*${encodeURIComponent(q)}*&limit=6`);
-      const rows = await res.json();
-      if (!Array.isArray(rows) || !rows.length) { drop.style.display = 'none'; return; }
+      const rows = await buscarAlimentosOrdenados(q);
+      if (!Array.isArray(rows) || !rows.length) {
+        drop.innerHTML = `<div style="padding:9px 12px;font-size:12px;color:var(--muted);">No encontré "${escapeHtml(q)}".</div>`;
+        return;
+      }
       drop.innerHTML = '';
-      rows.forEach(r => {
+      rows.slice(0, 8).forEach(r => {
         const item = document.createElement('div');
         item.className = 'ing-search-item';
-        item.innerHTML = `<span>${escapeHtml(r.nombre)}</span><span class="ing-search-macros">${r.kcal_100} kcal/100g · P${r.p_100} HC${r.hc_100} G${r.g_100}</span>`;
+        const fuenteLabel = r.fuente==='supabase' ? '📋 BD' : r.fuente==='ia' ? '🤖 IA' : '🌍 OFF';
+        const recienteTag = r._reciente ? ' <span style="font-size:10px;font-weight:700;color:#2a9d5c;">· Reciente</span>' : '';
+        item.innerHTML = `<span>${escapeHtml(r.nombre)}${recienteTag}</span><span class="ing-search-macros">${r.kcal_100} kcal/100g · P${r.p_100} HC${r.hc_100} G${r.g_100} · ${fuenteLabel}</span>`;
         item.addEventListener('pointerdown', e => {
           e.preventDefault();
           document.getElementById('bibIngNombre_' + idx).value = r.nombre;
@@ -10854,7 +10865,7 @@ async function bibIngBuscar(idx, q) {
       });
       drop.style.display = 'block';
     } catch(e) { drop.style.display = 'none'; }
-  }, 400);
+  }, 600);
 }
 
 function bibIngActualizarGramos(idx, val) {
