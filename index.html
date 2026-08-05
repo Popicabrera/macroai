@@ -1139,8 +1139,9 @@ body{
       </div>
       <div id="crearClienteMsg" style="display:none;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;"></div>
       <div id="whatsappBox" style="display:none;background:var(--s2);border:1px solid rgba(192,57,43,0.2);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;"></div>
-      <div id="copiarBtnWrap" style="display:none;">
+      <div id="copiarBtnWrap" style="display:none;flex-direction:column;gap:8px;">
         <button onclick="copiarWhatsapp()" style="width:100%;padding:12px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#25d366;cursor:pointer;">📋 Copiar mensaje WhatsApp</button>
+        <button onclick="cerrarFormCliente()" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">Cerrar</button>
       </div>
       <div style="display:flex;gap:8px;" id="crearBtnRow">
         <button onclick="doCrearCliente()" id="crearClienteBtn" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:11px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Crear cliente</button>
@@ -3932,8 +3933,9 @@ async function doCrearCliente(){
     _ultimoWhatsapp=`Hola ${nombre} 👋\n\nTe he dado acceso a MacroAI, tu asistente de nutrición personalizado 🥗\n\n📲 Entra aquí:\nhttps://popicabrera.github.io/macroai/\n\nPasos:\n1. Abre el enlace\n2. Pulsa "Crear cuenta"\n3. Usa este email: ${email}\n4. Elige tu contraseña\n\n¡Cualquier duda me dices! 💪`;
     document.getElementById('whatsappBox').textContent=_ultimoWhatsapp;
     document.getElementById('whatsappBox').style.display='block';
-    document.getElementById('copiarBtnWrap').style.display='block';
+    document.getElementById('copiarBtnWrap').style.display='flex';
     document.getElementById('crearBtnRow').style.display='none';
+    loadAdminUsers();
     msg.style.display='block';msg.style.cssText='display:block;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);color:var(--accent);';
     msg.textContent='✅ Cliente creado. Copia el mensaje y envíaselo por WhatsApp.';
     setTimeout(()=>loadAdminUsers(),8000);
