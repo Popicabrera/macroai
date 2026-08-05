@@ -3806,7 +3806,7 @@ async function loadAdminUsers(){
   if(!body)return;
   body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px;">Cargando...</div>';
   try{
-    const res=await supaAdmin('/rest/v1/usuarios_macroai?select=*&order=created_at.desc');
+    const res=await supaAdmin('/rest/v1/usuarios_macroai?select=*&order=nombre.asc');
     const users=await res.json();
     window._adminPerfilesEmails=new Set();
     window._adminMenusEmails=new Set();
@@ -3820,6 +3820,7 @@ async function loadAdminUsers(){
       const mRows=await mRes.json(); if(Array.isArray(mRows)) mRows.forEach(r=>window._adminMenusEmails.add(r.cliente_email));
     }catch(e){}
     _adminUsersData=Array.isArray(users)?users:[];
+    _adminUsersData.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'',"es",{sensitivity:'base'}));
     renderAdminCards();
   }catch(e){
     if(body)body.innerHTML='<div style="text-align:center;color:var(--red);padding:40px 0;">Error cargando usuarios.</div>';
