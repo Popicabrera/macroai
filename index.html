@@ -7289,6 +7289,7 @@ async function handleFotoProducto(e) {
 .mc-alimento-kcal{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);}
 .mc-plato-titulo{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);padding:10px 14px 6px;}
 .mc-plato-titulo::before{content:'';width:3px;height:16px;background:var(--accent);flex-shrink:0;}
+.mc-alimento-medida{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;color:#b8860b;background:#fdf6e3;padding:2px 8px;border-radius:20px;}
 /* Expandir hint */
 .mc-expand-hint{text-align:center;padding:5px 0 2px;font-size:10px;color:var(--muted2);letter-spacing:0.3px;}
 
@@ -7733,6 +7734,40 @@ function mcToggleReceta(id) {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
+// Tabla fija de medidas caseras (gramos ya cocido/preparado). No varía de un plato a otro:
+// para cuadrar macros se usan raciones enteras/medias de esta base, nunca se reescala el gramaje de "1 unidad".
+const MEDIDAS_CASERAS = [
+  { match: /legumbre|alubia|garbanzo|lenteja/i, base: 200, singular: '1 cazo sopero', plural: 'cazos soperos' },
+  { match: /arroz/i,                            base: 100, singular: '1 cazo sopero', plural: 'cazos soperos' },
+  { match: /pasta|macarr[oó]n|espagueti/i,       base: 100, singular: '1 cazo sopero', plural: 'cazos soperos' },
+  { match: /fideo/i,                             base: 100, singular: '1 puñado',      plural: 'puñados' },
+  { match: /pollo|pavo/i,                        base: 110, singular: '1 filete mediano', plural: 'filetes medianos' },
+  { match: /ternera|cerdo|lomo/i,                base: 130, singular: '1 filete mediano-grande', plural: 'filetes medianos-grandes' },
+  { match: /salm[oó]n/i,                         base: 120, singular: '1 filete grande', plural: 'filetes grandes' },
+  { match: /lubina|bacaladilla/i,                base: 150, singular: '1 pescado entero mediano', plural: 'pescados enteros medianos' },
+  { match: /gallo/i,                             base: 200, singular: '1 pescado entero mediano-grande', plural: 'pescados enteros medianos-grandes' },
+  { match: /sardina/i,                           base: 170, singular: '3-4 sardinas medianas', plural: 'raciones de sardinas medianas' },
+  { match: /boquer[oó]n/i,                       base: 200, singular: '8-10 boquerones medianos', plural: 'raciones de boquerones medianos' },
+  { match: /patata/i,                            base: 200, singular: '1 patata mediana-grande', plural: 'patatas medianas-grandes' },
+  { match: /at[uú]n/i,                           base: 50,  singular: '1 lata pequeña', plural: 'latas pequeñas' },
+  { match: /sepia/i,                             base: 200, singular: '1 sepia mediana', plural: 'sepias medianas' },
+];
+function _medidaCaseraHtml(nombreIng, gramos) {
+  if (!nombreIng || !gramos) return '';
+  const entry = MEDIDAS_CASERAS.find(t => t.match.test(nombreIng));
+  if (!entry) return '';
+  const n = Math.round((gramos / entry.base) * 2) / 2; // redondeo a medias
+  if (n <= 0) return '';
+  let texto;
+  if (Math.abs(n - 1) < 0.01) {
+    texto = '≈ ' + entry.singular;
+  } else {
+    const numStr = (n % 1 === 0.5) ? (Math.floor(n) + '½') : String(n);
+    texto = '≈ ' + numStr + ' ' + entry.plural;
+  }
+  return '<div class="mc-alimento-medida">' + texto + '</div>';
+}
+
 function _renderMenuDia() {
   if (!_menuActivoCache || !_menuCeldasCache || !_menuBibCache) return;
 
@@ -7847,10 +7882,12 @@ function _renderMenuDia() {
             ? gramosAdj + 'g'
             : gramosAdj + 'g';
           const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
+          const _medidaHtml = _medidaCaseraHtml(ing.nombre||'', gramosAdj);
           ingredientesHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
             + '<div style="flex:1;min-width:0;">'
             + '<div><span class="mc-alimento-nombre">' + escapeHtml(ing.nombre||'') + '</span> <span class="mc-alimento-gramos">(' + _gramosHtml + ')</span></div>'
+            + _medidaHtml
             + _macrosHtml
             + '</div>'
             + '<div class="mc-alimento-right">'
@@ -12737,7 +12774,8 @@ function menuAbrirOpciones(menuId, idx) {
       </div>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuCargarExistente('${menuId}')" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">📂 Cargar en editor</button>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuEditarNombre('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">✏️ Editar nombre</button>
-      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuAbrirAsignacion('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">👤 Asignar a cliente</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuDuplicar('${menuId}',${idx})" style="width:100%;padding:13px;background:#fdf6e3;border:1px solid #e8d9a0;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:#8a6d1a;cursor:pointer;text-align:left;">🧬 Duplicar menú</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuAbrirAsignacion('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">👤 Asignar a cliente <span style="font-weight:400;color:var(--muted);font-size:11px;">(crea copia)</span></button>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuConfirmarBorrar('${menuId}','${escapeHtml(m.nombre||'Sin nombre')}')" style="width:100%;padding:13px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--accent);cursor:pointer;text-align:left;">🗑️ Borrar menú</button>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove()" style="width:100%;padding:11px;background:transparent;border:none;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
     </div>`;
@@ -12754,6 +12792,45 @@ function menuEditarNombre(menuId, idx) {
     body: JSON.stringify({ nombre: nuevoNombre.trim() })
   }).then(() => { showToast('✅ Nombre actualizado'); menuMostrarExistentes(); menuMostrarExistentes(); })
     .catch(() => showToast('❌ Error al renombrar'));
+}
+
+// ── Duplicar menú: crea una copia completa (menú + celdas) sin asignar a nadie ──
+async function menuDuplicar(menuId, idx) {
+  const m = _menuListCache[idx];
+  showToast('⏳ Duplicando menú...');
+  try {
+    // 1. Traer celdas del menú original
+    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes`);
+    if (!resC.ok) throw new Error('No se pudieron leer las celdas');
+    const celdasOriginales = await resC.json();
+    if (!celdasOriginales.length) { showToast('❌ El menú original no tiene comidas'); return; }
+
+    // 2. Crear el nuevo menú (siempre sin cliente, como borrador)
+    const nombreCopia = (m?.nombre || 'Menú') + ' (copia)';
+    const resM = await supaAdmin('/rest/v1/menus_macroai', {
+      method: 'POST', headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ nombre: nombreCopia, activo: false, pendiente: false, cliente_email: null })
+    });
+    if (!resM.ok) throw new Error('No se pudo crear la copia');
+    const nuevoMenu = (await resM.json())[0];
+    if (!nuevoMenu) throw new Error('No se creó la copia');
+
+    // 3. Copiar las celdas al nuevo menú
+    const celdasNuevas = celdasOriginales.map(c => ({
+      menu_id: nuevoMenu.id, tipo_dia: c.tipo_dia, franja: c.franja,
+      comida_id: c.comida_id, ingredientes: c.ingredientes || null
+    }));
+    const celRes = await supaAdmin('/rest/v1/menu_celdas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(celdasNuevas)
+    });
+    if (!celRes.ok) throw new Error('No se pudieron copiar las comidas');
+
+    showToast(`✅ Duplicado como "${nombreCopia}"`);
+    menuMostrarExistentes(); menuMostrarExistentes();
+  } catch(e) {
+    showToast('❌ Error al duplicar el menú'); console.error(e);
+  }
 }
 
 function menuConfirmarBorrar(menuId, nombre) {
@@ -12924,18 +13001,43 @@ async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, cliente
   cerrarMenuAsignacion();
   showToast('\u23f3 Asignando...');
   try {
-    // 1. Quitar pendiente de cualquier otro menú pendiente anterior (NO tocar el activo)
+    // 0. Si el menú ya pertenece a otro cliente (o no tiene dueño y queremos preservarlo
+    //    como plantilla), NUNCA lo movemos: creamos una copia para el nuevo cliente y
+    //    dejamos el menú original tal cual estaba, en su cliente de origen.
+    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes`);
+    if (!resC.ok) throw new Error('No se pudieron leer las celdas del menú original');
+    const celdasOriginales = await resC.json();
+    if (!celdasOriginales.length) { showToast('❌ El menú no tiene comidas que asignar'); return; }
+
+    const resM = await supaAdmin('/rest/v1/menus_macroai', {
+      method: 'POST', headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ nombre: menuNombre, activo: false, pendiente: false, cliente_email: null })
+    });
+    if (!resM.ok) throw new Error('No se pudo crear la copia para el nuevo cliente');
+    const copia = (await resM.json())[0];
+    if (!copia) throw new Error('No se creó la copia');
+
+    const celdasNuevas = celdasOriginales.map(c => ({
+      menu_id: copia.id, tipo_dia: c.tipo_dia, franja: c.franja,
+      comida_id: c.comida_id, ingredientes: c.ingredientes || null
+    }));
+    const celRes = await supaAdmin('/rest/v1/menu_celdas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(celdasNuevas)
+    });
+    if (!celRes.ok) throw new Error('No se pudieron copiar las comidas a la copia');
+
+    // 1. Quitar pendiente de cualquier otro menú pendiente anterior de ese cliente (NO tocar el activo)
     await supaAdmin(
-      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${menuId}`,
+      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true`,
       { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
     );
-    // 2. Marcar este menú como pendiente — el cliente lo activará cuando quiera
-    // El menú activo actual NO se toca: el cliente sigue usándolo hasta que active el nuevo
+    // 2. Marcar la COPIA como pendiente del nuevo cliente — el original no se toca
     await supaAdmin(
-      `/rest/v1/menus_macroai?id=eq.${menuId}`,
+      `/rest/v1/menus_macroai?id=eq.${copia.id}`,
       { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
     );
-    showToast(`\u2705 Menú preparado para ${clienteNombre} — lo activará cuando quiera`);
+    showToast(`\u2705 Copia preparada para ${clienteNombre} — el menú original no se ha tocado`);
     // Reabrir la lista para reflejar estado Activo actualizado
     const ld = document.getElementById('menuListaExistentes');
     if (ld) ld.style.display = 'none';
