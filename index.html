@@ -11489,6 +11489,19 @@ async function menuCocAbrirSelectorCliente() {
   document.body.appendChild(overlay);
 }
 
+// ── Cierra y limpia el panel de "menús guardados" (evita mostrar datos de otro cliente) ──
+function _menuCocResetListaGuardados() {
+  _menuListCache = [];
+  ['menuListaExistentes', 'menuListaExistentesMobile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  });
+  ['menuBtnVerExistentes', 'menuBtnVerExistentesMobile'].forEach(id => {
+    const bv = document.getElementById(id);
+    if (bv) bv.textContent = '📋 Ver / cargar menús guardados';
+  });
+}
+
 window._menuCocLimpiarCliente = function() {
   document.getElementById('_menuCocCliOverlay')?.remove();
   _menuCocClientePerfil = null;
@@ -11497,6 +11510,7 @@ window._menuCocLimpiarCliente = function() {
   _menuId = null;
   _menuDiasColapsados = {};
   _menuEraActivo = false;
+  _menuCocResetListaGuardados();
   ['menuCocClienteLabel','menuCocClienteLabelMobile'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = 'Seleccionar cliente para ver macros objetivo'; el.style.color = 'var(--text)'; el.style.fontWeight = '500'; }
@@ -11509,6 +11523,7 @@ window._menuCocLimpiarCliente = function() {
 
 window._menuCocSeleccionar = async function(clienteEmail) {
   document.getElementById('_menuCocCliOverlay')?.remove();
+  _menuCocResetListaGuardados();
   // Recargar perfil fresco desde Supabase (el cliente puede haber cambiado sus días)
   let perfil = _menuCocClientes.find(c => c.cliente_email === clienteEmail) || null;
   try {
@@ -12774,7 +12789,8 @@ function menuAbrirOpciones(menuId, idx) {
       </div>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuCargarExistente('${menuId}')" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">📂 Cargar en editor</button>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuEditarNombre('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">✏️ Editar nombre</button>
-      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuAbrirAsignacion('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">👤 Asignar a cliente</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuDuplicar('${menuId}',${idx})" style="width:100%;padding:13px;background:#fdf6e3;border:1px solid #e8d9a0;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:#8a6d1a;cursor:pointer;text-align:left;">🧬 Duplicar menú</button>
+      <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuAbrirAsignacion('${menuId}',${idx})" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;">👤 Asignar a cliente <span style="font-weight:400;color:var(--muted);font-size:11px;">(crea copia)</span></button>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove();menuConfirmarBorrar('${menuId}','${escapeHtml(m.nombre||'Sin nombre')}')" style="width:100%;padding:13px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--accent);cursor:pointer;text-align:left;">🗑️ Borrar menú</button>
       <button onclick="document.getElementById('menuOpcionesOverlay').remove()" style="width:100%;padding:11px;background:transparent;border:none;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;">Cancelar</button>
     </div>`;
@@ -12791,6 +12807,45 @@ function menuEditarNombre(menuId, idx) {
     body: JSON.stringify({ nombre: nuevoNombre.trim() })
   }).then(() => { showToast('✅ Nombre actualizado'); menuMostrarExistentes(); menuMostrarExistentes(); })
     .catch(() => showToast('❌ Error al renombrar'));
+}
+
+// ── Duplicar menú: crea una copia completa (menú + celdas) sin asignar a nadie ──
+async function menuDuplicar(menuId, idx) {
+  const m = _menuListCache[idx];
+  showToast('⏳ Duplicando menú...');
+  try {
+    // 1. Traer celdas del menú original
+    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes`);
+    if (!resC.ok) throw new Error('No se pudieron leer las celdas');
+    const celdasOriginales = await resC.json();
+    if (!celdasOriginales.length) { showToast('❌ El menú original no tiene comidas'); return; }
+
+    // 2. Crear el nuevo menú (siempre sin cliente, como borrador)
+    const nombreCopia = (m?.nombre || 'Menú') + ' (copia)';
+    const resM = await supaAdmin('/rest/v1/menus_macroai', {
+      method: 'POST', headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ nombre: nombreCopia, activo: false, pendiente: false, cliente_email: null })
+    });
+    if (!resM.ok) throw new Error('No se pudo crear la copia');
+    const nuevoMenu = (await resM.json())[0];
+    if (!nuevoMenu) throw new Error('No se creó la copia');
+
+    // 3. Copiar las celdas al nuevo menú
+    const celdasNuevas = celdasOriginales.map(c => ({
+      menu_id: nuevoMenu.id, tipo_dia: c.tipo_dia, franja: c.franja,
+      comida_id: c.comida_id, ingredientes: c.ingredientes || null
+    }));
+    const celRes = await supaAdmin('/rest/v1/menu_celdas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(celdasNuevas)
+    });
+    if (!celRes.ok) throw new Error('No se pudieron copiar las comidas');
+
+    showToast(`✅ Duplicado como "${nombreCopia}"`);
+    menuMostrarExistentes(); menuMostrarExistentes();
+  } catch(e) {
+    showToast('❌ Error al duplicar el menú'); console.error(e);
+  }
 }
 
 function menuConfirmarBorrar(menuId, nombre) {
@@ -12961,26 +13016,48 @@ async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, cliente
   cerrarMenuAsignacion();
   showToast('\u23f3 Asignando...');
   try {
-    // 1. Quitar pendiente de cualquier otro menú pendiente anterior (NO tocar el activo)
+    // El menú original NUNCA se mueve: se lee, se copia, y la copia se crea
+    // ya asignada al nuevo cliente en un solo paso (evita estados intermedios).
+    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes`);
+    if (!resC.ok) throw new Error('No se pudieron leer las celdas del menú original');
+    const celdasOriginales = await resC.json();
+    if (!celdasOriginales.length) { showToast('❌ El menú no tiene comidas que asignar'); return; }
+
+    // 1. Quitar pendiente de cualquier otro menú pendiente anterior de ese cliente (NO tocar el activo)
     await supaAdmin(
-      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true&id=neq.${menuId}`,
+      `/rest/v1/menus_macroai?cliente_email=eq.${encodeURIComponent(clienteEmail)}&pendiente=eq.true`,
       { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pendiente: false }) }
     );
-    // 2. Marcar este menú como pendiente — el cliente lo activará cuando quiera
-    // El menú activo actual NO se toca: el cliente sigue usándolo hasta que active el nuevo
-    await supaAdmin(
-      `/rest/v1/menus_macroai?id=eq.${menuId}`,
-      { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ cliente_email: clienteEmail, pendiente: true, activo: false }) }
-    );
-    showToast(`\u2705 Menú preparado para ${clienteNombre} — lo activará cuando quiera`);
-    // Reabrir la lista para reflejar estado Activo actualizado
+
+    // 2. Crear la copia ya asignada directamente al nuevo cliente
+    const resM = await supaAdmin('/rest/v1/menus_macroai', {
+      method: 'POST', headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ nombre: menuNombre, activo: false, pendiente: true, cliente_email: clienteEmail })
+    });
+    if (!resM.ok) { const t = await resM.text(); throw new Error(`No se pudo crear la copia (${resM.status}): ${t}`); }
+    const copiaRows = await resM.json();
+    const copia = Array.isArray(copiaRows) ? copiaRows[0] : null;
+    if (!copia) throw new Error('No se creó la copia');
+
+    const celdasNuevas = celdasOriginales.map(c => ({
+      menu_id: copia.id, tipo_dia: c.tipo_dia, franja: c.franja,
+      comida_id: c.comida_id, ingredientes: c.ingredientes || null
+    }));
+    const celRes = await supaAdmin('/rest/v1/menu_celdas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(celdasNuevas)
+    });
+    if (!celRes.ok) { const t = await celRes.text(); throw new Error(`No se pudieron copiar las comidas (${celRes.status}): ${t}`); }
+
+    showToast(`\u2705 Copia preparada para ${clienteNombre} — el menú original no se ha tocado`);
+    // Refrescar la lista SOLO si seguimos viendo el mismo cliente de origen (el que teníamos abierto)
     const ld = document.getElementById('menuListaExistentes');
     if (ld) ld.style.display = 'none';
     const bv = document.getElementById('menuBtnVerExistentes');
     if (bv) bv.textContent = '\ud83d\udccb Ver / cargar menús guardados';
     menuMostrarExistentes();
   } catch(e) {
-    showToast('\u274c Error al asignar el menú'); console.error(e);
+    showToast('\u274c Error al asignar el menú: ' + (e?.message || '')); console.error(e);
   }
 }
 
