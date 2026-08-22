@@ -7744,13 +7744,15 @@ const MEDIDAS_CASERAS = [
   { match: /pollo|pavo/i,                        base: 110, singular: '1 filete mediano', plural: 'filetes medianos' },
   { match: /ternera|cerdo|lomo/i,                base: 130, singular: '1 filete mediano-grande', plural: 'filetes medianos-grandes' },
   { match: /salm[oó]n/i,                         base: 120, singular: '1 filete grande', plural: 'filetes grandes' },
-  { match: /lubina|bacaladilla/i,                base: 150, singular: '1 pescado entero mediano', plural: 'pescados enteros medianos' },
+  { match: /lubina|bacaladilla|dorada|merluza|rape/i, base: 150, singular: '1 pescado entero mediano', plural: 'pescados enteros medianos' },
+  { match: /pescado blanco/i,                    base: 150, singular: '1 pescado entero mediano o 1 filete', plural: 'pescados enteros medianos o filetes' },
   { match: /gallo/i,                             base: 200, singular: '1 pescado entero mediano-grande', plural: 'pescados enteros medianos-grandes' },
   { match: /sardina/i,                           base: 170, singular: '3-4 sardinas medianas', plural: 'raciones de sardinas medianas' },
   { match: /boquer[oó]n/i,                       base: 200, singular: '8-10 boquerones medianos', plural: 'raciones de boquerones medianos' },
-  { match: /patata/i,                            base: 200, singular: '1 patata mediana-grande', plural: 'patatas medianas-grandes' },
+  { match: /patata|boniato/i,                    base: 200, singular: '1 patata mediana-grande', plural: 'patatas medianas-grandes' },
   { match: /at[uú]n/i,                           base: 50,  singular: '1 lata pequeña', plural: 'latas pequeñas' },
   { match: /sepia/i,                             base: 200, singular: '1 sepia mediana', plural: 'sepias medianas' },
+  { match: /yogur/i,                             base: 125, singular: '1 yogur individual', plural: 'yogures individuales' },
 ];
 function _medidaCaseraHtml(nombreIng, gramos) {
   if (!nombreIng || !gramos) return '';
