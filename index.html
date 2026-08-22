@@ -10800,6 +10800,7 @@ function bibRenderIngRow(idx) {
         <span class="bib-macro-pill grasa">G ${grasaIng}g</span>
        </div>`
     : `<div class="ing-row-macros" id="bibIngMacros_${idx}" style="display:none;"></div>`;
+  const medidaHtml = `<div id="bibIngMedida_${idx}">${_medidaCaseraHtml(ing.nombre||'', g)}</div>`;
 
   const total = _cocEditorIngs.length;
   const row = document.createElement('div');
@@ -10828,6 +10829,7 @@ function bibRenderIngRow(idx) {
       style="flex:0.8;text-align:center;">
     <div class="ing-del-btn" onclick="bibDelIngRow(${idx})">✕</div>
     ${macrosHtml}
+    ${medidaHtml}
   `;
   // Insertar en posición correcta (por idx)
   const rows = container.querySelectorAll('.ing-row');
@@ -10918,7 +10920,12 @@ function bibActualizarMacrosFila(idx) {
   const el = document.getElementById('bibIngMacros_' + idx);
   if (!el) return;
   const hayMacros = ing.kcal_100 > 0 || ing.p_100 > 0;
-  if (!hayMacros || g <= 0) { el.style.display = 'none'; return; }
+  if (!hayMacros || g <= 0) {
+    el.style.display = 'none';
+    const medidaElVacio = document.getElementById('bibIngMedida_' + idx);
+    if (medidaElVacio) medidaElVacio.innerHTML = '';
+    return;
+  }
   const kcalIng  = Math.round((ing.kcal_100||0)*g/100);
   const protIng  = Math.round((ing.p_100||0)*g/100*10)/10;
   const chIng    = Math.round((ing.hc_100||0)*g/100*10)/10;
@@ -10930,6 +10937,9 @@ function bibActualizarMacrosFila(idx) {
     <span class="bib-macro-pill grasa">G ${grasaIng}g</span>
   `;
   el.style.display = 'flex';
+
+  const medidaEl = document.getElementById('bibIngMedida_' + idx);
+  if (medidaEl) medidaEl.innerHTML = _medidaCaseraHtml(ing.nombre||'', g);
 }
 
 // ── Calcular totales desde ingredientes ──
