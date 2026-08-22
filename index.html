@@ -7741,18 +7741,16 @@ const MEDIDAS_CASERAS = [
   { match: /arroz/i,                            base: 100, singular: '1 cazo sopero', plural: 'cazos soperos' },
   { match: /pasta|macarr[oó]n|espagueti/i,       base: 100, singular: '1 cazo sopero', plural: 'cazos soperos' },
   { match: /fideo/i,                             base: 100, singular: '1 puñado',      plural: 'puñados' },
-  { match: /^(?!.*picada).*(pollo|pavo)/i,       base: 110, singular: '1 filete mediano', plural: 'filetes medianos' },
-  { match: /^(?!.*picada).*(ternera|cerdo|lomo)/i, base: 130, singular: '1 filete mediano-grande', plural: 'filetes medianos-grandes' },
+  { match: /pollo|pavo/i,                        base: 110, singular: '1 filete mediano', plural: 'filetes medianos' },
+  { match: /ternera|cerdo|lomo/i,                base: 130, singular: '1 filete mediano-grande', plural: 'filetes medianos-grandes' },
   { match: /salm[oó]n/i,                         base: 120, singular: '1 filete grande', plural: 'filetes grandes' },
-  { match: /lubina|bacaladilla|dorada|merluza|rape/i, base: 150, singular: '1 pescado entero mediano', plural: 'pescados enteros medianos' },
-  { match: /pescado blanco/i,                    base: 150, singular: '1 pescado entero mediano o 1 filete', plural: 'pescados enteros medianos o filetes' },
+  { match: /lubina|bacaladilla/i,                base: 150, singular: '1 pescado entero mediano', plural: 'pescados enteros medianos' },
   { match: /gallo/i,                             base: 200, singular: '1 pescado entero mediano-grande', plural: 'pescados enteros medianos-grandes' },
   { match: /sardina/i,                           base: 170, singular: '3-4 sardinas medianas', plural: 'raciones de sardinas medianas' },
   { match: /boquer[oó]n/i,                       base: 200, singular: '8-10 boquerones medianos', plural: 'raciones de boquerones medianos' },
-  { match: /patata|boniato/i,                    base: 200, singular: '1 patata mediana-grande', plural: 'patatas medianas-grandes' },
+  { match: /patata/i,                            base: 200, singular: '1 patata mediana-grande', plural: 'patatas medianas-grandes' },
   { match: /at[uú]n/i,                           base: 50,  singular: '1 lata pequeña', plural: 'latas pequeñas' },
   { match: /sepia/i,                             base: 200, singular: '1 sepia mediana', plural: 'sepias medianas' },
-  { match: /yogur/i,                             base: 125, singular: '1 yogur individual', plural: 'yogures individuales' },
 ];
 function _medidaCaseraHtml(nombreIng, gramos) {
   if (!nombreIng || !gramos) return '';
@@ -10802,7 +10800,6 @@ function bibRenderIngRow(idx) {
         <span class="bib-macro-pill grasa">G ${grasaIng}g</span>
        </div>`
     : `<div class="ing-row-macros" id="bibIngMacros_${idx}" style="display:none;"></div>`;
-  const medidaHtml = `<div id="bibIngMedida_${idx}">${_medidaCaseraHtml(ing.nombre||'', g)}</div>`;
 
   const total = _cocEditorIngs.length;
   const row = document.createElement('div');
@@ -10831,7 +10828,6 @@ function bibRenderIngRow(idx) {
       style="flex:0.8;text-align:center;">
     <div class="ing-del-btn" onclick="bibDelIngRow(${idx})">✕</div>
     ${macrosHtml}
-    ${medidaHtml}
   `;
   // Insertar en posición correcta (por idx)
   const rows = container.querySelectorAll('.ing-row');
@@ -10922,12 +10918,7 @@ function bibActualizarMacrosFila(idx) {
   const el = document.getElementById('bibIngMacros_' + idx);
   if (!el) return;
   const hayMacros = ing.kcal_100 > 0 || ing.p_100 > 0;
-  if (!hayMacros || g <= 0) {
-    el.style.display = 'none';
-    const medidaElVacio = document.getElementById('bibIngMedida_' + idx);
-    if (medidaElVacio) medidaElVacio.innerHTML = '';
-    return;
-  }
+  if (!hayMacros || g <= 0) { el.style.display = 'none'; return; }
   const kcalIng  = Math.round((ing.kcal_100||0)*g/100);
   const protIng  = Math.round((ing.p_100||0)*g/100*10)/10;
   const chIng    = Math.round((ing.hc_100||0)*g/100*10)/10;
@@ -10939,9 +10930,6 @@ function bibActualizarMacrosFila(idx) {
     <span class="bib-macro-pill grasa">G ${grasaIng}g</span>
   `;
   el.style.display = 'flex';
-
-  const medidaEl = document.getElementById('bibIngMedida_' + idx);
-  if (medidaEl) medidaEl.innerHTML = _medidaCaseraHtml(ing.nombre||'', g);
 }
 
 // ── Calcular totales desde ingredientes ──
@@ -11619,6 +11607,28 @@ function menuCalcDiaAcum(templateKey) {
       k+=cell.kcal||0; p+=cell.prot||0; c+=cell.ch||0; g+=cell.grasa||0;
     }
   });
+
+  // ── Tope de seguridad (entreno y descanso): las calorías del día casi nunca
+  // deben superar el objetivo pautado para ese tipo de día. Si el total sigue
+  // por encima (más allá de un pequeño margen de error), se recorta un poco
+  // más HC y grasa de forma proporcional — la proteína nunca se toca.
+  if (perfil) {
+    const objKcalDia = tipoDia === 'entreno' ? (perfil.kcal_objetivo || 0) : (perfil.kcal_descanso || 0);
+    const MARGEN_KCAL = 15; // pequeño margen de error aceptado
+    if (objKcalDia > 0 && k > objKcalDia + MARGEN_KCAL) {
+      const kcalCarbos = c * 4;
+      const kcalGrasa  = g * 9;
+      const removible  = kcalCarbos + kcalGrasa;
+      if (removible > 0) {
+        const excedente   = k - objKcalDia;
+        const factorExtra = Math.max(0, 1 - (excedente / removible));
+        c = c * factorExtra;
+        g = g * factorExtra;
+        k = p * 4 + c * 4 + g * 9;
+      }
+    }
+  }
+
   return {kcal:Math.round(k),prot:Math.round(p*10)/10,ch:Math.round(c*10)/10,grasa:Math.round(g*10)/10};
 }
 
