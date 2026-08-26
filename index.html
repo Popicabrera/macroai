@@ -257,6 +257,22 @@ body{
 }
 .mp-macro-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
 
+.mp-donut-toggle{
+  width:26px;height:26px;border-radius:50%;background:var(--s2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  transition:background 0.2s;
+}
+.mp-donut-toggle svg{width:14px;height:14px;stroke:var(--muted);}
+.mp-donut-toggle.active{background:var(--accent);}
+.mp-donut-toggle.active svg{stroke:var(--bg);}
+.mp-donut-row{display:none;padding-top:2px;}
+.mp-donut-row.show{display:block;}
+.mp-donut-legend{display:flex;flex-direction:column;gap:7px;}
+.mp-donut-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;}
+.mp-donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.mp-donut-legend-val{font-family:'Space Grotesk',sans-serif;font-weight:800;color:var(--text);}
+.mp-donut-legend-lbl{color:var(--muted);}
+
 /* MESSAGES — FIX: flex:1 + overflow-y:auto + overscroll para Chrome */
 .messages{
   flex:1;
@@ -877,9 +893,14 @@ body{
   <div class="macro-panel">
     <div class="mp-kcal-row">
       <div class="mp-kcal-label">Nutrientes restantes</div>
-      <div class="mp-kcal-val"><span id="kcalResta" class="mp-kcal-big">2000</span><span class="mp-kcal-sep">/</span><span id="kcalObj" class="mp-kcal-obj">2000</span></div>
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div class="mp-kcal-val"><span id="kcalResta" class="mp-kcal-big">2000</span><span class="mp-kcal-sep">/</span><span id="kcalObj" class="mp-kcal-obj">2000</span></div>
+        <div class="mp-donut-toggle" id="mpDonutToggle" onclick="toggleMacroDonut()" role="button" aria-label="Alternar gráfico circular de macros">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/></svg>
+        </div>
+      </div>
     </div>
-    <div class="mp-macros-row">
+    <div class="mp-macros-row" id="mpBarsRow">
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="chFill" style="background:var(--yellow);width:0%"></div></div>
         <div class="mp-macro-nums"><span id="chResta" class="mp-macro-rest" style="color:var(--yellow)">250</span><span class="mp-macro-lbl">Carbos (g)</span></div>
@@ -893,6 +914,42 @@ body{
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="grasaFill" style="background:var(--blue);width:0%"></div></div>
         <div class="mp-macro-nums"><span id="grasaResta" class="mp-macro-rest" style="color:var(--blue)">44</span><span class="mp-macro-lbl">Grasas (g)</span></div>
+      </div>
+    </div>
+    <div class="mp-donut-row" id="mpDonutRow">
+      <div style="display:flex;flex-direction:column;gap:12px;width:100%;">
+        <div style="display:flex;align-items:center;gap:18px;">
+          <svg width="88" height="88" viewBox="0 0 120 120" id="mpDonutSvg" role="img" aria-label="Gráfico circular de composición de macros">
+            <g id="mpPieSlices"></g>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--s3)" stroke-width="1" id="mpPieEmpty" style="display:none"/>
+          </svg>
+          <div class="mp-donut-legend">
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="mpPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbos</span></div>
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--red)"></span><span class="mp-donut-legend-val" id="mpPieProtPct">0%</span><span class="mp-donut-legend-lbl">Proteína</span></div>
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--blue)"></span><span class="mp-donut-legend-val" id="mpPieGrasaPct">0%</span><span class="mp-donut-legend-lbl">Grasas</span></div>
+          </div>
+        </div>
+        <div id="mpPieEmptyMsg" style="display:none;font-size:11px;color:var(--muted);text-align:center;padding:2px 0 0;">Aún no hay nada registrado hoy</div>
+        <div id="mpPieTable" style="border-top:1px solid var(--border);padding-top:8px;">
+          <div style="display:grid;grid-template-columns:1fr 46px 46px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">
+            <span></span><span style="text-align:right;">Total</span><span style="text-align:right;">Objetivo</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
+            <span style="color:var(--text);">Carbos</span>
+            <span id="mpPieChTotal" style="text-align:right;color:var(--muted);">0%</span>
+            <span id="mpPieChObj" style="text-align:right;color:var(--yellow);font-weight:700;">0%</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
+            <span style="color:var(--text);">Proteína</span>
+            <span id="mpPieProtTotal" style="text-align:right;color:var(--muted);">0%</span>
+            <span id="mpPieProtObj" style="text-align:right;color:var(--red);font-weight:700;">0%</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
+            <span style="color:var(--text);">Grasas</span>
+            <span id="mpPieGrasaTotal" style="text-align:right;color:var(--muted);">0%</span>
+            <span id="mpPieGrasaObj" style="text-align:right;color:var(--blue);font-weight:700;">0%</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -3555,9 +3612,89 @@ function updateBars(){
   document.getElementById('grasaResta').textContent=grasaR;
   document.getElementById('kcalObj').textContent=_kcalObjLabel(S.kcalObj);
   document.getElementById('kcalResta').style.color=kcalR<0?'var(--red)':'var(--accent)';
+  renderMacroDonut();
   // Refrescar diario MFP si está visible
   if (document.getElementById('viewMain')?.classList.contains('active')) {
     renderMFPDiario();
+  }
+}
+
+// ── DONUT MACROS (vista alternativa al panel de barras) ──
+// Círculo tipo pastel: % de las kcal consumidas que aporta cada macro (Atwater: CH×4, Prot×4, Grasa×9)
+// Tabla Total vs Objetivo: compara esa composición real contra la composición del objetivo del día
+function renderMacroDonut(){
+  const pieSlices=document.getElementById('mpPieSlices');
+  const pieEmpty=document.getElementById('mpPieEmpty');
+  const emptyMsg=document.getElementById('mpPieEmptyMsg');
+  const pieTable=document.getElementById('mpPieTable');
+  if(!pieSlices)return;
+
+  const kCh=S.chC*4, kProt=S.protC*4, kGrasa=S.grasaC*9;
+  const totalK=kCh+kProt+kGrasa;
+
+  if(totalK<=0){
+    pieSlices.innerHTML='';
+    pieEmpty.style.display='block';
+    emptyMsg.style.display='block';
+    pieTable.style.display='none';
+    ['mpPieChPct','mpPieProtPct','mpPieGrasaPct'].forEach(id=>document.getElementById(id).textContent='—');
+    return;
+  }
+  pieEmpty.style.display='none';
+  emptyMsg.style.display='none';
+  pieTable.style.display='block';
+
+  const fCh=kCh/totalK, fProt=kProt/totalK, fGrasa=kGrasa/totalK;
+  const cx=60,cy=60,r=50;
+  const toXY=(deg)=>{const rad=deg*Math.PI/180;return[cx+r*Math.cos(rad),cy+r*Math.sin(rad)];};
+  const arcPath=(a0,a1)=>{
+    const span=a1-a0;
+    if(span<=0.01)return'';
+    const large=span>180?1:0;
+    const[x1,y1]=toXY(a0),[x2,y2]=toXY(a1);
+    return`M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
+  };
+  let ang=-90;
+  const segCh=fCh*360,segProt=fProt*360,segGrasa=fGrasa*360;
+  const dCh=arcPath(ang,ang+segCh);ang+=segCh;
+  const dProt=arcPath(ang,ang+segProt);ang+=segProt;
+  const dGrasa=arcPath(ang,ang+segGrasa);
+  pieSlices.innerHTML=
+    (dCh?`<path d="${dCh}" fill="var(--yellow)"/>`:'')+
+    (dProt?`<path d="${dProt}" fill="var(--red)"/>`:'')+
+    (dGrasa?`<path d="${dGrasa}" fill="var(--blue)"/>`:'');
+
+  const pctCh=Math.round(fCh*100),pctProt=Math.round(fProt*100),pctGrasa=Math.round(fGrasa*100);
+  document.getElementById('mpPieChPct').textContent=pctCh+'%';
+  document.getElementById('mpPieProtPct').textContent=pctProt+'%';
+  document.getElementById('mpPieGrasaPct').textContent=pctGrasa+'%';
+  document.getElementById('mpPieChTotal').textContent=pctCh+'%';
+  document.getElementById('mpPieProtTotal').textContent=pctProt+'%';
+  document.getElementById('mpPieGrasaTotal').textContent=pctGrasa+'%';
+
+  const kChObj=S.ch*4,kProtObj=S.prot*4,kGrasaObj=S.grasa*9;
+  const totalObj=kChObj+kProtObj+kGrasaObj;
+  const pctChObj=totalObj>0?Math.round(kChObj/totalObj*100):0;
+  const pctProtObj=totalObj>0?Math.round(kProtObj/totalObj*100):0;
+  const pctGrasaObj=totalObj>0?Math.round(kGrasaObj/totalObj*100):0;
+  document.getElementById('mpPieChObj').textContent=pctChObj+'%';
+  document.getElementById('mpPieProtObj').textContent=pctProtObj+'%';
+  document.getElementById('mpPieGrasaObj').textContent=pctGrasaObj+'%';
+}
+function toggleMacroDonut(){
+  const barsRow=document.getElementById('mpBarsRow');
+  const donutRow=document.getElementById('mpDonutRow');
+  const btn=document.getElementById('mpDonutToggle');
+  const showing=donutRow.classList.contains('show');
+  if(showing){
+    donutRow.classList.remove('show');
+    barsRow.style.display='flex';
+    btn.classList.remove('active');
+  }else{
+    renderMacroDonut();
+    barsRow.style.display='none';
+    donutRow.classList.add('show');
+    btn.classList.add('active');
   }
 }
 
