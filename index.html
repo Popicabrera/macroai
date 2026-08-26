@@ -2426,7 +2426,7 @@ function saveFechaSupabase(fecha, d){
   // Recalcular totales desde comidas para no depender del estado S
   let kcalC=0,protC=0,chC=0,grasaC=0;
   (d.comidas||[]).forEach(c=>{kcalC+=c.kcal||0;protC+=c.prot||0;chC+=c.ch||0;grasaC+=c.grasa||0;});
-  supaFetch('/rest/v1/registros_macroai',{
+  supaFetch('/rest/v1/registros_macroai?on_conflict=usuario_id,fecha',{
     method:'POST',
     headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
     body:JSON.stringify({
