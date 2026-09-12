@@ -3453,7 +3453,7 @@ async function abrirFSM(query, gramosInicial = null) {
   overlay.classList.add('open');
 
   try {
-    const res = await fetch(WORKER_URL + '/search', {
+    const res = await fetchConTimeout(WORKER_URL + '/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
@@ -4931,12 +4931,23 @@ function buscadorOnInput(val) {
 }
 
 // ── Motor de búsqueda compartido: Diario y Cocina usan la misma función y el mismo orden ──
+// Evita que una búsqueda se quede colgada para siempre si el servidor no responde
+async function fetchConTimeout(url, opts, ms=12000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function buscarAlimentosOrdenados(query) {
   const resultados = [];
 
   // 1. Worker (Supabase → OFF → IA)
   try {
-    const resFS = await fetch(WORKER_URL + '/search', {
+    const resFS = await fetchConTimeout(WORKER_URL + '/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
@@ -4960,7 +4971,7 @@ async function buscarAlimentosOrdenados(query) {
   // 2. Claude fallback — si el worker no encontró nada
   if (resultados.length === 0) {
     try {
-      const resIA = await fetch(WORKER_URL, {
+      const resIA = await fetchConTimeout(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -5042,7 +5053,12 @@ async function buscarAlimentoMFP(query) {
   if (!query || query.length < 2) return;
   const res = document.getElementById('buscadorResultados');
   res.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="auth-spinner"></div>Buscando...</div>';
-  const resultadosConPrioridad = await buscarAlimentosOrdenados(query);
+  let resultadosConPrioridad = [];
+  try {
+    resultadosConPrioridad = await buscarAlimentosOrdenados(query);
+  } catch(e) {
+    console.error('buscarAlimentoMFP error:', e);
+  }
   renderResultadosBuscador(resultadosConPrioridad, query);
 }
 
