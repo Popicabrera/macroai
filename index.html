@@ -388,14 +388,20 @@ body.letra-grande #viewChat #inputField{
 body.letra-grande #viewChat #inputField::placeholder{
   font-size:17px;
 }
-body.letra-grande #viewMain .food-name-txt{
-  font-size:14px!important;
-}
-body.letra-grande #viewMain .food-kcal-txt{
+body.letra-grande #viewMain .mfp-item-nombre{
   font-size:15px!important;
 }
-body.letra-grande #viewMain .food-macro-txt{
-  font-size:11px!important;
+body.letra-grande #viewMain .mfp-item-macro{
+  font-size:12px!important;
+}
+body.letra-grande #viewMain .mfp-item-kcal{
+  font-size:15px!important;
+}
+body.letra-grande #viewMain .mfp-meal-sub{
+  font-size:12px!important;
+}
+body.letra-grande #viewMain .mfp-meal-kcal{
+  font-size:17px!important;
 }
 body.letra-grande #viewMain .meal-name{
   font-size:19px!important;
@@ -4459,11 +4465,11 @@ function renderMFPDiario() {
              ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchMove(event)"
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
-            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
+            <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
+            <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
+            <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
           </div>
         </div>`;
     });
@@ -4477,11 +4483,11 @@ function renderMFPDiario() {
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
             <div class="meal-name">${meal.name}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
+            <div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
+          <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
           <span id="chev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
       </div>
