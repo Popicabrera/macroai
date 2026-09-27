@@ -8070,7 +8070,7 @@ function _renderMenuDia() {
 
           // Calcular kcal del ingrediente ajustado
           const factor = gramosAdj / 100;
-          const iKcal  = Math.round(((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9) * factor);
+          const iKcal  = Math.round((ing.kcal_100||0) * factor);
           const iProt  = Math.round((ing.p_100||0)  * factor * 10) / 10;
           const iHc    = Math.round((ing.hc_100||0) * factor * 10) / 10;
           const iGrasa = Math.round((ing.g_100||0)  * factor * 10) / 10;
@@ -11899,7 +11899,7 @@ function menuCalcDiaAcum(templateKey) {
         if (!ing.gramos) return;
         const gramosAdj = _menuAjustarGramos(ing.gramos, ing, tipoDia, perfil);
         const factor = gramosAdj / 100;
-        k += ((ing.p_100||0)*4 + (ing.hc_100||0)*4 + (ing.g_100||0)*9) * factor;
+        k += (ing.kcal_100||0) * factor;
         p += (ing.p_100||0)  * factor;
         c += (ing.hc_100||0) * factor;
         g += (ing.g_100||0)  * factor;
@@ -12527,7 +12527,7 @@ function menuRenderGrid() {
             if (!ing.gramos) return;
             const gadj = _menuAjustarGramos(ing.gramos, ing, 'descanso', _perfCoc);
             const f = gadj/100;
-            ak += ((ing.p_100||0)*4+(ing.hc_100||0)*4+(ing.g_100||0)*9)*f;
+            ak += (ing.kcal_100||0)*f;
             ap += (ing.p_100||0)*f; ac += (ing.hc_100||0)*f; ag += (ing.g_100||0)*f;
           });
           dispKcal=Math.round(ak); dispProt=Math.round(ap*10)/10; dispCh=Math.round(ac*10)/10; dispGrasa=Math.round(ag*10)/10;
