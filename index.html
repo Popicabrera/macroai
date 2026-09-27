@@ -11487,7 +11487,9 @@ PLATO: ${nombre}
 INGREDIENTES (con la cantidad exacta que debe usarse):
 ${listaIngs}
 
-No inventes ingredientes que no estén en la lista. No repitas las cantidades en el texto salvo que sea imprescindible para la preparación (p. ej. tiempos de cocción sí, gramos no). Máximo 5 pasos. Devuelve ÚNICAMENTE los pasos, sin introducción ni comentarios.`;
+No inventes ingredientes que no estén en la lista. No repitas las cantidades en el texto salvo que sea imprescindible para la preparación (p. ej. tiempos de cocción sí, gramos no). Máximo 5 pasos. Devuelve ÚNICAMENTE los pasos, sin introducción ni comentarios.
+
+IMPORTANTE sobre las verduras: para cada ingrediente de tipo verdura/hortaliza, elige y especifica SIEMPRE una forma concreta de prepararla — ensalada (en crudo), salteada, al vapor, asada, crema o puré — la que mejor encaje con el resto del plato. Nunca lo dejes ambiguo (evita frases como "cocinar la verdura al vapor o salteada"); indica una sola forma concreta.`;
 
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
 
