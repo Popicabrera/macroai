@@ -8123,14 +8123,15 @@ function _renderMenuDia() {
           + '</div>';
       }
 
-      // Botón receta (si el plato tiene receta guardada en Biblioteca)
-      if (bib.receta && bib.receta.trim()) {
+      // Botón receta (celda del cliente si tiene una propia, si no la de Biblioteca)
+      const recetaMostrar = celda.receta || bib.receta;
+      if (recetaMostrar && recetaMostrar.trim()) {
         const recId = 'mc-rec-' + diaNum + '-' + idx + '-' + ci;
         ingredientesHtml += '<div class="mc-receta-toggle" onclick="mcToggleReceta(\'' + recId + '\')" style="display:flex;align-items:center;gap:6px;margin:6px 14px 4px;padding:8px 10px;background:rgba(192,57,43,0.06);border-radius:10px;cursor:pointer;">'
           + '<span style="font-size:12px;font-weight:700;color:var(--accent);">📖 Ver receta</span>'
           + '</div>'
           + '<div id="' + recId + '" style="display:none;font-size:12px;color:var(--muted);line-height:1.7;padding:2px 14px 12px;white-space:pre-line;">'
-          + escapeHtml(bib.receta)
+          + escapeHtml(recetaMostrar)
           + '</div>';
       }
     });
@@ -9514,7 +9515,7 @@ async function menuAbrirAsignarDirecto() {
       const tipoDiaGuardar = (tipoDiaReal === 'igual') ? 'entreno' : tipoDiaReal;
       MENU_FRANJAS.forEach((franja,fi)=>{
         const cell = _menuGrid[`${tpl.key}-f${fi}`];
-        if (cell) celdasMap[tipoDiaGuardar + '|' + franja] = { tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null, nombre: cell.nombre || null };
+        if (cell) celdasMap[tipoDiaGuardar + '|' + franja] = { tipo_dia: tipoDiaGuardar, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null, nombre: cell.nombre || null, receta: cell.receta || null };
       });
     });
     const celdas = Object.values(celdasMap);
@@ -11494,6 +11495,7 @@ async function guardarComidaBib() {
     _menuGrid[_cocEditorCellKey] = {
       ...(_menuGrid[_cocEditorCellKey] || {}),
       nombre: nombre,
+      receta: receta || null,
       kcal:  Math.round(kcal),
       prot:  Math.round(prot*10)/10,
       ch:    Math.round(ch*10)/10,
@@ -12565,7 +12567,7 @@ function menuRenderGrid() {
             ov.remove();
             const comidaBib = (_cocBibComidas||[]).find(c => String(c.id) === String(cell.comida_id));
             if (comidaBib) {
-              const comidaParaEditor = { ...comidaBib, nombre: cell.nombre || comidaBib.nombre };
+              const comidaParaEditor = { ...comidaBib, nombre: cell.nombre || comidaBib.nombre, receta: cell.receta || comidaBib.receta };
               if (cell.ingredientes && cell.ingredientes.length) comidaParaEditor.ingredientes = cell.ingredientes;
               abrirEditorBiblioteca(comidaParaEditor, cellKey);
             }
@@ -12865,7 +12867,7 @@ async function menuGuardarMenuCompleto() {
   MENU_TEMPLATES.forEach(tpl => {
     MENU_FRANJAS.forEach((franja,fi)=>{
       const cell = _menuGrid[`${tpl.key}-f${fi}`];
-      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null, nombre: cell.nombre || null });
+      if (cell) celdas.push({ tipo_dia: tpl.key, franja, comida_id: cell.comida_id, ingredientes: cell.ingredientes || null, nombre: cell.nombre || null, receta: cell.receta || null });
     });
   });
   if (!celdas.length) { showToast('❌ Añade al menos una comida al menú'); return; }
@@ -13118,7 +13120,7 @@ async function menuDuplicar(menuId, idx) {
   showToast('⏳ Duplicando menú...');
   try {
     // 1. Traer celdas del menú original
-    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes,nombre`);
+    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes,nombre,receta`);
     if (!resC.ok) throw new Error('No se pudieron leer las celdas');
     const celdasOriginales = await resC.json();
     if (!celdasOriginales.length) { showToast('❌ El menú original no tiene comidas'); return; }
@@ -13136,7 +13138,7 @@ async function menuDuplicar(menuId, idx) {
     // 3. Copiar las celdas al nuevo menú
     const celdasNuevas = celdasOriginales.map(c => ({
       menu_id: nuevoMenu.id, tipo_dia: c.tipo_dia, franja: c.franja,
-      comida_id: c.comida_id, ingredientes: c.ingredientes || null, nombre: c.nombre || null
+      comida_id: c.comida_id, ingredientes: c.ingredientes || null, nombre: c.nombre || null, receta: c.receta || null
     }));
     const celRes = await supaAdmin('/rest/v1/menu_celdas', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -13244,7 +13246,7 @@ async function menuCargarExistente(menuId) {
           }
 
           if (fi>=0) _menuGrid[`${key}-f${fi}`] = {
-            comida_id: comida.id, nombre: c.nombre || comida.nombre,
+            comida_id: comida.id, nombre: c.nombre || comida.nombre, receta: c.receta || comida.receta || null,
             kcal:  Math.round(kcal),
             prot:  Math.round(prot*10)/10,
             ch:    Math.round(ch*10)/10,
@@ -13321,7 +13323,7 @@ async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, cliente
   try {
     // El menú original NUNCA se mueve: se lee, se copia, y la copia se crea
     // ya asignada al nuevo cliente en un solo paso (evita estados intermedios).
-    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes,nombre`);
+    const resC = await supaAdmin(`/rest/v1/menu_celdas?menu_id=eq.${menuId}&select=tipo_dia,franja,comida_id,ingredientes,nombre,receta`);
     if (!resC.ok) throw new Error('No se pudieron leer las celdas del menú original');
     const celdasOriginales = await resC.json();
     if (!celdasOriginales.length) { showToast('❌ El menú no tiene comidas que asignar'); return; }
@@ -13344,7 +13346,7 @@ async function menuConfirmarAsignacion(menuId, menuNombre, clienteEmail, cliente
 
     const celdasNuevas = celdasOriginales.map(c => ({
       menu_id: copia.id, tipo_dia: c.tipo_dia, franja: c.franja,
-      comida_id: c.comida_id, ingredientes: c.ingredientes || null, nombre: c.nombre || null
+      comida_id: c.comida_id, ingredientes: c.ingredientes || null, nombre: c.nombre || null, receta: c.receta || null
     }));
     const celRes = await supaAdmin('/rest/v1/menu_celdas', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
