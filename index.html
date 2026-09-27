@@ -374,6 +374,60 @@ body{
 .input-field{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;
   font-size:15px;line-height:1.4;resize:none;max-height:90px;min-height:22px;padding:4px 4px;}
 .input-field::placeholder{color:var(--muted);}
+
+/* ── Letra grande a nivel de app (preferencia del cliente, guardada en
+   Supabase). Se aplica por fases a las pantallas que más se leen:
+   chat, diario y menú semanal. ── */
+body.letra-grande #viewChat .bubble{
+  font-size:16px!important;
+  line-height:1.6!important;
+}
+body.letra-grande #viewChat #inputField{
+  font-size:17px!important;
+}
+body.letra-grande #viewChat #inputField::placeholder{
+  font-size:17px;
+}
+body.letra-grande #viewMain .mfp-item-nombre{
+  font-size:15px!important;
+}
+body.letra-grande #viewMain .mfp-item-macro{
+  font-size:12px!important;
+}
+body.letra-grande #viewMain .mfp-item-kcal{
+  font-size:15px!important;
+}
+body.letra-grande #viewMain .mfp-meal-sub{
+  font-size:12px!important;
+}
+body.letra-grande #viewMain .mfp-meal-kcal{
+  font-size:17px!important;
+}
+body.letra-grande #viewMain .meal-name{
+  font-size:19px!important;
+}
+body.letra-grande #viewMain .mp-kcal-big{
+  font-size:26px!important;
+}
+body.letra-grande #viewMain .mp-macro-rest{
+  font-size:19px!important;
+}
+body.letra-grande #viewMiMenu .mc-comida-titulo{
+  font-size:16px!important;
+}
+body.letra-grande #viewMiMenu .mc-comida-sub{
+  font-size:13px!important;
+}
+body.letra-grande #viewMiMenu .mc-alimento-nombre{
+  font-size:15px!important;
+}
+body.letra-grande #viewMiMenu .mc-alimento-macros{
+  font-size:13px!important;
+}
+body.letra-grande #viewMiMenu .mc-alimento-kcal{
+  font-size:15px!important;
+}
+
 .ibtns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
 .icon-btn{width:36px;height:36px;border-radius:11px;background:var(--s3);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0;transition:all 0.2s;}
@@ -1093,6 +1147,7 @@ body{
     <div class="back-btn" onclick="bnNav('diario')">‹</div>
     <h2>Perfil</h2>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+      <div class="icon-nav" id="mp-letra-grande-header-btn" onclick="toggleLetraGrandeApp()" title="Letra grande" aria-label="Activar letra grande">Aa</div>
       <div class="icon-nav" id="adminHeaderBtn" onclick="showView('viewAdmin');loadAdminUsers()" title="Panel Admin" style="display:none;background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.3);color:var(--accent);">⚡</div>
     </div>
   </div>
@@ -1147,6 +1202,7 @@ body{
       </div>
     </div>
     <button class="save-btn" onclick="guardarDiasEntreno()">Guardar mis días</button>
+
     <button class="cfg-logout-btn" onclick="doLogout()">Cerrar sesión</button>
   </div>
 </div>
@@ -4409,11 +4465,11 @@ function renderMFPDiario() {
              ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchMove(event)"
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
-            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
+            <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
+            <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
+            <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
           </div>
         </div>`;
     });
@@ -4427,11 +4483,11 @@ function renderMFPDiario() {
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
             <div class="meal-name">${meal.name}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
+            <div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
+          <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
           <span id="chev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
       </div>
@@ -10169,6 +10225,9 @@ async function cargarPerfilUsuario() {
       if (p.kcal_descanso) {
         CFG.descanso = {kcal: p.kcal_descanso, prot: p.p_descanso||100, ch: p.hc_descanso||180, grasa: p.g_descanso||55};
       }
+      // Letra grande — preferencia del cliente, ya viene en esta misma fila
+      aplicarLetraGrandeApp(!!p.letra_grande);
+      try{ localStorage.setItem('macroai_letra_grande', p.letra_grande ? '1' : '0'); }catch(e){}
       // Cargar días de entreno desde Supabase si los tiene
       if (p.dias_entreno && Array.isArray(p.dias_entreno) && p.dias_entreno.length > 0) {
         WEEK_DAYS = p.dias_entreno.map(d => parseInt(d));
@@ -10220,6 +10279,46 @@ async function cargarPerfilUsuario() {
     if (pN) pN.textContent = CURRENT_USER.email?.split('@')[0] || '';
   }
 }
+
+// ── Letra grande a nivel de app (preferencia del cliente) ──────────────
+// Se guarda en perfiles_macroai.letra_grande (persiste entre dispositivos,
+// ya llega en la misma fila que carga cargarPerfilUsuario) y se cachea en
+// localStorage para aplicarla al instante al abrir la app, sin esperar a
+// la respuesta de Supabase.
+function aplicarLetraGrandeApp(on){
+  document.body.classList.toggle('letra-grande', !!on);
+  const btn = document.getElementById('mp-letra-grande-header-btn');
+  if(btn){
+    btn.style.background = on ? 'var(--accent)' : 'var(--s2)';
+    btn.style.color = on ? '#fff' : 'var(--text)';
+    btn.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  }
+}
+
+async function toggleLetraGrandeApp(){
+  const on = !document.body.classList.contains('letra-grande');
+  aplicarLetraGrandeApp(on);
+  try{ localStorage.setItem('macroai_letra_grande', on ? '1' : '0'); }catch(e){}
+  if(CURRENT_USER){
+    try{
+      await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.'+encodeURIComponent(CURRENT_USER.email), {
+        method:'PATCH',
+        headers:{'Prefer':'return=minimal','Content-Type':'application/json'},
+        body: JSON.stringify({letra_grande:on})
+      });
+    }catch(e){}
+  }
+}
+
+// Aplicar de inmediato la caché local al cargar, para que no haya
+// parpadeo de letra pequeña→grande mientras responde Supabase.
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    let on = false;
+    try{ on = localStorage.getItem('macroai_letra_grande') === '1'; }catch(e){}
+    if(on) aplicarLetraGrandeApp(true);
+  });
+})();
 
 // Guardar días de entreno del cliente en Supabase
 async function guardarDiasEntreno() {
