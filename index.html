@@ -11487,6 +11487,10 @@ PLATO: ${nombre}
 INGREDIENTES (con la cantidad exacta que debe usarse):
 ${listaIngs}
 
+ESTILO OBLIGATORIO: cocina casera española, sencilla, la que haría cualquiera en su cocina de diario. Usa solo técnicas básicas: hervir, cocer, plancha, horno simple, salteado, al vapor, asado, crudo. NUNCA uses técnicas de restaurante ni elaboradas (empanados, rebozados, gratinados, reducciones, espumas, migas de pan, purés forzados sobre un ingrediente que no lo pide, etc.) salvo que el propio nombre del plato lo indique explícitamente.
+
+No transformes un ingrediente en otro formato o textura distinta al que tiene de por sí. Los alimentos que se comen tal cual (pan, fruta fresca) se sirven enteros o cortados, como acompañamiento — nunca los conviertas en otra cosa (p. ej. el pan nunca se convierte en migas, rebozado o tostada con algo encima salvo que el nombre del plato lo pida).
+
 No inventes ingredientes que no estén en la lista. No repitas las cantidades en el texto salvo que sea imprescindible para la preparación (p. ej. tiempos de cocción sí, gramos no). Máximo 5 pasos. Devuelve ÚNICAMENTE los pasos, sin introducción ni comentarios.
 
 IMPORTANTE sobre las verduras: para cada ingrediente de tipo verdura/hortaliza, elige y especifica SIEMPRE una forma concreta de prepararla — ensalada (en crudo), salteada, al vapor, asada, crema o puré — la que mejor encaje con el resto del plato. Nunca lo dejes ambiguo (evita frases como "cocinar la verdura al vapor o salteada"); indica una sola forma concreta.
@@ -11502,7 +11506,7 @@ IMPORTANTE sobre el huevo: si el plato lleva huevo, NO fijes una única forma de
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
-        system: 'Eres un cocinero práctico que escribe recetas caseras breves para clientes de nutrición deportiva. Respondes solo con los pasos, sin texto adicional.',
+        system: 'Eres un cocinero casero español, nada creativo ni de restaurante: escribes recetas sencillas, de cocina de diario, con las técnicas más básicas y directas posibles. Evitas cualquier elaboración innecesaria. Respondes solo con los pasos, sin texto adicional.',
         messages: [{ role: 'user', content: prompt }]
       })
     });
