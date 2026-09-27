@@ -11030,9 +11030,12 @@ function abrirEditorBiblioteca(comida, cellKey) {
 
         <div id="bibIngRows" style="margin-bottom:12px;"></div>
 
-        <div class="bib-field-label">Receta / Preparación (opcional)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;">
+          <div class="bib-field-label" style="margin-bottom:0;">Receta / Preparación (opcional)</div>
+          <button id="bibRegenRecetaBtn" onclick="bibRegenerarReceta()" style="background:var(--accent-dim);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;">🔄 Regenerar con IA</button>
+        </div>
         <textarea id="bibEdReceta" class="bib-input" rows="5" placeholder="Ej: 1. Cocer el arroz 15 min...&#10;2. Marcar el pollo en la sartén...&#10;3. Mezclar todo y servir."
-          style="width:100%;resize:vertical;font-family:inherit;line-height:1.5;margin-bottom:16px;">${escapeHtml(comida?.receta || '')}</textarea>
+          style="width:100%;resize:vertical;font-family:inherit;line-height:1.5;margin-bottom:16px;margin-top:8px;">${escapeHtml(comida?.receta || '')}</textarea>
 
         <button onclick="abrirNuevoAlimentoDesdeModal()" style="width:100%;padding:11px;background:rgba(192,57,43,0.06);border:1px dashed rgba(192,57,43,0.35);border-radius:11px;color:var(--accent);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
           + Nuevo alimento
@@ -11467,6 +11470,53 @@ function bibAjustarAlTarget() {
   bibRecalcTotales();
   showToast('✅ Gramos ajustados al target');
 }
+// ── REGENERAR RECETA CON IA (a partir de los ingredientes actuales del formulario) ──
+async function bibRegenerarReceta() {
+  const btn = document.getElementById('bibRegenRecetaBtn');
+  const nombre = (document.getElementById('bibEdNombre')?.value || '').trim() || 'este plato';
+
+  const ingsValidos = _cocEditorIngs.filter(i => i.nombre && i.nombre.trim() && i.gramos > 0);
+  if (!ingsValidos.length) { showToast('❌ Añade ingredientes con cantidad antes de generar la receta'); return; }
+
+  const listaIngs = ingsValidos.map(i => `- ${i.nombre.trim()} (${i.gramos}g)`).join('\n');
+
+  const prompt = `Escribe los pasos de preparación de esta receta, en español, en pasos numerados, breves y directos (estilo: "1. Cocer la patata 15 min. Pelar y cortar en rodajas.").
+
+PLATO: ${nombre}
+INGREDIENTES (con la cantidad exacta que debe usarse):
+${listaIngs}
+
+No inventes ingredientes que no estén en la lista. No repitas las cantidades en el texto salvo que sea imprescindible para la preparación (p. ej. tiempos de cocción sí, gramos no). Máximo 5 pasos. Devuelve ÚNICAMENTE los pasos, sin introducción ni comentarios.`;
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: 'Eres un cocinero práctico que escribe recetas caseras breves para clientes de nutrición deportiva. Respondes solo con los pasos, sin texto adicional.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const texto = (data.content?.find(b => b.type === 'text')?.text || data.content?.[0]?.text || '').trim();
+    if (!texto) throw new Error('Sin texto en respuesta');
+
+    const textarea = document.getElementById('bibEdReceta');
+    if (textarea) textarea.value = texto;
+    showToast('✅ Receta propuesta — revísala antes de guardar');
+  } catch (e) {
+    console.error('bibRegenerarReceta error:', e);
+    showToast('❌ No se pudo generar la receta');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Regenerar con IA'; }
+  }
+}
+
 // ── GUARDAR ──
 async function guardarComidaBib() {
   const nombre = (document.getElementById('bibEdNombre')?.value || '').trim();
