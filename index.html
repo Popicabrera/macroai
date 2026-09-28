@@ -427,6 +427,12 @@ body.letra-grande #viewMiMenu .mc-alimento-macros{
 body.letra-grande #viewMiMenu .mc-alimento-kcal{
   font-size:15px!important;
 }
+body.letra-grande #viewBuscador .mfp-item-nombre{
+  font-size:15px!important;
+}
+body.letra-grande #viewBuscador .mfp-item-macro{
+  font-size:12px!important;
+}
 
 .ibtns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
 .icon-btn{width:36px;height:36px;border-radius:11px;background:var(--s3);border:1px solid var(--border);
@@ -686,7 +692,8 @@ body.letra-grande #viewMiMenu .mc-alimento-kcal{
 .fsm-overlay.open{display:flex;}
 .fsm-sheet{width:100%;max-width:430px;background:var(--s1);border-radius:22px 22px 0 0;
   border-top:1px solid var(--border);padding:16px 16px 36px;
-  display:flex;flex-direction:column;gap:10px;animation:slideUp 0.25s ease;max-height:80vh;}
+  display:flex;flex-direction:column;gap:10px;animation:slideUp 0.25s ease;max-height:80vh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .fsm-handle{width:36px;height:4px;background:var(--muted2);border-radius:4px;margin:0 auto 6px;}
 .fsm-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);
   text-transform:uppercase;letter-spacing:0.5px;}
@@ -718,6 +725,23 @@ body.letra-grande #viewMiMenu .mc-alimento-kcal{
 .fsm-not-found{text-align:center;padding:20px;color:var(--muted);font-size:13px;line-height:1.6;}
 .fsm-loading{text-align:center;padding:24px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px;}
 .fsm-selected{background:rgba(192,57,43,0.07);border-color:rgba(192,57,43,0.4)!important;}
+
+/* ── Panel de nutrientes ampliado en el editor de alimentos (fsm) ── */
+.fsm-nutri-card{background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:14px;}
+.fsm-nutri-hdr{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.fsm-nutri-sub{font-size:10px;color:var(--muted2);margin-bottom:10px;}
+.fsm-nutri-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid var(--border);}
+.fsm-nutri-row:last-child{border-bottom:none;}
+.fsm-nutri-row.sub{padding-left:12px;}
+.fsm-nutri-lbl{font-size:12.5px;font-weight:600;}
+.fsm-nutri-row.sub .fsm-nutri-lbl{font-size:11.5px;font-weight:400;color:var(--muted);}
+.fsm-nutri-val{font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:700;}
+.fsm-nutri-row.sub .fsm-nutri-val{font-size:11.5px;font-weight:400;color:var(--muted);font-family:'Inter',sans-serif;}
+.fsm-obj-bar-track{height:6px;border-radius:4px;background:var(--s3);overflow:hidden;margin-top:5px;}
+.fsm-obj-bar-fill{height:100%;border-radius:4px;}
+.fsm-nutri-note{font-size:10.5px;color:var(--muted2);font-style:italic;line-height:1.5;margin-top:10px;}
 
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
@@ -1962,11 +1986,24 @@ function usarFavorito(id){
   mostrarSelectorComidaFav(id, null);
 }
 
+// Un favorito "desglosable" es el que guarda kcal_100+gramos por ingrediente
+// (los creados manteniendo pulsado el header de una comida). Con esos datos
+// cada ingrediente puede registrarse como línea suelta y editable en el diario,
+// en vez de una única línea con el total — igual que MyFitnessPal.
+function _favoritoEsDesglosable(f){
+  return !!(f.ingredientes && f.ingredientes.length &&
+    f.ingredientes.every(i=>i.kcal_100!=null && i.kcal_100>0 && i.gramos!=null && i.gramos>0));
+}
+
 function _ejecutarRegistroFavorito(id, mealId, fecha){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
   const esHoy = !fecha || fecha === getToday();
   // Si tiene macros guardados — registrar directamente sin llamar a la IA
   if(f.kcal>0){
+    if(_favoritoEsDesglosable(f)){
+      _registrarFavoritoDesglosado(f, mealId, fecha, esHoy);
+      return;
+    }
     const kcalN=f.kcal||0,protN=f.prot||0,chN=f.ch||0,grasaN=f.grasa||0;
     let ingTexto='';
     if(f.ingredientes&&f.ingredientes.length){
@@ -2040,6 +2077,56 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
     const diaLabel = fecha && fecha !== getToday() ? ` para el ${getFechaLabel(fecha)}` : '';
     setTimeout(()=>sendDirect(`Registra este favorito en ${comidaLabel}${diaLabel}: ${f.nombre}. Ingredientes: ${lista}`),300);
   }
+}
+
+// Registra un favorito desglosable como una línea de diario por cada ingrediente
+// (en vez de una sola línea con el total). Cada línea queda suelta y editable/borrable
+// desde el diario igual que cualquier alimento añadido a mano, sin tocar el favorito guardado.
+function _registrarFavoritoDesglosado(f, mealId, fecha, esHoy){
+  const hora=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  const entradas=f.ingredientes.map(i=>{
+    const factor=i.gramos/100;
+    const kcal=Math.round(i.kcal_100*factor);
+    const prot=Math.round(i.p_100*factor*10)/10;
+    const ch=Math.round(i.hc_100*factor*10)/10;
+    const grasa=Math.round(i.g_100*factor*10)/10;
+    return{
+      nombre:i.nombre,hora,kcal,prot,ch,grasa,
+      ingredientes:`${i.nombre}:${i.cantidad||(i.gramos+'g')}:`,
+      mealId,kcal_100:i.kcal_100,p_100:i.p_100,hc_100:i.hc_100,g_100:i.g_100
+    };
+  });
+  const kcalN=Math.round(entradas.reduce((a,e)=>a+e.kcal,0));
+  const protN=Math.round(entradas.reduce((a,e)=>a+e.prot,0)*10)/10;
+  const chN=Math.round(entradas.reduce((a,e)=>a+e.ch,0)*10)/10;
+  const grasaN=Math.round(entradas.reduce((a,e)=>a+e.grasa,0)*10)/10;
+  if(!esHoy){
+    // Día pasado o futuro — guardar en localStorage de ese día
+    const key='macroai_dia_'+fecha;
+    const d=JSON.parse(localStorage.getItem(key)||'null')||{fecha,comidas:[]};
+    entradas.forEach(e=>d.comidas.push(e));
+    saveDiaFecha(fecha, d);
+    showView('viewMain');
+    setTimeout(()=>cargarDiarioPorFecha(fecha),200);
+    showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
+    return;
+  }
+  // Hoy
+  showView('viewMain');
+  setTimeout(()=>{
+    entradas.forEach(e=>{
+      S.kcalC+=e.kcal;S.protC+=e.prot;S.chC+=e.ch;S.grasaC+=e.grasa;
+      S.comidas.push(e);
+      saveComidaSupabase({nombre:e.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:e.kcal,prot:e.prot,ch:e.ch,grasa:e.grasa,ingredientes:e.ingredientes});
+    });
+    updateBars();saveToday();renderMFPDiario();
+    let ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
+    f.ingredientes.forEach(i=>{ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(i.nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(i.cantidad||(i.gramos+'g'))}</div></div></div>`;});
+    ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal</span></div></div>`;
+    ingHtml+='</div>';
+    addMsg('ai','✅ '+f.nombre+' registrado desde favoritos (cada ingrediente por separado, edítalos o bórralos en el diario)',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN});
+    showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
+  },300);
 }
 
 function editarFavorito(id){
@@ -2376,12 +2463,20 @@ async function buscarEnOFF(nombre) {
     });
     if (!productos.length) return null;
     const n = productos[0].nutriments||{};
-    return {
+    // sat_100/fibra_100/azucar_100/sodio_100: nutrientes ampliados para el panel
+    // "Información nutricional" del editor de alimentos (fsmRenderNutriPanel).
+    // OFF ya los trae en la misma respuesta — antes se descartaban.
+    const out = {
       p_100:  Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
       hc_100: Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
       g_100:  Math.round(parseFloat(n['fat_100g']||0)*10)/10,
       kcal_100: Math.round(parseFloat(n['energy-kcal_100g']||0))
     };
+    if (n['saturated-fat_100g'] != null) out.sat_100    = Math.round(parseFloat(n['saturated-fat_100g'])*10)/10;
+    if (n['fiber_100g']         != null) out.fibra_100  = Math.round(parseFloat(n['fiber_100g'])*10)/10;
+    if (n['sugars_100g']        != null) out.azucar_100 = Math.round(parseFloat(n['sugars_100g'])*10)/10;
+    if (n['sodium_100g']        != null) out.sodio_100  = Math.round(parseFloat(n['sodium_100g'])*1000); // g→mg
+    return out;
   } catch(e) {}
   return null;
 }
@@ -3592,7 +3687,12 @@ function fsmActualizarPreview() {
   if (!_fsmProductoSeleccionado) return;
   const g = parseFloat(document.getElementById('fsmGramos').value) || 0;
   const p = _fsmProductoSeleccionado;
-  if (!g) { document.getElementById('fsmPreview').textContent = ''; return; }
+  const nutriPanel = document.getElementById('fsmNutriPanel');
+  if (!g) {
+    document.getElementById('fsmPreview').textContent = '';
+    if (nutriPanel) { nutriPanel.style.display = 'none'; nutriPanel.innerHTML = ''; }
+    return;
+  }
   const f = g / 100;
   const kcal = Math.round(p.kcal_100 * f);
   const prot = Math.round(p.p_100 * f * 10) / 10;
@@ -3600,6 +3700,96 @@ function fsmActualizarPreview() {
   const grasa= Math.round(p.g_100  * f * 10) / 10;
   document.getElementById('fsmPreview').innerHTML =
     `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · CH${hc}g · P${prot}g · G${grasa}g`;
+  fsmRenderNutriPanel(p, f, {kcal, prot, hc, grasa});
+}
+
+// Panel "Editar entrada" ampliado: reparto de macros + % de objetivos diarios +
+// información nutricional completa — TODO referido únicamente a este alimento suelto
+// (independiente del anillo de totales del día, que sigue siendo otro).
+function fsmRenderNutriPanel(p, f, m) {
+  const nutriPanel = document.getElementById('fsmNutriPanel');
+  if (!nutriPanel) return;
+  const { kcal, prot, hc, grasa } = m;
+  if (kcal <= 0) { nutriPanel.style.display = 'none'; nutriPanel.innerHTML = ''; return; }
+
+  // % de este alimento por macro (sobre sus propias kcal)
+  const kcalCh = hc * 4, kcalP = prot * 4, kcalG = grasa * 9;
+  const kcalMacros = kcalCh + kcalP + kcalG || 1;
+  const pctCh = Math.round(kcalCh / kcalMacros * 100);
+  const pctP  = Math.round(kcalP  / kcalMacros * 100);
+  const pctG  = Math.max(0, 100 - pctCh - pctP);
+  const gradCh = pctCh, gradP = pctCh + pctP;
+
+  // % de los objetivos diarios que cubre este alimento
+  const pctObjKcal = S.kcalObj > 0 ? Math.round(kcal / S.kcalObj * 100) : 0;
+  const pctObjCh   = S.ch     > 0 ? Math.round(hc   / S.ch     * 100) : 0;
+  const pctObjG    = S.grasa  > 0 ? Math.round(grasa/ S.grasa  * 100) : 0;
+  const pctObjP    = S.prot   > 0 ? Math.round(prot / S.prot   * 100) : 0;
+
+  // Campos extra (grasas saturadas, fibra, azúcares, sodio) — solo si el producto
+  // los trae (p.ej. de un código de barras); si no, esas líneas ni se generan.
+  const satVal   = p.sat_100    != null ? Math.round(p.sat_100    * f * 10) / 10 : null;
+  const fibraVal = p.fibra_100  != null ? Math.round(p.fibra_100  * f * 10) / 10 : null;
+  const azucVal  = p.azucar_100 != null ? Math.round(p.azucar_100 * f * 10) / 10 : null;
+  const sodioVal = p.sodio_100  != null ? Math.round(p.sodio_100  * f)           : null;
+  const tieneExtra = satVal != null || fibraVal != null || azucVal != null || sodioVal != null;
+
+  nutriPanel.style.display = 'flex';
+  nutriPanel.innerHTML = `
+    <div class="fsm-nutri-card">
+      <div class="fsm-nutri-hdr">Reparto de macros</div>
+      <div class="fsm-nutri-sub">Solo de este alimento</div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="position:relative;width:78px;height:78px;flex-shrink:0;border-radius:50%;background:conic-gradient(var(--yellow) 0% ${gradCh}%, var(--red) ${gradCh}% ${gradP}%, var(--blue) ${gradP}% 100%);">
+          <div style="position:absolute;inset:9px;border-radius:50%;background:var(--s2);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;">${kcal}</div>
+            <div style="font-size:8px;color:var(--muted);">kcal</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;"></span><strong>${pctCh}%</strong><span style="color:var(--muted);">Carbos</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span><strong>${pctP}%</strong><span style="color:var(--muted);">Proteína</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span><strong>${pctG}%</strong><span style="color:var(--muted);">Grasas</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsm-nutri-card">
+      <div class="fsm-nutri-hdr">% de tus objetivos diarios</div>
+      <div class="fsm-nutri-sub">Lo que aporta esta cantidad</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Calorías</span><span style="color:var(--muted);">${pctObjKcal}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjKcal)}%;background:var(--accent);"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Carbohidratos</span><span style="color:var(--muted);">${pctObjCh}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjCh)}%;background:var(--yellow);"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Grasas</span><span style="color:var(--muted);">${pctObjG}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjG)}%;background:var(--blue);"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Proteínas</span><span style="color:var(--muted);">${pctObjP}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjP)}%;background:var(--red);"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsm-nutri-card">
+      <div class="fsm-nutri-hdr">Información nutricional</div>
+      <div class="fsm-nutri-sub">${tieneExtra ? '🏷️ Ampliada desde el código de barras' : 'Macros básicos de este alimento'}</div>
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Calorías</span><span class="fsm-nutri-val">${kcal}</span></div>
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Grasa total</span><span class="fsm-nutri-val">${grasa} g</span></div>
+      ${satVal != null ? `<div class="fsm-nutri-row sub"><span class="fsm-nutri-lbl">Grasas saturadas</span><span class="fsm-nutri-val">${satVal} g</span></div>` : ''}
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Carbohidratos totales</span><span class="fsm-nutri-val">${hc} g</span></div>
+      ${fibraVal != null ? `<div class="fsm-nutri-row sub"><span class="fsm-nutri-lbl">Fibra dietética</span><span class="fsm-nutri-val">${fibraVal} g</span></div>` : ''}
+      ${azucVal  != null ? `<div class="fsm-nutri-row sub"><span class="fsm-nutri-lbl">Azúcares</span><span class="fsm-nutri-val">${azucVal} g</span></div>` : ''}
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Proteínas</span><span class="fsm-nutri-val">${prot} g</span></div>
+      ${sodioVal != null ? `<div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Sodio</span><span class="fsm-nutri-val">${sodioVal} mg</span></div>` : ''}
+      ${!tieneExtra ? `<div class="fsm-nutri-note">Grasas saturadas, fibra, azúcares y sodio solo aparecen cuando este alimento viene de un código de barras escaneado.</div>` : ''}
+    </div>`;
 }
 
 
@@ -3610,6 +3800,8 @@ function fsmCerrar() {
   _futEditandoFecha = null; _futEditandoMealId = null; _futEditandoIdx = -1;
   const _ner = document.getElementById('fsmNameEditRow');
   if (_ner) _ner.style.display = 'none';
+  const _np = document.getElementById('fsmNutriPanel');
+  if (_np) { _np.style.display = 'none'; _np.innerHTML = ''; }
 }
 
 // ── sendDirect MEJORADO: intercepta búsquedas de alimentos ──
@@ -4631,7 +4823,7 @@ function mfpGuardarMealFavorito(mealId, mealName) {
   }, 100);
 }
 
-function mfpTouchStart(idx,e){window._mfpTouchY=e.touches[0].clientY;window._mfpTimer=setTimeout(()=>mfpMenuItem(idx,e),600);} function mfpTouchEnd(){clearTimeout(window._mfpTimer);} function mfpTouchMove(e){if(Math.abs(e.touches[0].clientY-window._mfpTouchY)>8)clearTimeout(window._mfpTimer);} function mfpMenuItem(idx,e){   if(e)e.preventDefault();   const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];   const mealIds=['desayuno','almuerzo','comida','merienda','cena'];   const overlay=document.createElement('div');   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';   let moverOpts=mealIds.map((id,i)=>`<button onclick="mfpMoverItem(${idx},'${id}');this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');   overlay.innerHTML=`<div data-mfp-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">     <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${S.comidas[idx]?.nombre||'Alimento'}</div>     <button onclick="mfpEliminarItem(${idx});this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>     <button onclick="mfpAnadirFavorito(${idx});this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:13px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.4);border-radius:12px;font-size:14px;color:#b8860b;font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">⭐ Añadir a favoritos</button>     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>     ${moverOpts}     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:4px;">Cancelar</button>   </div>`;   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});   document.body.appendChild(overlay); } function mfpMoverItem(idx,newMealId){   if(!S.comidas[idx])return;   S.comidas[idx].mealId=newMealId;   updateBars();saveToday();renderMFPDiario();showToast('↩ Movido a '+newMealId); } function mfpAnadirFavorito(idx){
+function mfpTouchStart(idx,e){window._mfpTouchY=e.touches[0].clientY;window._mfpTimer=setTimeout(()=>mfpMenuItem(idx,e),600);} function mfpTouchEnd(){clearTimeout(window._mfpTimer);} function mfpTouchMove(e){if(Math.abs(e.touches[0].clientY-window._mfpTouchY)>8)clearTimeout(window._mfpTimer);} function mfpMenuItem(idx,e){   if(e)e.preventDefault();   const comidas=['Desayuno','Almuerzo','Comida','Merienda','Cena'];   const mealIds=['desayuno','almuerzo','comida','merienda','cena'];   const overlay=document.createElement('div');   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';   let moverOpts=mealIds.map((id,i)=>`<button onclick="this.closest('[data-mfp-menu]').parentElement.remove();mfpMoverItem(${idx},'${id}');" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');   overlay.innerHTML=`<div data-mfp-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">     <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">${S.comidas[idx]?.nombre||'Alimento'}</div>     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();mfpEliminarItem(${idx});" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();mfpAnadirFavorito(${idx});" style="width:100%;padding:13px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.4);border-radius:12px;font-size:14px;color:#b8860b;font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">⭐ Añadir a favoritos</button>     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>     ${moverOpts}     <button onclick="this.closest('[data-mfp-menu]').parentElement.remove();" style="width:100%;padding:12px;background:var(--s3);border:none;border-radius:12px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:4px;">Cancelar</button>   </div>`;   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});   document.body.appendChild(overlay); } function mfpMoverItem(idx,newMealId){   if(!S.comidas[idx])return;   S.comidas[idx].mealId=newMealId;   updateBars();saveToday();renderMFPDiario();showToast('↩ Movido a '+newMealId); } function mfpAnadirFavorito(idx){
   const item=S.comidas[idx];
   if(!item)return;
   guardarFavorito(
@@ -4760,8 +4952,8 @@ function renderBuscadorInicio() {
       <div class="reciente-row" data-ri="${idx}"
         style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · CH${item.hc_100}g · P${item.p_100}g · G${item.g_100}g · por 100g</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · CH${item.hc_100}g · P${item.p_100}g · G${item.g_100}g · por 100g</div>
         </div>
         <div class="reciente-add-btn" data-ri="${idx}"
           style="width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:var(--accent);font-weight:700;cursor:pointer;">＋</div>
@@ -4780,8 +4972,8 @@ function renderBuscadorInicio() {
            oncontextmenu="event.preventDefault();favBuscadorMenu(${f.id},event)">
         <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⭐</div>
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="favBuscadorUsar(${f.id})">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
         </div>
         <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,211,61,0.15);border:1px solid rgba(255,211,61,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:#b8860b;font-weight:700;"
              onclick="event.stopPropagation();favBuscadorUsar(${f.id})">＋</div>
@@ -5164,8 +5356,8 @@ function renderResultadosBuscador(resultados, query) {
     item.innerHTML = `
       ${imgHtml}
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}${recienteTag}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · CH${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
+        <div class="mfp-item-nombre" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}${recienteTag}</div>
+        <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · CH${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
       </div>
       <span style="color:var(--accent);font-size:20px;flex-shrink:0;">›</span>`;
     res.appendChild(item);
@@ -6296,11 +6488,11 @@ function _diarioRenderFuturo(fecha) {
         oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
+          <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
         </div>
       </div>`).join('');
 
@@ -6309,12 +6501,12 @@ function _diarioRenderFuturo(fecha) {
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin planificar'}</div>
+            <div class="meal-name" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin planificar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length ? 'var(--accent)' : 'var(--muted)'};">${items.length ? totalKcal + ' kcal' : '—'}</span>
+          <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length ? 'var(--accent)' : 'var(--muted)'};">${items.length ? totalKcal + ' kcal' : '—'}</span>
           <span id="fchev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
       </div>
@@ -7245,6 +7437,8 @@ async function handleFotoProducto(e) {
         <div onclick="fsmSetGrams(1)" style="padding:5px 16px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;">1g</div>
         <div onclick="fsmSetGrams(100)" style="padding:5px 16px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;">100g</div>
       </div>
+      <!-- Panel de nutrientes de ESTE alimento (independiente del anillo del día) -->
+      <div id="fsmNutriPanel" style="display:none;flex-direction:column;gap:10px;margin-top:4px;"></div>
     </div>
     <div class="fsm-cancel" onclick="fsmCerrar()">✕ Cancelar</div>
   </div>
