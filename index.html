@@ -719,6 +719,23 @@ body.letra-grande #viewMiMenu .mc-alimento-kcal{
 .fsm-loading{text-align:center;padding:24px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px;}
 .fsm-selected{background:rgba(192,57,43,0.07);border-color:rgba(192,57,43,0.4)!important;}
 
+/* ── Panel de nutrientes ampliado en el editor de alimentos (fsm) ── */
+.fsm-nutri-card{background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:14px;}
+.fsm-nutri-hdr{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.fsm-nutri-sub{font-size:10px;color:var(--muted2);margin-bottom:10px;}
+.fsm-nutri-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid var(--border);}
+.fsm-nutri-row:last-child{border-bottom:none;}
+.fsm-nutri-row.sub{padding-left:12px;}
+.fsm-nutri-lbl{font-size:12.5px;font-weight:600;}
+.fsm-nutri-row.sub .fsm-nutri-lbl{font-size:11.5px;font-weight:400;color:var(--muted);}
+.fsm-nutri-val{font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:700;}
+.fsm-nutri-row.sub .fsm-nutri-val{font-size:11.5px;font-weight:400;color:var(--muted);font-family:'Inter',sans-serif;}
+.fsm-obj-bar-track{height:6px;border-radius:4px;background:var(--s3);overflow:hidden;margin-top:5px;}
+.fsm-obj-bar-fill{height:100%;border-radius:4px;}
+.fsm-nutri-note{font-size:10.5px;color:var(--muted2);font-style:italic;line-height:1.5;margin-top:10px;}
+
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
 @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.4);}50%{box-shadow:0 0 0 6px rgba(255,107,107,0);}}
@@ -2439,12 +2456,20 @@ async function buscarEnOFF(nombre) {
     });
     if (!productos.length) return null;
     const n = productos[0].nutriments||{};
-    return {
+    // sat_100/fibra_100/azucar_100/sodio_100: nutrientes ampliados para el panel
+    // "Información nutricional" del editor de alimentos (fsmRenderNutriPanel).
+    // OFF ya los trae en la misma respuesta — antes se descartaban.
+    const out = {
       p_100:  Math.round(parseFloat(n['proteins_100g']||0)*10)/10,
       hc_100: Math.round(parseFloat(n['carbohydrates_100g']||0)*10)/10,
       g_100:  Math.round(parseFloat(n['fat_100g']||0)*10)/10,
       kcal_100: Math.round(parseFloat(n['energy-kcal_100g']||0))
     };
+    if (n['saturated-fat_100g'] != null) out.sat_100    = Math.round(parseFloat(n['saturated-fat_100g'])*10)/10;
+    if (n['fiber_100g']         != null) out.fibra_100  = Math.round(parseFloat(n['fiber_100g'])*10)/10;
+    if (n['sugars_100g']        != null) out.azucar_100 = Math.round(parseFloat(n['sugars_100g'])*10)/10;
+    if (n['sodium_100g']        != null) out.sodio_100  = Math.round(parseFloat(n['sodium_100g'])*1000); // g→mg
+    return out;
   } catch(e) {}
   return null;
 }
@@ -3655,7 +3680,12 @@ function fsmActualizarPreview() {
   if (!_fsmProductoSeleccionado) return;
   const g = parseFloat(document.getElementById('fsmGramos').value) || 0;
   const p = _fsmProductoSeleccionado;
-  if (!g) { document.getElementById('fsmPreview').textContent = ''; return; }
+  const nutriPanel = document.getElementById('fsmNutriPanel');
+  if (!g) {
+    document.getElementById('fsmPreview').textContent = '';
+    if (nutriPanel) { nutriPanel.style.display = 'none'; nutriPanel.innerHTML = ''; }
+    return;
+  }
   const f = g / 100;
   const kcal = Math.round(p.kcal_100 * f);
   const prot = Math.round(p.p_100 * f * 10) / 10;
@@ -3663,6 +3693,96 @@ function fsmActualizarPreview() {
   const grasa= Math.round(p.g_100  * f * 10) / 10;
   document.getElementById('fsmPreview').innerHTML =
     `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · CH${hc}g · P${prot}g · G${grasa}g`;
+  fsmRenderNutriPanel(p, f, {kcal, prot, hc, grasa});
+}
+
+// Panel "Editar entrada" ampliado: reparto de macros + % de objetivos diarios +
+// información nutricional completa — TODO referido únicamente a este alimento suelto
+// (independiente del anillo de totales del día, que sigue siendo otro).
+function fsmRenderNutriPanel(p, f, m) {
+  const nutriPanel = document.getElementById('fsmNutriPanel');
+  if (!nutriPanel) return;
+  const { kcal, prot, hc, grasa } = m;
+  if (kcal <= 0) { nutriPanel.style.display = 'none'; nutriPanel.innerHTML = ''; return; }
+
+  // % de este alimento por macro (sobre sus propias kcal)
+  const kcalCh = hc * 4, kcalP = prot * 4, kcalG = grasa * 9;
+  const kcalMacros = kcalCh + kcalP + kcalG || 1;
+  const pctCh = Math.round(kcalCh / kcalMacros * 100);
+  const pctP  = Math.round(kcalP  / kcalMacros * 100);
+  const pctG  = Math.max(0, 100 - pctCh - pctP);
+  const gradCh = pctCh, gradP = pctCh + pctP;
+
+  // % de los objetivos diarios que cubre este alimento
+  const pctObjKcal = S.kcalObj > 0 ? Math.round(kcal / S.kcalObj * 100) : 0;
+  const pctObjCh   = S.ch     > 0 ? Math.round(hc   / S.ch     * 100) : 0;
+  const pctObjG    = S.grasa  > 0 ? Math.round(grasa/ S.grasa  * 100) : 0;
+  const pctObjP    = S.prot   > 0 ? Math.round(prot / S.prot   * 100) : 0;
+
+  // Campos extra (grasas saturadas, fibra, azúcares, sodio) — solo si el producto
+  // los trae (p.ej. de un código de barras); si no, esas líneas ni se generan.
+  const satVal   = p.sat_100    != null ? Math.round(p.sat_100    * f * 10) / 10 : null;
+  const fibraVal = p.fibra_100  != null ? Math.round(p.fibra_100  * f * 10) / 10 : null;
+  const azucVal  = p.azucar_100 != null ? Math.round(p.azucar_100 * f * 10) / 10 : null;
+  const sodioVal = p.sodio_100  != null ? Math.round(p.sodio_100  * f)           : null;
+  const tieneExtra = satVal != null || fibraVal != null || azucVal != null || sodioVal != null;
+
+  nutriPanel.style.display = 'flex';
+  nutriPanel.innerHTML = `
+    <div class="fsm-nutri-card">
+      <div class="fsm-nutri-hdr">Reparto de macros</div>
+      <div class="fsm-nutri-sub">Solo de este alimento</div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="position:relative;width:78px;height:78px;flex-shrink:0;border-radius:50%;background:conic-gradient(var(--yellow) 0% ${gradCh}%, var(--red) ${gradCh}% ${gradP}%, var(--blue) ${gradP}% 100%);">
+          <div style="position:absolute;inset:9px;border-radius:50%;background:var(--s2);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;">${kcal}</div>
+            <div style="font-size:8px;color:var(--muted);">kcal</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;"></span><strong>${pctCh}%</strong><span style="color:var(--muted);">Carbos</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span><strong>${pctP}%</strong><span style="color:var(--muted);">Proteína</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span><strong>${pctG}%</strong><span style="color:var(--muted);">Grasas</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsm-nutri-card">
+      <div class="fsm-nutri-hdr">% de tus objetivos diarios</div>
+      <div class="fsm-nutri-sub">Lo que aporta esta cantidad</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Calorías</span><span style="color:var(--muted);">${pctObjKcal}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjKcal)}%;background:var(--accent);"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Carbohidratos</span><span style="color:var(--muted);">${pctObjCh}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjCh)}%;background:var(--yellow);"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Grasas</span><span style="color:var(--muted);">${pctObjG}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjG)}%;background:var(--blue);"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span>Proteínas</span><span style="color:var(--muted);">${pctObjP}%</span></div>
+          <div class="fsm-obj-bar-track"><div class="fsm-obj-bar-fill" style="width:${Math.min(100,pctObjP)}%;background:var(--red);"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsm-nutri-card">
+      <div class="fsm-nutri-hdr">Información nutricional</div>
+      <div class="fsm-nutri-sub">${tieneExtra ? '🏷️ Ampliada desde el código de barras' : 'Macros básicos de este alimento'}</div>
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Calorías</span><span class="fsm-nutri-val">${kcal}</span></div>
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Grasa total</span><span class="fsm-nutri-val">${grasa} g</span></div>
+      ${satVal != null ? `<div class="fsm-nutri-row sub"><span class="fsm-nutri-lbl">Grasas saturadas</span><span class="fsm-nutri-val">${satVal} g</span></div>` : ''}
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Carbohidratos totales</span><span class="fsm-nutri-val">${hc} g</span></div>
+      ${fibraVal != null ? `<div class="fsm-nutri-row sub"><span class="fsm-nutri-lbl">Fibra dietética</span><span class="fsm-nutri-val">${fibraVal} g</span></div>` : ''}
+      ${azucVal  != null ? `<div class="fsm-nutri-row sub"><span class="fsm-nutri-lbl">Azúcares</span><span class="fsm-nutri-val">${azucVal} g</span></div>` : ''}
+      <div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Proteínas</span><span class="fsm-nutri-val">${prot} g</span></div>
+      ${sodioVal != null ? `<div class="fsm-nutri-row"><span class="fsm-nutri-lbl">Sodio</span><span class="fsm-nutri-val">${sodioVal} mg</span></div>` : ''}
+      ${!tieneExtra ? `<div class="fsm-nutri-note">Grasas saturadas, fibra, azúcares y sodio solo aparecen cuando este alimento viene de un código de barras escaneado.</div>` : ''}
+    </div>`;
 }
 
 
@@ -3673,6 +3793,8 @@ function fsmCerrar() {
   _futEditandoFecha = null; _futEditandoMealId = null; _futEditandoIdx = -1;
   const _ner = document.getElementById('fsmNameEditRow');
   if (_ner) _ner.style.display = 'none';
+  const _np = document.getElementById('fsmNutriPanel');
+  if (_np) { _np.style.display = 'none'; _np.innerHTML = ''; }
 }
 
 // ── sendDirect MEJORADO: intercepta búsquedas de alimentos ──
@@ -7308,6 +7430,8 @@ async function handleFotoProducto(e) {
         <div onclick="fsmSetGrams(1)" style="padding:5px 16px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;">1g</div>
         <div onclick="fsmSetGrams(100)" style="padding:5px 16px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;">100g</div>
       </div>
+      <!-- Panel de nutrientes de ESTE alimento (independiente del anillo del día) -->
+      <div id="fsmNutriPanel" style="display:none;flex-direction:column;gap:10px;margin-top:4px;"></div>
     </div>
     <div class="fsm-cancel" onclick="fsmCerrar()">✕ Cancelar</div>
   </div>
