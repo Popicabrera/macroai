@@ -692,7 +692,8 @@ body.letra-grande #viewBuscador .mfp-item-macro{
 .fsm-overlay.open{display:flex;}
 .fsm-sheet{width:100%;max-width:430px;background:var(--s1);border-radius:22px 22px 0 0;
   border-top:1px solid var(--border);padding:16px 16px 36px;
-  display:flex;flex-direction:column;gap:10px;animation:slideUp 0.25s ease;max-height:80vh;}
+  display:flex;flex-direction:column;gap:10px;animation:slideUp 0.25s ease;max-height:80vh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .fsm-handle{width:36px;height:4px;background:var(--muted2);border-radius:4px;margin:0 auto 6px;}
 .fsm-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);
   text-transform:uppercase;letter-spacing:0.5px;}
