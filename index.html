@@ -1962,11 +1962,24 @@ function usarFavorito(id){
   mostrarSelectorComidaFav(id, null);
 }
 
+// Un favorito "desglosable" es el que guarda kcal_100+gramos por ingrediente
+// (los creados manteniendo pulsado el header de una comida). Con esos datos
+// cada ingrediente puede registrarse como línea suelta y editable en el diario,
+// en vez de una única línea con el total — igual que MyFitnessPal.
+function _favoritoEsDesglosable(f){
+  return !!(f.ingredientes && f.ingredientes.length &&
+    f.ingredientes.every(i=>i.kcal_100!=null && i.kcal_100>0 && i.gramos!=null && i.gramos>0));
+}
+
 function _ejecutarRegistroFavorito(id, mealId, fecha){
   const favs=loadFavs();const f=favs.find(x=>x.id===id);if(!f)return;
   const esHoy = !fecha || fecha === getToday();
   // Si tiene macros guardados — registrar directamente sin llamar a la IA
   if(f.kcal>0){
+    if(_favoritoEsDesglosable(f)){
+      _registrarFavoritoDesglosado(f, mealId, fecha, esHoy);
+      return;
+    }
     const kcalN=f.kcal||0,protN=f.prot||0,chN=f.ch||0,grasaN=f.grasa||0;
     let ingTexto='';
     if(f.ingredientes&&f.ingredientes.length){
@@ -2040,6 +2053,56 @@ function _ejecutarRegistroFavorito(id, mealId, fecha){
     const diaLabel = fecha && fecha !== getToday() ? ` para el ${getFechaLabel(fecha)}` : '';
     setTimeout(()=>sendDirect(`Registra este favorito en ${comidaLabel}${diaLabel}: ${f.nombre}. Ingredientes: ${lista}`),300);
   }
+}
+
+// Registra un favorito desglosable como una línea de diario por cada ingrediente
+// (en vez de una sola línea con el total). Cada línea queda suelta y editable/borrable
+// desde el diario igual que cualquier alimento añadido a mano, sin tocar el favorito guardado.
+function _registrarFavoritoDesglosado(f, mealId, fecha, esHoy){
+  const hora=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  const entradas=f.ingredientes.map(i=>{
+    const factor=i.gramos/100;
+    const kcal=Math.round(i.kcal_100*factor);
+    const prot=Math.round(i.p_100*factor*10)/10;
+    const ch=Math.round(i.hc_100*factor*10)/10;
+    const grasa=Math.round(i.g_100*factor*10)/10;
+    return{
+      nombre:i.nombre,hora,kcal,prot,ch,grasa,
+      ingredientes:`${i.nombre}:${i.cantidad||(i.gramos+'g')}:`,
+      mealId,kcal_100:i.kcal_100,p_100:i.p_100,hc_100:i.hc_100,g_100:i.g_100
+    };
+  });
+  const kcalN=Math.round(entradas.reduce((a,e)=>a+e.kcal,0));
+  const protN=Math.round(entradas.reduce((a,e)=>a+e.prot,0)*10)/10;
+  const chN=Math.round(entradas.reduce((a,e)=>a+e.ch,0)*10)/10;
+  const grasaN=Math.round(entradas.reduce((a,e)=>a+e.grasa,0)*10)/10;
+  if(!esHoy){
+    // Día pasado o futuro — guardar en localStorage de ese día
+    const key='macroai_dia_'+fecha;
+    const d=JSON.parse(localStorage.getItem(key)||'null')||{fecha,comidas:[]};
+    entradas.forEach(e=>d.comidas.push(e));
+    saveDiaFecha(fecha, d);
+    showView('viewMain');
+    setTimeout(()=>cargarDiarioPorFecha(fecha),200);
+    showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
+    return;
+  }
+  // Hoy
+  showView('viewMain');
+  setTimeout(()=>{
+    entradas.forEach(e=>{
+      S.kcalC+=e.kcal;S.protC+=e.prot;S.chC+=e.ch;S.grasaC+=e.grasa;
+      S.comidas.push(e);
+      saveComidaSupabase({nombre:e.nombre,fecha:getToday(),tipoDia:S.tipoDia,kcal:e.kcal,prot:e.prot,ch:e.ch,grasa:e.grasa,ingredientes:e.ingredientes});
+    });
+    updateBars();saveToday();renderMFPDiario();
+    let ingHtml='<div class="plan-card"><div class="plan-hdr">📋 ⭐ '+escapeHtml(f.nombre)+' — Ingredientes</div>';
+    f.ingredientes.forEach(i=>{ingHtml+=`<div class="plan-item"><div class="pi-l"><div class="pi-name">${escapeHtml(i.nombre)}</div></div><div class="pi-r"><div class="pi-g">${escapeHtml(i.cantidad||(i.gramos+'g'))}</div></div></div>`;});
+    ingHtml+=`<div class="plan-tot"><div class="pt-lbl">Total</div><div class="pt-ms"><span class="ptm" style="color:var(--yellow)">CH ${chN}g</span><span class="ptm" style="color:var(--red)">P ${protN}g</span><span class="ptm" style="color:var(--blue)">G ${grasaN}g</span><span class="ptm" style="color:var(--accent)">${kcalN} kcal</span></div></div>`;
+    ingHtml+='</div>';
+    addMsg('ai','✅ '+f.nombre+' registrado desde favoritos (cada ingrediente por separado, edítalos o bórralos en el diario)',[{type:'html',content:ingHtml}],[],{kcal:kcalN,prot:protN,ch:chN,grasa:grasaN});
+    showToast('⭐ '+f.nombre+' → '+mealId+' · '+kcalN+' kcal');
+  },300);
 }
 
 function editarFavorito(id){
