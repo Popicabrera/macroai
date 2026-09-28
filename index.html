@@ -427,6 +427,12 @@ body.letra-grande #viewMiMenu .mc-alimento-macros{
 body.letra-grande #viewMiMenu .mc-alimento-kcal{
   font-size:15px!important;
 }
+body.letra-grande #viewBuscador .mfp-item-nombre{
+  font-size:15px!important;
+}
+body.letra-grande #viewBuscador .mfp-item-macro{
+  font-size:12px!important;
+}
 
 .ibtns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
 .icon-btn{width:36px;height:36px;border-radius:11px;background:var(--s3);border:1px solid var(--border);
@@ -4945,8 +4951,8 @@ function renderBuscadorInicio() {
       <div class="reciente-row" data-ri="${idx}"
         style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · CH${item.hc_100}g · P${item.p_100}g · G${item.g_100}g · por 100g</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · CH${item.hc_100}g · P${item.p_100}g · G${item.g_100}g · por 100g</div>
         </div>
         <div class="reciente-add-btn" data-ri="${idx}"
           style="width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:var(--accent);font-weight:700;cursor:pointer;">＋</div>
@@ -4965,8 +4971,8 @@ function renderBuscadorInicio() {
            oncontextmenu="event.preventDefault();favBuscadorMenu(${f.id},event)">
         <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⭐</div>
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="favBuscadorUsar(${f.id})">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
         </div>
         <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,211,61,0.15);border:1px solid rgba(255,211,61,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:#b8860b;font-weight:700;"
              onclick="event.stopPropagation();favBuscadorUsar(${f.id})">＋</div>
@@ -5349,8 +5355,8 @@ function renderResultadosBuscador(resultados, query) {
     item.innerHTML = `
       ${imgHtml}
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}${recienteTag}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · CH${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
+        <div class="mfp-item-nombre" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}${recienteTag}</div>
+        <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · CH${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
       </div>
       <span style="color:var(--accent);font-size:20px;flex-shrink:0;">›</span>`;
     res.appendChild(item);
