@@ -6359,11 +6359,11 @@ function _diarioRenderFuturo(fecha) {
         oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
+          <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
         </div>
       </div>`).join('');
 
@@ -6372,12 +6372,12 @@ function _diarioRenderFuturo(fecha) {
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin planificar'}</div>
+            <div class="meal-name" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin planificar'}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length ? 'var(--accent)' : 'var(--muted)'};">${items.length ? totalKcal + ' kcal' : '—'}</span>
+          <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length ? 'var(--accent)' : 'var(--muted)'};">${items.length ? totalKcal + ' kcal' : '—'}</span>
           <span id="fchev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
       </div>
