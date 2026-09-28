@@ -2091,7 +2091,7 @@ function _registrarFavoritoDesglosado(f, mealId, fecha, esHoy){
     const ch=Math.round(i.hc_100*factor*10)/10;
     const grasa=Math.round(i.g_100*factor*10)/10;
     return{
-      nombre:i.nombre,hora,kcal,prot,ch,grasa,
+      nombre:`${i.nombre} (${i.gramos}g)`,hora,kcal,prot,ch,grasa,
       ingredientes:`${i.nombre}:${i.cantidad||(i.gramos+'g')}:`,
       mealId,kcal_100:i.kcal_100,p_100:i.p_100,hc_100:i.hc_100,g_100:i.g_100
     };
