@@ -981,7 +981,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
     <div class="mp-macros-row" id="mpBarsRow">
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="chFill" style="background:var(--yellow);width:0%"></div></div>
-        <div class="mp-macro-nums"><span id="chResta" class="mp-macro-rest" style="color:var(--yellow)">250</span><span class="mp-macro-lbl">Carbos (g)</span></div>
+        <div class="mp-macro-nums"><span id="chResta" class="mp-macro-rest" style="color:var(--yellow)">250</span><span class="mp-macro-lbl">Carbohidratos (g)</span></div>
       </div>
       <div class="mp-macro-div"></div>
       <div class="mp-macro">
@@ -1002,7 +1002,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
             <circle cx="60" cy="60" r="50" fill="none" stroke="var(--s3)" stroke-width="1" id="mpPieEmpty" style="display:none"/>
           </svg>
           <div class="mp-donut-legend">
-            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="mpPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbos</span></div>
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="mpPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbohidratos</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--red)"></span><span class="mp-donut-legend-val" id="mpPieProtPct">0%</span><span class="mp-donut-legend-lbl">Proteína</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--blue)"></span><span class="mp-donut-legend-val" id="mpPieGrasaPct">0%</span><span class="mp-donut-legend-lbl">Grasas</span></div>
             <div class="mp-donut-legend-item" style="margin-top:2px;padding-top:6px;border-top:1px solid var(--border);"><span class="mp-donut-dot" style="background:var(--s3);border:1px solid var(--border);"></span><span class="mp-donut-legend-val" id="mpPieRestanteTxt" style="color:var(--muted);font-weight:600;">—</span><span class="mp-donut-legend-lbl">restantes</span></div>
@@ -1014,7 +1014,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
             <span></span><span style="text-align:right;">Total</span><span style="text-align:right;">Objetivo</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
-            <span style="color:var(--text);">Carbos</span>
+            <span style="color:var(--text);">Carbohidratos</span>
             <span id="mpPieChTotal" style="text-align:right;color:var(--muted);">0%</span>
             <span id="mpPieChObj" style="text-align:right;color:var(--yellow);font-weight:700;">0%</span>
           </div>
@@ -2268,7 +2268,7 @@ function editarFavorito(id){
     overlay.querySelector('#favEditSave').addEventListener('click',()=>{
       const t=calcTotales();
       const freshFavs=loadFavs();const idx=freshFavs.findIndex(x=>x.id===id);
-      if(idx>=0){freshFavs[idx].ingredientes=ings;freshFavs[idx].kcal=t.kcal;freshFavs[idx].prot=t.prot;freshFavs[idx].ch=t.ch;freshFavs[idx].grasa=t.grasa;}
+      if(idx>=0){freshFavs[idx].ingredientes=ings.map(i=>({...i,cantidad:(i.gramos!=null&&i.gramos!=='')?(Math.round(i.gramos*10)/10)+'g':(i.cantidad||'')}));freshFavs[idx].kcal=t.kcal;freshFavs[idx].prot=t.prot;freshFavs[idx].ch=t.ch;freshFavs[idx].grasa=t.grasa;}
       saveFavs(freshFavs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
     });
     return;
@@ -2363,6 +2363,7 @@ function eliminarFavorito(id){
   let favs=loadFavs();favs=favs.filter(f=>f.id!==id);saveFavs(favs);renderFavoritos();
 }
 
+function fmtMacros(ch,prot,grasa){const r=v=>Math.round(parseFloat(v)||0);return `Carbohidratos ${r(ch)} g · Proteína ${r(prot)} g · Grasa ${r(grasa)} g`;}
 function escapeHtml(t){if(!t&&t!==0)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function mfpNombreGramosHtml(nombre){
   const s=String(nombre||'');
@@ -3219,7 +3220,7 @@ function parseAI(raw){
             }
             // Actualizar badge
             const badges=document.querySelectorAll('.meal-edit-badge span');
-            badges.forEach(b=>{if(b.textContent.includes(_nombre.substring(0,10)))b.textContent=`${newKcal} kcal · CH${newCh}g · P${newProt}g · G${newGrasa}g`;});
+            badges.forEach(b=>{if(b.textContent.includes(_nombre.substring(0,10)))b.textContent=`${newKcal} kcal · ${fmtMacros(newCh,newProt,newGrasa)}`;});
           }
           saveToday();
         });
@@ -3468,7 +3469,7 @@ function setMealTipo(mealIdx, btn, tipo){
     const badge = msgDiv.querySelector('.meal-edit-badge span');
     if(badge){
       const m = S.comidas[mealIdx];
-      badge.innerHTML = `<strong style="color:var(--accent)">${tipo}</strong> · ${m.kcal} kcal · CH${m.ch}g · P${m.prot}g · G${m.grasa}g`;
+      badge.innerHTML = `<strong style="color:var(--accent)">${tipo}</strong> · ${m.kcal} kcal · ${fmtMacros(m.ch,m.prot,m.grasa)}`;
     }
     // Actualizar plan-hdr
     const hdr = msgDiv.querySelector('.plan-hdr');
@@ -3501,7 +3502,7 @@ function addMsg(role,text,extraElements=[],opciones=[],macros=null,mealIdx=-1,in
     const m=S.comidas[mealIdx];
     const tipoLabel=m.tipo||'';
     h+=`<div class="meal-edit-badge" style="margin-top:8px;padding:6px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <span>${tipoLabel?'<strong style="color:var(--accent)">'+tipoLabel+'</strong> · ':''}${m.kcal} kcal · CH${m.ch}g · P${m.prot}g · G${m.grasa}g</span>
+      <span>${tipoLabel?'<strong style="color:var(--accent)">'+tipoLabel+'</strong> · ':''}${m.kcal} kcal · ${fmtMacros(m.ch,m.prot,m.grasa)}</span>
       <span style="color:var(--accent);font-size:10px;font-weight:600;">mantén para editar</span>
     </div>`;
     // Selector tipo comida si aún no tiene tipo asignado
@@ -3705,7 +3706,7 @@ function fsmActualizarPreview() {
   const hc   = Math.round(p.hc_100 * f * 10) / 10;
   const grasa= Math.round(p.g_100  * f * 10) / 10;
   document.getElementById('fsmPreview').innerHTML =
-    `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · CH${hc}g · P${prot}g · G${grasa}g`;
+    `<strong>${g}g</strong> → <span style="color:var(--accent)">${kcal} kcal</span> · ${fmtMacros(hc,prot,grasa)}`;
   fsmRenderNutriPanel(p, f, {kcal, prot, hc, grasa});
 }
 
@@ -3753,7 +3754,7 @@ function fsmRenderNutriPanel(p, f, m) {
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">
-          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;"></span><strong>${pctCh}%</strong><span style="color:var(--muted);">Carbos</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;"></span><strong>${pctCh}%</strong><span style="color:var(--muted);">Carbohidratos</span></div>
           <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span><strong>${pctP}%</strong><span style="color:var(--muted);">Proteína</span></div>
           <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span><strong>${pctG}%</strong><span style="color:var(--muted);">Grasas</span></div>
         </div>
@@ -4664,7 +4665,7 @@ function renderMFPDiario() {
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre)}</div>
-            <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
+            <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
@@ -4673,7 +4674,7 @@ function renderMFPDiario() {
     });
 
     block.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;touch-action:pan-y;"
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;touch-action:pan-y;"
            onclick="mfpToggleMeal('body-${meal.id}','chev-${meal.id}')"
            ontouchstart="mfpMealTouchStart('${meal.id}',event)" ontouchend="mfpMealTouchEnd()" ontouchmove="mfpMealTouchMove(event)"
            oncontextmenu="event.preventDefault();${items.length ? `mfpMealMenu('${meal.id}','${meal.name}',${totalKcal},${totalProt},${totalCh},${totalGrasa},event)` : ''}">
@@ -4681,13 +4682,14 @@ function renderMFPDiario() {
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
             <div class="meal-name">${meal.name}</div>
-            <div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin registrar'}</div>
+            ${items.length ? '' : `<div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">Sin registrar</div>`}
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length?'var(--accent)':'var(--muted)'};">${items.length ? totalKcal+' kcal' : '—'}</span>
           <span id="chev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
+        ${items.length ? `<div class="mfp-meal-sub" style="flex-basis:100%;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;">${fmtMacros(totalCh,totalProt,totalGrasa)}</div>` : ''}
       </div>
       <div id="body-${meal.id}" style="display:none;border-top:1px solid var(--border);">
         ${itemsHtml}
@@ -4747,7 +4749,7 @@ function mfpMealMenu(mealId, mealName, totalKcal, totalProt, totalCh, totalGrasa
   overlay.innerHTML = `
     <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${mealName}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${totalKcal} kcal · ${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
       <button onclick="this.closest('[data-meal-menu]').parentElement.remove();mfpGuardarMealFavorito('${mealId}','${mealName}');"
         style="width:100%;padding:13px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;">
         ⭐ Guardar como favorito
@@ -4791,7 +4793,7 @@ function mfpGuardarMealFavorito(mealId, mealName) {
   overlay.innerHTML = `
     <div data-fav-nombre style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">⭐ Guardar favorito</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${totalKcal} kcal · ${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;">Nombre del favorito</div>
       <input id="favNombreInput" type="text" value="${mealName}"
         style="width:100%;background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:8px;">
@@ -4960,7 +4962,7 @@ function renderBuscadorInicio() {
         style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;">
         <div style="flex:1;min-width:0;">
           <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
-          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · CH${item.hc_100}g · P${item.p_100}g · G${item.g_100}g · por 100g</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${item.kcal_100} kcal · ${fmtMacros(item.hc_100,item.p_100,item.g_100)} · por 100g</div>
         </div>
         <div class="reciente-add-btn" data-ri="${idx}"
           style="width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:var(--accent);font-weight:700;cursor:pointer;">＋</div>
@@ -4980,7 +4982,7 @@ function renderBuscadorInicio() {
         <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⭐</div>
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="favBuscadorUsar(${f.id})">
           <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.nombre)}</div>
-          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
+          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">${f.kcal} kcal · ${fmtMacros(f.ch,f.prot,f.grasa)}${f.ingredientes&&f.ingredientes.length?' · '+f.ingredientes.length+' ingredientes':''}</div>
         </div>
         <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,211,61,0.15);border:1px solid rgba(255,211,61,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:#b8860b;font-weight:700;"
              onclick="event.stopPropagation();favBuscadorUsar(${f.id})">＋</div>
@@ -5059,7 +5061,7 @@ function favBuscadorMenu(id, e) {
   overlay.innerHTML = `
     <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;">⭐ ${escapeHtml(f.nombre)}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${f.kcal} kcal · CH${f.ch}g · P${f.prot}g · G${f.grasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${f.kcal} kcal · ${fmtMacros(f.ch,f.prot,f.grasa)}</div>
       <button onclick="favBuscadorUsar(${f.id});this.closest('[data-fav-menu]').parentElement.remove();"
         style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;cursor:pointer;">
         ＋ Añadir a ${escapeHtml(_buscadorMealName||'comida')}
@@ -5364,7 +5366,7 @@ function renderResultadosBuscador(resultados, query) {
       ${imgHtml}
       <div style="flex:1;min-width:0;">
         <div class="mfp-item-nombre" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}${p.marca?`<span style="font-weight:400;color:var(--muted);"> · ${escapeHtml(p.marca)}</span>`:''}${recienteTag}</div>
-        <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · CH${p.hc_100}g · P${p.p_100}g · G${p.g_100}g <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
+        <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:2px;">${p.kcal_100} kcal · ${fmtMacros(p.hc_100,p.p_100,p.g_100)} <span style="color:${fuenteColor};margin-left:4px;">${fuenteLabel}</span></div>
       </div>
       <span style="color:var(--accent);font-size:20px;flex-shrink:0;">›</span>`;
     res.appendChild(item);
@@ -5690,7 +5692,7 @@ function renderDiario(){
           <div class="meal-em">${m.emoji}</div>
           <div>
             <div class="meal-name">${m.name}</div>
-            <div class="meal-sub">${hasItems?`CH${Math.round(totalCh)}g · P${Math.round(totalProt)}g · G${Math.round(totalGrasa)}g`:hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
+            <div class="meal-sub" style="white-space:nowrap;">${hasItems?fmtMacros(totalCh,totalProt,totalGrasa):hasPending?`<span style="color:var(--accent)">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'Sin registrar'}</div>
           </div>
         </div>
         <div class="meal-hdr-right">
@@ -5919,7 +5921,7 @@ Responde SOLO con el bloque de ingredientes y los tags, sin texto extra.`;
       resultEl.innerHTML=`${itemsHtml}
         <div style="display:flex;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid rgba(192,57,43,0.2);">
           <span style="font-weight:700;">TOTAL</span>
-          <span style="color:var(--accent);font-weight:800;">${kcalN} kcal · CH${chN}g · P${protN}g · G${grasaN}g</span>
+          <span style="color:var(--accent);font-weight:800;">${kcalN} kcal · ${fmtMacros(chN,protN,grasaN)}</span>
         </div>`;
       btn.textContent='✓ Añadir más';
       btn.disabled=false;btn.style.opacity='1';
@@ -6231,7 +6233,7 @@ function _diarioRenderOtroDia(data, fecha) {
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>
         <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
       </div>`).join('');
@@ -6239,15 +6241,15 @@ function _diarioRenderOtroDia(data, fecha) {
     html += `
       <div style="border-bottom:1px solid var(--border);">
         <div class="diario-meal-hdr" data-mid="${mid}" data-meal-name="${MEAL_NAMES[mid]||mid}" data-kcal="${totalKcal}" data-prot="${totalProt}" data-ch="${totalCh}" data-grasa="${totalGrasa}"
-          style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;">
+          style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:18px;">${MEAL_EMOJIS[mid]||'🍽️'}</span>
             <div>
               <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${MEAL_NAMES[mid]||mid}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:1px;">CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
             </div>
           </div>
           <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${totalKcal} kcal</span>
+          <div style="flex-basis:100%;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;">${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
         </div>
         ${itemsHtml}
       </div>`;
@@ -6265,7 +6267,7 @@ function _diarioRenderOtroDia(data, fecha) {
               <span style="font-size:18px;">🍽️</span>
               <div>
                 <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${escapeHtml(item.nombre||'Comida')}</div>
-                <div style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
               </div>
             </div>
             <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${item.kcal||0} kcal</span>
@@ -6310,7 +6312,7 @@ function _diarioRenderOtroDia(data, fecha) {
       ov2.innerHTML = `
         <div data-meal-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
           <div class="meal-name">${mealName}</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · ${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
           <button id="_hdrFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar como favorito</button>
           <button id="_hdrCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
         </div>`;
@@ -6344,7 +6346,7 @@ function _diarioItemMenu(el, data, fecha) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
   overlay.innerHTML = `<div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
     <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px;color:var(--text);">${escapeHtml(item.nombre||'Alimento')}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">CH${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g · ${item.kcal||0} kcal</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${fmtMacros(item.ch||0,item.prot||0,item.grasa||0)} · ${item.kcal||0} kcal</div>
     <button id="_dioFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
     <button id="_dioHoy" style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(192,57,43,0.3);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;cursor:pointer;text-align:left;">↩ Copiar a hoy</button>
     <button id="_dioDel" style="width:100%;padding:14px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);margin-bottom:12px;cursor:pointer;text-align:left;">🗑️ Borrar de este día</button>
@@ -6416,7 +6418,7 @@ function _diarioFavModal(nombreDefault, macros, ingRaw) {
   ov.innerHTML = `
     <div data-fav-nombre style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">⭐ Guardar favorito</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${macros.kcal} kcal · CH${macros.ch}g · P${macros.prot}g · G${macros.grasa}g</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${macros.kcal} kcal · ${fmtMacros(macros.ch,macros.prot,macros.grasa)}</div>
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;">Nombre del favorito</div>
       <input id="_dioFavInput" type="text" value="${escapeHtml(nombreDefault)}"
         style="width:100%;background:var(--s2);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:16px;box-sizing:border-box;">
@@ -6496,7 +6498,7 @@ function _diarioRenderFuturo(fecha) {
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
           <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre||'')}</div>
-          <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
+          <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
@@ -6504,18 +6506,19 @@ function _diarioRenderFuturo(fecha) {
       </div>`).join('');
 
     block.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;" onclick="mfpToggleMeal('fbody-${meal.id}','fchev-${meal.id}')">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;" onclick="mfpToggleMeal('fbody-${meal.id}','fchev-${meal.id}')">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
             <div class="meal-name" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
-            <div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">${items.length ? `CH${totalCh}g · P${totalProt}g · G${totalGrasa}g` : 'Sin planificar'}</div>
+            ${items.length ? '' : `<div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">Sin planificar</div>`}
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:${items.length ? 'var(--accent)' : 'var(--muted)'};">${items.length ? totalKcal + ' kcal' : '—'}</span>
           <span id="fchev-${meal.id}" style="font-size:11px;color:var(--muted);transition:transform 0.2s;display:inline-block;">▾</span>
         </div>
+        ${items.length ? `<div class="mfp-meal-sub" style="flex-basis:100%;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;">${fmtMacros(totalCh,totalProt,totalGrasa)}</div>` : ''}
       </div>
       <div id="fbody-${meal.id}" style="display:none;border-top:1px solid var(--border);">
         ${itemsHtml}
@@ -6547,7 +6550,7 @@ function _diarioRenderFuturo(fecha) {
           ov.innerHTML = `
             <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;margin:0 auto;">
               <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;">${meal.name}</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · CH${totalCh}g · P${totalProt}g · G${totalGrasa}g</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${totalKcal} kcal · ${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
               <button id="_futHdrFav" style="width:100%;padding:14px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar como favorito</button>
               <button id="_futHdrCancel" style="width:100%;padding:13px;background:var(--s2);border:1px solid var(--border);border-radius:14px;font-size:14px;color:var(--muted);cursor:pointer;">Cancelar</button>
             </div>`;
@@ -6652,7 +6655,7 @@ function futurMfpMenuItem(fecha,mealId,idx,e){
   let moverOpts=mealIds.map((id,i)=>`<button onclick="this.closest('[data-fut-menu]').parentElement.remove();futurMfpMoverItem('${fecha}','${mealId}',${idx},'${id}');" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);margin-bottom:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${comidas[i]}</button>`).join('');
   overlay.innerHTML=`<div data-fut-menu style="background:var(--s1);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:430px;margin:0 auto;">
     <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;">${nombreItem}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">CH${itemMacros.ch}g · P${itemMacros.prot}g · G${itemMacros.grasa}g · ${itemMacros.kcal} kcal</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${fmtMacros(itemMacros.ch,itemMacros.prot,itemMacros.grasa)} · ${itemMacros.kcal} kcal</div>
     <button id="_futFav" style="width:100%;padding:13px;background:rgba(255,211,61,0.12);border:1px solid rgba(255,211,61,0.35);border-radius:14px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#b8860b;margin-bottom:8px;cursor:pointer;text-align:left;">⭐ Guardar en favoritos</button>
     <button onclick="this.closest('[data-fut-menu]').parentElement.remove();eliminarComidaFutura('${fecha}','${mealId}',${idx});" style="width:100%;padding:13px;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:12px;font-size:14px;color:var(--accent);font-weight:700;margin-bottom:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">🗑️ Borrar</button>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'Space Grotesk',sans-serif;">↩ Mover a...</div>
@@ -7576,7 +7579,7 @@ async function handleFotoProducto(e) {
     <div class="mp-macros-row" id="menuBarsRow">
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="menuChFill" style="background:var(--yellow);width:0%"></div></div>
-        <div class="mp-macro-nums"><span id="menuChVal" class="mp-macro-rest" style="color:var(--yellow)">—</span><span class="mp-macro-lbl">Carbos (g)</span></div>
+        <div class="mp-macro-nums"><span id="menuChVal" class="mp-macro-rest" style="color:var(--yellow)">—</span><span class="mp-macro-lbl">Carbohidratos (g)</span></div>
       </div>
       <div class="mp-macro-div"></div>
       <div class="mp-macro">
@@ -7597,7 +7600,7 @@ async function handleFotoProducto(e) {
             <circle cx="60" cy="60" r="50" fill="none" stroke="var(--s3)" stroke-width="1" id="menuPieEmpty" style="display:none"/>
           </svg>
           <div class="mp-donut-legend">
-            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="menuPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbos</span></div>
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="menuPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbohidratos</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--red)"></span><span class="mp-donut-legend-val" id="menuPieProtPct">0%</span><span class="mp-donut-legend-lbl">Proteína</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--blue)"></span><span class="mp-donut-legend-val" id="menuPieGrasaPct">0%</span><span class="mp-donut-legend-lbl">Grasas</span></div>
             <div class="mp-donut-legend-item" style="margin-top:2px;padding-top:6px;border-top:1px solid var(--border);"><span class="mp-donut-dot" style="background:var(--s3);border:1px solid var(--border);"></span><span class="mp-donut-legend-val" id="menuPieRestanteTxt" style="color:var(--muted);font-weight:600;">—</span><span class="mp-donut-legend-lbl">restantes</span></div>
@@ -7609,7 +7612,7 @@ async function handleFotoProducto(e) {
             <span></span><span style="text-align:right;">Total</span><span style="text-align:right;">Menú</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
-            <span style="color:var(--text);">Carbos</span>
+            <span style="color:var(--text);">Carbohidratos</span>
             <span id="menuPieChTotal" style="text-align:right;color:var(--muted);">0%</span>
             <span id="menuPieChObj" style="text-align:right;color:var(--yellow);font-weight:700;">0%</span>
           </div>
@@ -7719,7 +7722,7 @@ async function handleFotoProducto(e) {
 /* ── MENÚ CLIENTE ESTILOS ── */
 .mc-list{display:flex;flex-direction:column;gap:0;padding:0 0 100px;}
 .mc-comida-sec{background:var(--s1);border:none;border-bottom:1px solid var(--border);border-radius:0;overflow:hidden;}
-.mc-comida-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;gap:10px;}
+.mc-comida-hdr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;gap:10px;}
 .mc-comida-hdr-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
 .mc-comida-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .mc-ic-des{background:rgba(255,211,61,0.18);}
@@ -8343,7 +8346,7 @@ function _renderMenuDia() {
           const _gramosHtml = ajustado
             ? gramosAdj + 'g'
             : gramosAdj + 'g';
-          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
+          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros" style="white-space:nowrap;">' + fmtMacros(iHc, iProt, iGrasa) + '</div>' : '';
           const _medidaHtml = _medidaCaseraHtml(ing.nombre||'', gramosAdj);
           ingredientesHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
@@ -8410,7 +8413,6 @@ function _renderMenuDia() {
       + '<div class="mc-comida-icon ' + meta.clase + '">' + meta.emoji + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div class="mc-comida-titulo">' + escapeHtml(franja) + '</div>'
-      + '<div class="mc-comida-sub">HC' + Math.round(franjaHc) + 'g · P' + Math.round(franjaProt) + 'g · G' + Math.round(franjaGrasa) + 'g</div>'
       + '</div>'
       + '</div>'
       + '<div class="mc-comida-right">'
@@ -8427,6 +8429,7 @@ function _renderMenuDia() {
       + '</div>'
       + '<span class="mc-chevron' + (inicialAbierto ? ' open' : '') + '" id="mc-chev-' + diaNum + '-' + idx + '">▾</span>'
       + '</div>'
+      + '<div class="mc-comida-sub" style="flex-basis:100%;font-size:12px;">' + fmtMacros(franjaHc, franjaProt, franjaGrasa) + '</div>'
       + '</div>'
       + '<div class="mc-franja-body' + (inicialAbierto ? ' open' : '') + '" id="' + bodyId + '" data-franja="' + escapeHtml(franja) + '" data-dia="' + diaNum + '">'
       + '<div class="mc-ing-body">'
@@ -9688,7 +9691,7 @@ function renderMenuPreview(menu, kcal_total, prot_total, hc_total, grasa_total, 
         <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${kcal_total} kcal</span>
       </div>
       <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);">
-        P ${prot_total}g · HC ${hc_total}g · G ${grasa_total}g
+        ${fmtMacros(hc_total,prot_total,grasa_total)}
       </div>
       ${comidasHtml}
     </div>`;
@@ -12349,7 +12352,7 @@ function menuRenderDiaHeader(tpl) {
           <div class="mch-macro-track"><div class="mch-macro-fill" style="background:var(--yellow);width:${obj.ch>0?Math.min(acum.ch/obj.ch*100,100).toFixed(1):0}%;"></div></div>
           <div class="mch-macro-nums">
             <span class="mch-macro-rest" style="color:${chColor};">${chVal}</span>
-            <span class="mch-macro-lbl">Carbos (g)</span>
+            <span class="mch-macro-lbl">Carbohidratos (g)</span>
           </div>
         </div>
         <div class="mch-macro-div"></div>
