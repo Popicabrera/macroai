@@ -981,7 +981,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
     <div class="mp-macros-row" id="mpBarsRow">
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="chFill" style="background:var(--yellow);width:0%"></div></div>
-        <div class="mp-macro-nums"><span id="chResta" class="mp-macro-rest" style="color:var(--yellow)">250</span><span class="mp-macro-lbl">Carbos (g)</span></div>
+        <div class="mp-macro-nums"><span id="chResta" class="mp-macro-rest" style="color:var(--yellow)">250</span><span class="mp-macro-lbl">Carbohidratos (g)</span></div>
       </div>
       <div class="mp-macro-div"></div>
       <div class="mp-macro">
@@ -1002,7 +1002,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
             <circle cx="60" cy="60" r="50" fill="none" stroke="var(--s3)" stroke-width="1" id="mpPieEmpty" style="display:none"/>
           </svg>
           <div class="mp-donut-legend">
-            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="mpPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbos</span></div>
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="mpPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbohidratos</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--red)"></span><span class="mp-donut-legend-val" id="mpPieProtPct">0%</span><span class="mp-donut-legend-lbl">Proteína</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--blue)"></span><span class="mp-donut-legend-val" id="mpPieGrasaPct">0%</span><span class="mp-donut-legend-lbl">Grasas</span></div>
             <div class="mp-donut-legend-item" style="margin-top:2px;padding-top:6px;border-top:1px solid var(--border);"><span class="mp-donut-dot" style="background:var(--s3);border:1px solid var(--border);"></span><span class="mp-donut-legend-val" id="mpPieRestanteTxt" style="color:var(--muted);font-weight:600;">—</span><span class="mp-donut-legend-lbl">restantes</span></div>
@@ -1014,7 +1014,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
             <span></span><span style="text-align:right;">Total</span><span style="text-align:right;">Objetivo</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
-            <span style="color:var(--text);">Carbos</span>
+            <span style="color:var(--text);">Carbohidratos</span>
             <span id="mpPieChTotal" style="text-align:right;color:var(--muted);">0%</span>
             <span id="mpPieChObj" style="text-align:right;color:var(--yellow);font-weight:700;">0%</span>
           </div>
@@ -2363,7 +2363,7 @@ function eliminarFavorito(id){
   let favs=loadFavs();favs=favs.filter(f=>f.id!==id);saveFavs(favs);renderFavoritos();
 }
 
-function fmtMacros(ch,prot,grasa){const r=v=>Math.round(parseFloat(v)||0);return `Carbohidratos ${r(ch)} g · Grasa ${r(grasa)} g · Proteína ${r(prot)} g`;}
+function fmtMacros(ch,prot,grasa){const r=v=>Math.round(parseFloat(v)||0);return `Carbohidratos ${r(ch)} g · Proteína ${r(prot)} g · Grasa ${r(grasa)} g`;}
 function escapeHtml(t){if(!t&&t!==0)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function mfpNombreGramosHtml(nombre){
   const s=String(nombre||'');
@@ -3754,7 +3754,7 @@ function fsmRenderNutriPanel(p, f, m) {
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">
-          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;"></span><strong>${pctCh}%</strong><span style="color:var(--muted);">Carbos</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;"></span><strong>${pctCh}%</strong><span style="color:var(--muted);">Carbohidratos</span></div>
           <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span><strong>${pctP}%</strong><span style="color:var(--muted);">Proteína</span></div>
           <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span><strong>${pctG}%</strong><span style="color:var(--muted);">Grasas</span></div>
         </div>
@@ -7579,7 +7579,7 @@ async function handleFotoProducto(e) {
     <div class="mp-macros-row" id="menuBarsRow">
       <div class="mp-macro">
         <div class="mp-macro-track"><div class="mp-macro-fill" id="menuChFill" style="background:var(--yellow);width:0%"></div></div>
-        <div class="mp-macro-nums"><span id="menuChVal" class="mp-macro-rest" style="color:var(--yellow)">—</span><span class="mp-macro-lbl">Carbos (g)</span></div>
+        <div class="mp-macro-nums"><span id="menuChVal" class="mp-macro-rest" style="color:var(--yellow)">—</span><span class="mp-macro-lbl">Carbohidratos (g)</span></div>
       </div>
       <div class="mp-macro-div"></div>
       <div class="mp-macro">
@@ -7600,7 +7600,7 @@ async function handleFotoProducto(e) {
             <circle cx="60" cy="60" r="50" fill="none" stroke="var(--s3)" stroke-width="1" id="menuPieEmpty" style="display:none"/>
           </svg>
           <div class="mp-donut-legend">
-            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="menuPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbos</span></div>
+            <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--yellow)"></span><span class="mp-donut-legend-val" id="menuPieChPct">0%</span><span class="mp-donut-legend-lbl">Carbohidratos</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--red)"></span><span class="mp-donut-legend-val" id="menuPieProtPct">0%</span><span class="mp-donut-legend-lbl">Proteína</span></div>
             <div class="mp-donut-legend-item"><span class="mp-donut-dot" style="background:var(--blue)"></span><span class="mp-donut-legend-val" id="menuPieGrasaPct">0%</span><span class="mp-donut-legend-lbl">Grasas</span></div>
             <div class="mp-donut-legend-item" style="margin-top:2px;padding-top:6px;border-top:1px solid var(--border);"><span class="mp-donut-dot" style="background:var(--s3);border:1px solid var(--border);"></span><span class="mp-donut-legend-val" id="menuPieRestanteTxt" style="color:var(--muted);font-weight:600;">—</span><span class="mp-donut-legend-lbl">restantes</span></div>
@@ -7612,7 +7612,7 @@ async function handleFotoProducto(e) {
             <span></span><span style="text-align:right;">Total</span><span style="text-align:right;">Menú</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 46px 46px;align-items:center;font-size:12px;padding:3px 0;">
-            <span style="color:var(--text);">Carbos</span>
+            <span style="color:var(--text);">Carbohidratos</span>
             <span id="menuPieChTotal" style="text-align:right;color:var(--muted);">0%</span>
             <span id="menuPieChObj" style="text-align:right;color:var(--yellow);font-weight:700;">0%</span>
           </div>
@@ -7722,7 +7722,7 @@ async function handleFotoProducto(e) {
 /* ── MENÚ CLIENTE ESTILOS ── */
 .mc-list{display:flex;flex-direction:column;gap:0;padding:0 0 100px;}
 .mc-comida-sec{background:var(--s1);border:none;border-bottom:1px solid var(--border);border-radius:0;overflow:hidden;}
-.mc-comida-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;gap:10px;}
+.mc-comida-hdr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;gap:10px;}
 .mc-comida-hdr-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
 .mc-comida-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .mc-ic-des{background:rgba(255,211,61,0.18);}
@@ -8346,7 +8346,7 @@ function _renderMenuDia() {
           const _gramosHtml = ajustado
             ? gramosAdj + 'g'
             : gramosAdj + 'g';
-          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros">P' + iProt + 'g · HC' + iHc + 'g · G' + iGrasa + 'g</div>' : '';
+          const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros" style="white-space:nowrap;">' + fmtMacros(iHc, iProt, iGrasa) + '</div>' : '';
           const _medidaHtml = _medidaCaseraHtml(ing.nombre||'', gramosAdj);
           ingredientesHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
@@ -8413,7 +8413,6 @@ function _renderMenuDia() {
       + '<div class="mc-comida-icon ' + meta.clase + '">' + meta.emoji + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div class="mc-comida-titulo">' + escapeHtml(franja) + '</div>'
-      + '<div class="mc-comida-sub">HC' + Math.round(franjaHc) + 'g · P' + Math.round(franjaProt) + 'g · G' + Math.round(franjaGrasa) + 'g</div>'
       + '</div>'
       + '</div>'
       + '<div class="mc-comida-right">'
@@ -8430,6 +8429,7 @@ function _renderMenuDia() {
       + '</div>'
       + '<span class="mc-chevron' + (inicialAbierto ? ' open' : '') + '" id="mc-chev-' + diaNum + '-' + idx + '">▾</span>'
       + '</div>'
+      + '<div class="mc-comida-sub" style="flex-basis:100%;font-size:12px;">' + fmtMacros(franjaHc, franjaProt, franjaGrasa) + '</div>'
       + '</div>'
       + '<div class="mc-franja-body' + (inicialAbierto ? ' open' : '') + '" id="' + bodyId + '" data-franja="' + escapeHtml(franja) + '" data-dia="' + diaNum + '">'
       + '<div class="mc-ing-body">'
@@ -9691,7 +9691,7 @@ function renderMenuPreview(menu, kcal_total, prot_total, hc_total, grasa_total, 
         <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${kcal_total} kcal</span>
       </div>
       <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);">
-        P ${prot_total}g · HC ${hc_total}g · G ${grasa_total}g
+        ${fmtMacros(hc_total,prot_total,grasa_total)}
       </div>
       ${comidasHtml}
     </div>`;
@@ -12352,7 +12352,7 @@ function menuRenderDiaHeader(tpl) {
           <div class="mch-macro-track"><div class="mch-macro-fill" style="background:var(--yellow);width:${obj.ch>0?Math.min(acum.ch/obj.ch*100,100).toFixed(1):0}%;"></div></div>
           <div class="mch-macro-nums">
             <span class="mch-macro-rest" style="color:${chColor};">${chVal}</span>
-            <span class="mch-macro-lbl">Carbos (g)</span>
+            <span class="mch-macro-lbl">Carbohidratos (g)</span>
           </div>
         </div>
         <div class="mch-macro-div"></div>
