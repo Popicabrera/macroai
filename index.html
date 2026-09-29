@@ -2364,6 +2364,12 @@ function eliminarFavorito(id){
 }
 
 function escapeHtml(t){if(!t&&t!==0)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function mfpNombreGramosHtml(nombre){
+  const s=String(nombre||'');
+  const m=s.match(/^(.*?)(\s*\(\d+(?:\.\d+)?g\))\s*$/);
+  if(!m) return `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">${escapeHtml(s)}</span>`;
+  return `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m[1])}</span><span style="flex-shrink:0;white-space:nowrap;">${escapeHtml(m[2])}</span>`;
+}
 
 // ── TODAY DATA ──
 function loadToday(){
@@ -4657,7 +4663,7 @@ function renderMFPDiario() {
              ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchMove(event)"
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
-            <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre)}</div>
+            <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre)}</div>
             <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch}g · P${item.prot}g · G${item.grasa}g</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -4864,7 +4870,7 @@ function mfpEditarItem(globalIdx) {
   // Guardar el idx a editar y abrir FSM con gramos precargados
   _mfpEditandoIdx = globalIdx;
   _fsmProductoSeleccionado = producto;
-  document.getElementById('fsmTitle').textContent = '✏️ Editar cantidad';
+  document.getElementById('fsmTitle').textContent = 'Editar cantidad';
   document.getElementById('fsmSubtitle').textContent = nombreBase;
   document.getElementById('fsmList').innerHTML = `
     <div class="fsm-item fsm-selected">
@@ -6488,7 +6494,7 @@ function _diarioRenderFuturo(fecha) {
         oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
         style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
-          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre||'')}</div>
           <div class="mfp-item-macro" style="font-size:10px;color:var(--muted);margin-top:1px;">HC${item.ch||0}g · P${item.prot||0}g · G${item.grasa||0}g</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -6683,7 +6689,7 @@ function futurMfpEditarItem(fecha, mealId, idx) {
 
   _futEditandoFecha = fecha; _futEditandoMealId = mealId; _futEditandoIdx = idx;
   _fsmProductoSeleccionado = producto;
-  document.getElementById('fsmTitle').textContent = '✏️ Editar cantidad';
+  document.getElementById('fsmTitle').textContent = 'Editar cantidad';
   document.getElementById('fsmSubtitle').textContent = nombreBase;
   document.getElementById('fsmList').innerHTML = `
     <div class="fsm-item fsm-selected">
