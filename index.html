@@ -4660,16 +4660,16 @@ function renderMFPDiario() {
       const gramMatch = item.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
       const gramosActuales = gramMatch ? gramMatch[1] : '';
       itemsHtml += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);touch-action:pan-y;"
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);touch-action:pan-y;"
              ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchMove(event)"
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre)}</div>
-            <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
           </div>
+          <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>`;
     });
 
@@ -6230,12 +6230,12 @@ function _diarioRenderOtroDia(data, fecha) {
 
     const itemsHtml = items.map((item, itemIdx) => `
       <div class="diario-item-otroDia" data-fecha="${fecha}" data-mid="${mid}" data-item-idx="${itemIdx}"
-        style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
+        style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>
         <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
       </div>`).join('');
 
     html += `
@@ -6495,14 +6495,14 @@ function _diarioRenderFuturo(fecha) {
         ontouchend="futurMfpTouchEnd()"
         ontouchmove="futurMfpTouchEnd()"
         oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
-        style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
           <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre||'')}</div>
-          <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
         </div>
+        <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
       </div>`).join('');
 
     block.innerHTML = `
