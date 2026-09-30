@@ -1467,6 +1467,11 @@ function doLogout(){
   SUPA_TOKEN=null;CURRENT_USER=null;
   localStorage.removeItem('macroai_token');
   localStorage.removeItem('macroai_user');
+  // Borrar datos de este usuario del móvil para que no pasen a otra cuenta; siguen a salvo en la nube
+  try{
+    ['macroai_favs','macroai_favs_ts','macroai_ajustes_ts','macroai_dias','macroai_cfg','macroai_desp','macroai_numcomidas','macroai_menu_overrides','macroai_weekdays'].forEach(k=>localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k=>k.startsWith('macroai_dia_')).forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
   hideBottomNav();
   // Supabase logout en background
   try{fetch(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY}});}catch(e){}
@@ -1508,6 +1513,7 @@ function enterApp(){
   fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
   // Sincronizar favoritos e historial desde Supabase (fix incógnito)
   loadFavsFromSupa().catch(()=>{});
+  ajustesPull().catch(()=>{});
   syncHistorialDesdeSupabase().then(()=>{
     // Re-renderizar inicio buscador si está abierto
     if(document.getElementById('viewBuscador')?.classList.contains('active')){
@@ -1589,16 +1595,68 @@ function enterApp(){
   }
 })();
 
+// ── AJUSTES SINCRONIZADOS ENTRE DISPOSITIVOS (tabla ajustes_macroai) ──
+const _AJ_KEYS={cfg:'macroai_cfg',desp:'macroai_desp',numcomidas:'macroai_numcomidas',menu_overrides:'macroai_menu_overrides',weekdays:'macroai_weekdays'};
+let _ajTimer=null,_ajApplying=false;
+function _ajCollect(){const o={};for(const k in _AJ_KEYS){const v=localStorage.getItem(_AJ_KEYS[k]);if(v!==null){try{o[k]=JSON.parse(v);}catch(e){}}}return o;}
+function _ajustesPush(){
+  if(_ajApplying)return;
+  try{localStorage.setItem('macroai_ajustes_ts',new Date().toISOString());}catch(e){}
+  clearTimeout(_ajTimer);
+  _ajTimer=setTimeout(_ajustesPushNow,1500);
+}
+async function _ajustesPushNow(){
+  if(!CURRENT_USER)return;
+  try{
+    await supaFetch('/rest/v1/ajustes_macroai?on_conflict=usuario_id',{
+      method:'POST',
+      headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:_ajCollect(),updated_at:localStorage.getItem('macroai_ajustes_ts')||new Date().toISOString()})
+    });
+  }catch(e){}
+}
+async function ajustesPull(){
+  if(!CURRENT_USER)return;
+  try{
+    const res=await supaFetch('/rest/v1/ajustes_macroai?usuario_id=eq.'+CURRENT_USER.id+'&select=datos,updated_at&limit=1');
+    const rows=await res.json();
+    if(!Array.isArray(rows))return;
+    const localTs=localStorage.getItem('macroai_ajustes_ts')||'';
+    if(!rows.length){
+      if(Object.keys(_ajCollect()).length){
+        if(!localTs)try{localStorage.setItem('macroai_ajustes_ts',new Date().toISOString());}catch(e){}
+        _ajustesPushNow();
+      }
+      return;
+    }
+    const r=rows[0];
+    if(localTs&&new Date(localTs)>=new Date(r.updated_at)){
+      if(new Date(localTs)>new Date(r.updated_at))_ajustesPushNow();
+      return;
+    }
+    _ajApplying=true;
+    try{
+      for(const k in _AJ_KEYS){if(r.datos&&r.datos[k]!==undefined)localStorage.setItem(_AJ_KEYS[k],JSON.stringify(r.datos[k]));}
+      localStorage.setItem('macroai_ajustes_ts',r.updated_at);
+      CFG=loadCFG();DESP=loadDesp();WEEK_DAYS=loadWeekDays();
+      _menuTipoDiaOverride=_menuLoadOverrides();
+      applyMacros(CFG.tipoDia);setDayType(CFG.tipoDia,false);renderWeekDays();
+      updateBars();renderMFPDiario();
+    }catch(e){}
+    _ajApplying=false;
+  }catch(e){}
+}
+
 // ── CONFIG ──
 function loadCFG(){
   const def={entreno:{kcal:2000,prot:100,ch:250,grasa:44},descanso:{kcal:1700,prot:100,ch:180,grasa:55},tipoDia:'entreno'};
   try{return Object.assign(def,JSON.parse(localStorage.getItem('macroai_cfg')||'{}'));}catch(e){return def;}
 }
-function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));}
+function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));_ajustesPush();}
 
 // ── DÍAS DE ENTRENO SEMANALES ──
 function loadWeekDays(){try{const d=JSON.parse(localStorage.getItem("macroai_weekdays")||"[1,2,3,4,5]");return(Array.isArray(d)&&d.length>0)?d:[1,2,3,4,5];}catch(e){return[1,2,3,4,5];}}
-function saveWeekDays(days){localStorage.setItem("macroai_weekdays",JSON.stringify(days));}
+function saveWeekDays(days){localStorage.setItem("macroai_weekdays",JSON.stringify(days));_ajustesPush();}
 let WEEK_DAYS=loadWeekDays();
 
 function toggleWeekDay(d){
@@ -1668,7 +1726,7 @@ function loadDesp(){
     return raw;
   }catch(e){return[];}
 }
-function saveDesp(arr){localStorage.setItem('macroai_desp',JSON.stringify(arr));}
+function saveDesp(arr){localStorage.setItem('macroai_desp',JSON.stringify(arr));_ajustesPush();}
 let DESP=loadDesp();
 
 function despNombres(){return DESP.map(d=>d.nombre);}
@@ -1734,6 +1792,7 @@ function usarDespensa(){
 function loadFavs(){try{return JSON.parse(localStorage.getItem('macroai_favs')||'[]');}catch(e){return[];}}
 function saveFavs(arr){
   localStorage.setItem('macroai_favs',JSON.stringify(arr));
+  try{localStorage.setItem('macroai_favs_ts',new Date().toISOString());}catch(e){}
   _syncFavsToSupa(arr).catch(()=>{});
 }
 
@@ -1741,7 +1800,6 @@ async function _syncFavsToSupa(arr){
   if(!CURRENT_USER)return;
   try{
     await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{method:'DELETE'});
-    if(!arr.length)return;
     await supaFetch('/rest/v1/favoritos_macroai',{
       method:'POST',
       headers:{'Prefer':'return=minimal','Content-Type':'application/json'},
@@ -1753,19 +1811,29 @@ async function _syncFavsToSupa(arr){
 async function loadFavsFromSupa(){
   if(!CURRENT_USER)return;
   try{
-    const res=await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id+'&limit=1&select=datos');
+    const res=await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id+'&order=created_at.desc&limit=1&select=datos,created_at');
     const rows=await res.json();
-    if(!Array.isArray(rows)||!rows.length)return;
-    const remoto=rows[0].datos||[];
-    if(!Array.isArray(remoto)||!remoto.length)return;
+    if(!Array.isArray(rows))return;
     const local=loadFavs();
-    const localIds=new Set(local.map(f=>f.id));
-    // Deduplicar también por nombre+kcal para evitar duplicados por distinto id
-    const localKeys=new Set(local.map(f=>f.nombre+'|'+f.kcal+'|'+(f.fecha||'')));
-    const soloRemoto=remoto.filter(rf=>!localIds.has(rf.id)&&!localKeys.has(rf.nombre+'|'+rf.kcal+'|'+(rf.fecha||'')));
-    if(!soloRemoto.length)return;
-    const final=[...local,...soloRemoto];
-    localStorage.setItem('macroai_favs',JSON.stringify(final));
+    const localTs=localStorage.getItem('macroai_favs_ts')||'';
+    if(!rows.length){
+      // Nunca se sincronizó: subir lo que haya en este móvil
+      if(local.length){_syncFavsToSupa(local).catch(()=>{});}
+      return;
+    }
+    const remoto=Array.isArray(rows[0].datos)?rows[0].datos:[];
+    const remotoTs=rows[0].created_at||'';
+    // Cambios de este móvil aún sin subir: ganan y se suben
+    if(localTs && remotoTs && new Date(localTs)>new Date(remotoTs)){
+      _syncFavsToSupa(local).catch(()=>{});
+      return;
+    }
+    // La nube manda: mismos favoritos, ediciones y borrados incluidos
+    if(JSON.stringify(remoto)!==JSON.stringify(local)){
+      localStorage.setItem('macroai_favs',JSON.stringify(remoto));
+    }
+    localStorage.setItem('macroai_favs_ts',remotoTs||new Date().toISOString());
+    if(document.getElementById('favBody')&&document.getElementById('viewFavoritos')?.classList.contains('active'))renderFavoritos();
   }catch(e){}
 }
 
@@ -1804,8 +1872,9 @@ function renderFavoritos(){
   // Deduplicar por nombre+kcal+fecha antes de renderizar
   let favs=loadFavs();
   const seen=new Set();
+  const _antes=favs.length;
   favs=favs.filter(f=>{const k=f.nombre+'|'+f.kcal+'|'+(f.fecha||'');if(seen.has(k))return false;seen.add(k);return true;});
-  saveFavs(favs);
+  if(favs.length!==_antes)saveFavs(favs);
   if(!favs.length){
     body.innerHTML='<div class="fav-empty">⭐<br><br>Aún no tienes favoritos.<br><br>Mantén pulsado cualquier mensaje<br>de la IA para guardarlo como favorito.</div>';
     return;
@@ -5605,7 +5674,7 @@ const MEAL_CONFIG=[
 function loadNumComidas(){
   return parseInt(localStorage.getItem('macroai_numcomidas')||'4');
 }
-function saveNumComidas(n){localStorage.setItem('macroai_numcomidas',n);}
+function saveNumComidas(n){localStorage.setItem('macroai_numcomidas',n);_ajustesPush();}
 
 function getMealsForToday(){
   const n=loadNumComidas();
@@ -7835,7 +7904,7 @@ function _menuLoadOverrides() {
   try { return JSON.parse(localStorage.getItem('macroai_menu_overrides') || '{}'); } catch(e) { return {}; }
 }
 function _menuSaveOverrides(obj) {
-  try { localStorage.setItem('macroai_menu_overrides', JSON.stringify(obj)); } catch(e) {} 
+  try { localStorage.setItem('macroai_menu_overrides', JSON.stringify(obj)); } catch(e) {} _ajustesPush();
 }
 
 // Calcula el tipo de día para un día de semana (1=Lun..7=Dom), con posible override manual
