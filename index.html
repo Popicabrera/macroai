@@ -1336,6 +1336,15 @@ const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
 
 let SUPA_TOKEN=null,CURRENT_USER=null,db=null;
+// Todas las llamadas al Worker llevan la sesión del usuario (el Worker comprueba quién es).
+(function(){const _f=window.fetch.bind(window);
+window.fetch=function(u,o){
+  try{if(typeof u==='string'&&u.startsWith(WORKER_URL)&&SUPA_TOKEN){
+    o=Object.assign({},o||{});
+    const h=new Headers(o.headers||{});
+    if(!h.has('Authorization'))h.set('Authorization','Bearer '+SUPA_TOKEN);
+    o.headers=h;}}catch(e){}
+  return _f(u,o);};})();
 
 function initSupabaseClient(){
   if(window.supabase&&window.supabase.createClient){
