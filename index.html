@@ -1334,7 +1334,6 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const CODIGO_VALIDO='POPI2025';
 const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
-const SUPA_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEzOTEwMSwiZXhwIjoyMDkyNzE1MTAxfQ.BFH-QFpbkP9hlfr6kWTgeTT3JcopXQfR2dM-yu7B9Gc';
 
 let SUPA_TOKEN=null,CURRENT_USER=null,db=null;
 
@@ -1349,9 +1348,9 @@ async function supaFetch(path,opts={}){
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
-// Solo para operaciones de admin — bypassa RLS con service key
+// Operaciones de admin: usan la sesión del usuario logueado; los permisos los decide RLS en Supabase
 async function supaAdmin(path,opts={}){
-  const headers={'Content-Type':'application/json','apikey':SUPA_SERVICE_KEY,'Authorization':'Bearer '+SUPA_SERVICE_KEY,...(opts.headers||{})};
+  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
@@ -1434,14 +1433,9 @@ async function doRegistro(){
     SUPA_TOKEN=data.session.access_token;
     CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
     // Vincular con fila creada por admin o insertar nueva
-    const existingRes=await supaFetch('/rest/v1/usuarios_macroai?select=id,activo&email=eq.'+encodeURIComponent(email));
-    const rows=await existingRes.json();
-    if(rows&&rows.length>0){
-      if(rows[0].activo===false){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
-      await supaAdmin('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,nombre})});
-    }else{
-      await supaAdmin('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,activo:true})});
-    }
+    const vinRes=await supaFetch('/rest/v1/rpc/vincular_usuario',{method:'POST',body:JSON.stringify({p_nombre:nombre})});
+    const vin=await vinRes.json();
+    if(vin==='desactivado'){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
     localStorage.setItem('macroai_token',SUPA_TOKEN);
     localStorage.setItem('macroai_refresh',data.session.refresh_token);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
@@ -10576,11 +10570,7 @@ async function toggleLetraGrandeApp(){
   try{ localStorage.setItem('macroai_letra_grande', on ? '1' : '0'); }catch(e){}
   if(CURRENT_USER){
     try{
-      await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.'+encodeURIComponent(CURRENT_USER.email), {
-        method:'PATCH',
-        headers:{'Prefer':'return=minimal','Content-Type':'application/json'},
-        body: JSON.stringify({letra_grande:on})
-      });
+      await supaFetch('/rest/v1/rpc/actualizar_mi_perfil',{method:'POST',body:JSON.stringify({p_letra_grande:on})});
     }catch(e){}
   }
 }
@@ -10601,11 +10591,7 @@ async function guardarDiasEntreno() {
   saveWeekDays(WEEK_DAYS);
   autoDetectDayType();
   try {
-    await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email), {
-      method: 'PATCH',
-      headers: {'Prefer': 'return=minimal', 'Content-Type': 'application/json'},
-      body: JSON.stringify({dias_entreno: WEEK_DAYS})
-    });
+    await supaFetch('/rest/v1/rpc/actualizar_mi_perfil',{method:'POST',body:JSON.stringify({p_dias_entreno: WEEK_DAYS})});
     showToast('✅ Días guardados');
   } catch(e) {
     showToast('✅ Días guardados localmente');
