@@ -1330,7 +1330,7 @@ body.letra-grande #viewBuscador .mfp-item-macro{
 <script>
 // ── SUPABASE ──
 const SUPA_URL='https://wgjzelrqfyvlnxikbijl.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzkxMDEsImV4cCI6MjA5MjcxNTEwMX0.grES_8m9TDG5KY8U6SeBgqAohhX5gtqqIWt0iTcaB3o';
+const SUPA_KEY='sb_publishable_P_vUKp6xX1n4-vtaChQTAQ_TLrYkthc';
 const CODIGO_VALIDO='POPI2025';
 const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
@@ -1344,13 +1344,13 @@ function initSupabaseClient(){
 }
 
 async function supaFetch(path,opts={}){
-  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
+  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,...(SUPA_TOKEN?{'Authorization':'Bearer '+SUPA_TOKEN}:{}),...(opts.headers||{})};
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
 // Operaciones de admin: usan la sesión del usuario logueado; los permisos los decide RLS en Supabase
 async function supaAdmin(path,opts={}){
-  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
+  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,...(SUPA_TOKEN?{'Authorization':'Bearer '+SUPA_TOKEN}:{}),...(opts.headers||{})};
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
