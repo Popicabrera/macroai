@@ -1403,6 +1403,7 @@ async function doLogin(){
       const chk=await supaFetch('/rest/v1/usuarios_macroai?select=activo,nombre&email=eq.'+encodeURIComponent(data.user.email));
       const chkData=await chk.json();
       if(chkData&&chkData[0]&&chkData[0].activo===false){SUPA_TOKEN=null;CURRENT_USER=null;showMsg('loginMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');return;}
+      if(Array.isArray(chkData)&&chkData.length===0){SUPA_TOKEN=null;CURRENT_USER=null;try{await db.auth.signOut();}catch(e){}showMsg('loginMsg','Tu cuenta aún no tiene acceso. Pide a tu entrenador que te dé de alta.');return;}
       if(chkData&&chkData[0]&&chkData[0].nombre)CURRENT_USER.nombre=chkData[0].nombre;
     }
     localStorage.setItem('macroai_token',SUPA_TOKEN);
@@ -1436,6 +1437,7 @@ async function doRegistro(){
     const vinRes=await supaFetch('/rest/v1/rpc/vincular_usuario',{method:'POST',body:JSON.stringify({p_nombre:nombre})});
     const vin=await vinRes.json();
     if(vin==='desactivado'){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
+    if(vin==='no_autorizado'){showMsg('registroMsg','Tu correo aún no tiene acceso. Pide a tu entrenador que te dé de alta con este mismo correo.');SUPA_TOKEN=null;CURRENT_USER=null;try{await db.auth.signOut();}catch(e){}return;}
     localStorage.setItem('macroai_token',SUPA_TOKEN);
     localStorage.setItem('macroai_refresh',data.session.refresh_token);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
