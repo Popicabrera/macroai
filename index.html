@@ -1336,15 +1336,44 @@ const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
 
 let SUPA_TOKEN=null,CURRENT_USER=null,db=null;
-// Todas las llamadas al Worker llevan la sesión del usuario (el Worker comprueba quién es).
+// Todas las llamadas al Worker y a la API de Supabase llevan la sesión del usuario.
+// Si el servidor dice 401 (sesión caducada o firmada con una clave ya revocada),
+// se renueva la sesión una vez y se repite la llamada; si no se puede, se vuelve al login.
 (function(){const _f=window.fetch.bind(window);
-window.fetch=function(u,o){
-  try{if(typeof u==='string'&&u.startsWith(WORKER_URL)&&SUPA_TOKEN){
-    o=Object.assign({},o||{});
-    const h=new Headers(o.headers||{});
-    if(!h.has('Authorization'))h.set('Authorization','Bearer '+SUPA_TOKEN);
-    o.headers=h;}}catch(e){}
-  return _f(u,o);};})();
+let _renovando=null;
+function _esNuestra(u){return typeof u==='string'&&(u.startsWith(WORKER_URL)||u.startsWith(SUPA_URL+'/rest/v1'));}
+function _conToken(o,tok){o=Object.assign({},o||{});const h=new Headers(o.headers||{});h.set('Authorization','Bearer '+tok);o.headers=h;return o;}
+async function _renovar(){
+  if(_renovando) return _renovando;
+  _renovando=(async()=>{
+    try{
+      const rt=localStorage.getItem('macroai_refresh');
+      if(!db||!rt) return null;
+      const {data,error}=await db.auth.refreshSession({refresh_token:rt});
+      if(error||!data||!data.session) return null;
+      SUPA_TOKEN=data.session.access_token;
+      localStorage.setItem('macroai_token',SUPA_TOKEN);
+      if(data.session.refresh_token) localStorage.setItem('macroai_refresh',data.session.refresh_token);
+      return SUPA_TOKEN;
+    }catch(e){return null;}
+    finally{setTimeout(()=>{_renovando=null;},2000);}
+  })();
+  return _renovando;
+}
+window.fetch=async function(u,o){
+  if(!_esNuestra(u)) return _f(u,o);
+  const teniaSesion=!!SUPA_TOKEN;
+  if(SUPA_TOKEN&&!(o&&o.headers&&new Headers(o.headers).has('Authorization'))) o=_conToken(o,SUPA_TOKEN);
+  const r=await _f(u,o);
+  if(r.status!==401||!teniaSesion) return r;
+  const nuevo=await _renovar();
+  if(nuevo) return _f(u,_conToken(o,nuevo));
+  try{['macroai_token','macroai_refresh','macroai_user'].forEach(k=>localStorage.removeItem(k));}catch(e){}
+  SUPA_TOKEN=null;CURRENT_USER=null;
+  try{await db.auth.signOut();}catch(e){}
+  try{showAuth('screenLogin');}catch(e){location.reload();}
+  return r;
+};})();
 
 function initSupabaseClient(){
   if(window.supabase&&window.supabase.createClient){
