@@ -1330,13 +1330,21 @@ body.letra-grande #viewBuscador .mfp-item-macro{
 <script>
 // ── SUPABASE ──
 const SUPA_URL='https://wgjzelrqfyvlnxikbijl.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzkxMDEsImV4cCI6MjA5MjcxNTEwMX0.grES_8m9TDG5KY8U6SeBgqAohhX5gtqqIWt0iTcaB3o';
+const SUPA_KEY='sb_publishable_P_vUKp6xX1n4-vtaChQTAQ_TLrYkthc';
 const CODIGO_VALIDO='POPI2025';
 const ADMIN_EMAIL='joseju.popi@hotmail.es';
 const WORKER_URL='https://macroai.joseju-popi.workers.dev';
-const SUPA_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnanplbHJxZnl2bG54aWtiaWpsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEzOTEwMSwiZXhwIjoyMDkyNzE1MTAxfQ.BFH-QFpbkP9hlfr6kWTgeTT3JcopXQfR2dM-yu7B9Gc';
 
 let SUPA_TOKEN=null,CURRENT_USER=null,db=null;
+// Todas las llamadas al Worker llevan la sesión del usuario (el Worker comprueba quién es).
+(function(){const _f=window.fetch.bind(window);
+window.fetch=function(u,o){
+  try{if(typeof u==='string'&&u.startsWith(WORKER_URL)&&SUPA_TOKEN){
+    o=Object.assign({},o||{});
+    const h=new Headers(o.headers||{});
+    if(!h.has('Authorization'))h.set('Authorization','Bearer '+SUPA_TOKEN);
+    o.headers=h;}}catch(e){}
+  return _f(u,o);};})();
 
 function initSupabaseClient(){
   if(window.supabase&&window.supabase.createClient){
@@ -1345,13 +1353,13 @@ function initSupabaseClient(){
 }
 
 async function supaFetch(path,opts={}){
-  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+(SUPA_TOKEN||SUPA_KEY),...(opts.headers||{})};
+  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,...(SUPA_TOKEN?{'Authorization':'Bearer '+SUPA_TOKEN}:{}),...(opts.headers||{})};
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
-// Solo para operaciones de admin — bypassa RLS con service key
+// Operaciones de admin: usan la sesión del usuario logueado; los permisos los decide RLS en Supabase
 async function supaAdmin(path,opts={}){
-  const headers={'Content-Type':'application/json','apikey':SUPA_SERVICE_KEY,'Authorization':'Bearer '+SUPA_SERVICE_KEY,...(opts.headers||{})};
+  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,...(SUPA_TOKEN?{'Authorization':'Bearer '+SUPA_TOKEN}:{}),...(opts.headers||{})};
   return fetch(SUPA_URL+path,{...opts,headers});
 }
 
@@ -1404,6 +1412,7 @@ async function doLogin(){
       const chk=await supaFetch('/rest/v1/usuarios_macroai?select=activo,nombre&email=eq.'+encodeURIComponent(data.user.email));
       const chkData=await chk.json();
       if(chkData&&chkData[0]&&chkData[0].activo===false){SUPA_TOKEN=null;CURRENT_USER=null;showMsg('loginMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');return;}
+      if(Array.isArray(chkData)&&chkData.length===0){SUPA_TOKEN=null;CURRENT_USER=null;try{await db.auth.signOut();}catch(e){}showMsg('loginMsg','Tu cuenta aún no tiene acceso. Pide a tu entrenador que te dé de alta.');return;}
       if(chkData&&chkData[0]&&chkData[0].nombre)CURRENT_USER.nombre=chkData[0].nombre;
     }
     localStorage.setItem('macroai_token',SUPA_TOKEN);
@@ -1434,14 +1443,10 @@ async function doRegistro(){
     SUPA_TOKEN=data.session.access_token;
     CURRENT_USER={id:data.user.id,email:data.user.email,nombre};
     // Vincular con fila creada por admin o insertar nueva
-    const existingRes=await supaFetch('/rest/v1/usuarios_macroai?select=id,activo&email=eq.'+encodeURIComponent(email));
-    const rows=await existingRes.json();
-    if(rows&&rows.length>0){
-      if(rows[0].activo===false){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
-      await supaAdmin('/rest/v1/usuarios_macroai?email=eq.'+encodeURIComponent(email),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,nombre})});
-    }else{
-      await supaAdmin('/rest/v1/usuarios_macroai',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:data.user.id,email,nombre,activo:true})});
-    }
+    const vinRes=await supaFetch('/rest/v1/rpc/vincular_usuario',{method:'POST',body:JSON.stringify({p_nombre:nombre})});
+    const vin=await vinRes.json();
+    if(vin==='desactivado'){showMsg('registroMsg','Tu cuenta está desactivada. Contacta con tu entrenador.');SUPA_TOKEN=null;CURRENT_USER=null;return;}
+    if(vin==='no_autorizado'){showMsg('registroMsg','Tu correo aún no tiene acceso. Pide a tu entrenador que te dé de alta con este mismo correo.');SUPA_TOKEN=null;CURRENT_USER=null;try{await db.auth.signOut();}catch(e){}return;}
     localStorage.setItem('macroai_token',SUPA_TOKEN);
     localStorage.setItem('macroai_refresh',data.session.refresh_token);
     localStorage.setItem('macroai_user',JSON.stringify(CURRENT_USER));
@@ -1467,6 +1472,11 @@ function doLogout(){
   SUPA_TOKEN=null;CURRENT_USER=null;
   localStorage.removeItem('macroai_token');
   localStorage.removeItem('macroai_user');
+  // Borrar datos de este usuario del móvil para que no pasen a otra cuenta; siguen a salvo en la nube
+  try{
+    ['macroai_favs','macroai_favs_ts','macroai_ajustes_ts','macroai_dias','macroai_cfg','macroai_desp','macroai_numcomidas','macroai_menu_overrides','macroai_weekdays'].forEach(k=>localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k=>k.startsWith('macroai_dia_')).forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
   hideBottomNav();
   // Supabase logout en background
   try{fetch(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY}});}catch(e){}
@@ -1508,6 +1518,7 @@ function enterApp(){
   fetch(WORKER_URL+'/ping',{method:'GET'}).catch(()=>{});
   // Sincronizar favoritos e historial desde Supabase (fix incógnito)
   loadFavsFromSupa().catch(()=>{});
+  ajustesPull().catch(()=>{});
   syncHistorialDesdeSupabase().then(()=>{
     // Re-renderizar inicio buscador si está abierto
     if(document.getElementById('viewBuscador')?.classList.contains('active')){
@@ -1589,16 +1600,68 @@ function enterApp(){
   }
 })();
 
+// ── AJUSTES SINCRONIZADOS ENTRE DISPOSITIVOS (tabla ajustes_macroai) ──
+const _AJ_KEYS={cfg:'macroai_cfg',desp:'macroai_desp',numcomidas:'macroai_numcomidas',menu_overrides:'macroai_menu_overrides',weekdays:'macroai_weekdays'};
+let _ajTimer=null,_ajApplying=false;
+function _ajCollect(){const o={};for(const k in _AJ_KEYS){const v=localStorage.getItem(_AJ_KEYS[k]);if(v!==null){try{o[k]=JSON.parse(v);}catch(e){}}}return o;}
+function _ajustesPush(){
+  if(_ajApplying)return;
+  try{localStorage.setItem('macroai_ajustes_ts',new Date().toISOString());}catch(e){}
+  clearTimeout(_ajTimer);
+  _ajTimer=setTimeout(_ajustesPushNow,1500);
+}
+async function _ajustesPushNow(){
+  if(!CURRENT_USER)return;
+  try{
+    await supaFetch('/rest/v1/ajustes_macroai?on_conflict=usuario_id',{
+      method:'POST',
+      headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({usuario_id:CURRENT_USER.id,datos:_ajCollect(),updated_at:localStorage.getItem('macroai_ajustes_ts')||new Date().toISOString()})
+    });
+  }catch(e){}
+}
+async function ajustesPull(){
+  if(!CURRENT_USER)return;
+  try{
+    const res=await supaFetch('/rest/v1/ajustes_macroai?usuario_id=eq.'+CURRENT_USER.id+'&select=datos,updated_at&limit=1');
+    const rows=await res.json();
+    if(!Array.isArray(rows))return;
+    const localTs=localStorage.getItem('macroai_ajustes_ts')||'';
+    if(!rows.length){
+      if(Object.keys(_ajCollect()).length){
+        if(!localTs)try{localStorage.setItem('macroai_ajustes_ts',new Date().toISOString());}catch(e){}
+        _ajustesPushNow();
+      }
+      return;
+    }
+    const r=rows[0];
+    if(localTs&&new Date(localTs)>=new Date(r.updated_at)){
+      if(new Date(localTs)>new Date(r.updated_at))_ajustesPushNow();
+      return;
+    }
+    _ajApplying=true;
+    try{
+      for(const k in _AJ_KEYS){if(r.datos&&r.datos[k]!==undefined)localStorage.setItem(_AJ_KEYS[k],JSON.stringify(r.datos[k]));}
+      localStorage.setItem('macroai_ajustes_ts',r.updated_at);
+      CFG=loadCFG();DESP=loadDesp();WEEK_DAYS=loadWeekDays();
+      _menuTipoDiaOverride=_menuLoadOverrides();
+      applyMacros(CFG.tipoDia);setDayType(CFG.tipoDia,false);renderWeekDays();
+      updateBars();renderMFPDiario();
+    }catch(e){}
+    _ajApplying=false;
+  }catch(e){}
+}
+
 // ── CONFIG ──
 function loadCFG(){
   const def={entreno:{kcal:2000,prot:100,ch:250,grasa:44},descanso:{kcal:1700,prot:100,ch:180,grasa:55},tipoDia:'entreno'};
   try{return Object.assign(def,JSON.parse(localStorage.getItem('macroai_cfg')||'{}'));}catch(e){return def;}
 }
-function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));}
+function saveCFG(cfg){localStorage.setItem('macroai_cfg',JSON.stringify(cfg));_ajustesPush();}
 
 // ── DÍAS DE ENTRENO SEMANALES ──
 function loadWeekDays(){try{const d=JSON.parse(localStorage.getItem("macroai_weekdays")||"[1,2,3,4,5]");return(Array.isArray(d)&&d.length>0)?d:[1,2,3,4,5];}catch(e){return[1,2,3,4,5];}}
-function saveWeekDays(days){localStorage.setItem("macroai_weekdays",JSON.stringify(days));}
+function saveWeekDays(days){localStorage.setItem("macroai_weekdays",JSON.stringify(days));_ajustesPush();}
 let WEEK_DAYS=loadWeekDays();
 
 function toggleWeekDay(d){
@@ -1668,7 +1731,7 @@ function loadDesp(){
     return raw;
   }catch(e){return[];}
 }
-function saveDesp(arr){localStorage.setItem('macroai_desp',JSON.stringify(arr));}
+function saveDesp(arr){localStorage.setItem('macroai_desp',JSON.stringify(arr));_ajustesPush();}
 let DESP=loadDesp();
 
 function despNombres(){return DESP.map(d=>d.nombre);}
@@ -1734,6 +1797,7 @@ function usarDespensa(){
 function loadFavs(){try{return JSON.parse(localStorage.getItem('macroai_favs')||'[]');}catch(e){return[];}}
 function saveFavs(arr){
   localStorage.setItem('macroai_favs',JSON.stringify(arr));
+  try{localStorage.setItem('macroai_favs_ts',new Date().toISOString());}catch(e){}
   _syncFavsToSupa(arr).catch(()=>{});
 }
 
@@ -1741,7 +1805,6 @@ async function _syncFavsToSupa(arr){
   if(!CURRENT_USER)return;
   try{
     await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id,{method:'DELETE'});
-    if(!arr.length)return;
     await supaFetch('/rest/v1/favoritos_macroai',{
       method:'POST',
       headers:{'Prefer':'return=minimal','Content-Type':'application/json'},
@@ -1753,19 +1816,29 @@ async function _syncFavsToSupa(arr){
 async function loadFavsFromSupa(){
   if(!CURRENT_USER)return;
   try{
-    const res=await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id+'&limit=1&select=datos');
+    const res=await supaFetch('/rest/v1/favoritos_macroai?usuario_id=eq.'+CURRENT_USER.id+'&order=created_at.desc&limit=1&select=datos,created_at');
     const rows=await res.json();
-    if(!Array.isArray(rows)||!rows.length)return;
-    const remoto=rows[0].datos||[];
-    if(!Array.isArray(remoto)||!remoto.length)return;
+    if(!Array.isArray(rows))return;
     const local=loadFavs();
-    const localIds=new Set(local.map(f=>f.id));
-    // Deduplicar también por nombre+kcal para evitar duplicados por distinto id
-    const localKeys=new Set(local.map(f=>f.nombre+'|'+f.kcal+'|'+(f.fecha||'')));
-    const soloRemoto=remoto.filter(rf=>!localIds.has(rf.id)&&!localKeys.has(rf.nombre+'|'+rf.kcal+'|'+(rf.fecha||'')));
-    if(!soloRemoto.length)return;
-    const final=[...local,...soloRemoto];
-    localStorage.setItem('macroai_favs',JSON.stringify(final));
+    const localTs=localStorage.getItem('macroai_favs_ts')||'';
+    if(!rows.length){
+      // Nunca se sincronizó: subir lo que haya en este móvil
+      if(local.length){_syncFavsToSupa(local).catch(()=>{});}
+      return;
+    }
+    const remoto=Array.isArray(rows[0].datos)?rows[0].datos:[];
+    const remotoTs=rows[0].created_at||'';
+    // Cambios de este móvil aún sin subir: ganan y se suben
+    if(localTs && remotoTs && new Date(localTs)>new Date(remotoTs)){
+      _syncFavsToSupa(local).catch(()=>{});
+      return;
+    }
+    // La nube manda: mismos favoritos, ediciones y borrados incluidos
+    if(JSON.stringify(remoto)!==JSON.stringify(local)){
+      localStorage.setItem('macroai_favs',JSON.stringify(remoto));
+    }
+    localStorage.setItem('macroai_favs_ts',remotoTs||new Date().toISOString());
+    if(document.getElementById('favBody')&&document.getElementById('viewFavoritos')?.classList.contains('active'))renderFavoritos();
   }catch(e){}
 }
 
@@ -1804,8 +1877,9 @@ function renderFavoritos(){
   // Deduplicar por nombre+kcal+fecha antes de renderizar
   let favs=loadFavs();
   const seen=new Set();
+  const _antes=favs.length;
   favs=favs.filter(f=>{const k=f.nombre+'|'+f.kcal+'|'+(f.fecha||'');if(seen.has(k))return false;seen.add(k);return true;});
-  saveFavs(favs);
+  if(favs.length!==_antes)saveFavs(favs);
   if(!favs.length){
     body.innerHTML='<div class="fav-empty">⭐<br><br>Aún no tienes favoritos.<br><br>Mantén pulsado cualquier mensaje<br>de la IA para guardarlo como favorito.</div>';
     return;
@@ -2268,7 +2342,7 @@ function editarFavorito(id){
     overlay.querySelector('#favEditSave').addEventListener('click',()=>{
       const t=calcTotales();
       const freshFavs=loadFavs();const idx=freshFavs.findIndex(x=>x.id===id);
-      if(idx>=0){freshFavs[idx].ingredientes=ings;freshFavs[idx].kcal=t.kcal;freshFavs[idx].prot=t.prot;freshFavs[idx].ch=t.ch;freshFavs[idx].grasa=t.grasa;}
+      if(idx>=0){freshFavs[idx].ingredientes=ings.map(i=>({...i,cantidad:(i.gramos!=null&&i.gramos!=='')?(Math.round(i.gramos*10)/10)+'g':(i.cantidad||'')}));freshFavs[idx].kcal=t.kcal;freshFavs[idx].prot=t.prot;freshFavs[idx].ch=t.ch;freshFavs[idx].grasa=t.grasa;}
       saveFavs(freshFavs);renderFavoritos();overlay.remove();showToast('✅ Favorito actualizado');
     });
     return;
@@ -4660,16 +4734,16 @@ function renderMFPDiario() {
       const gramMatch = item.nombre.match(/\((\d+(?:\.\d+)?)g\)/);
       const gramosActuales = gramMatch ? gramMatch[1] : '';
       itemsHtml += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);touch-action:pan-y;"
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);touch-action:pan-y;"
              ontouchstart="mfpTouchStart(${globalIdx},event)" ontouchend="mfpTouchEnd()" ontouchmove="mfpTouchMove(event)"
              oncontextmenu="event.preventDefault();mfpMenuItem(${globalIdx},event)">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="mfpEditarItem(${globalIdx})">
             <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre)}</div>
-            <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal} kcal</div>
           </div>
+          <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>`;
     });
 
@@ -5605,7 +5679,7 @@ const MEAL_CONFIG=[
 function loadNumComidas(){
   return parseInt(localStorage.getItem('macroai_numcomidas')||'4');
 }
-function saveNumComidas(n){localStorage.setItem('macroai_numcomidas',n);}
+function saveNumComidas(n){localStorage.setItem('macroai_numcomidas',n);_ajustesPush();}
 
 function getMealsForToday(){
   const n=loadNumComidas();
@@ -6230,12 +6304,12 @@ function _diarioRenderOtroDia(data, fecha) {
 
     const itemsHtml = items.map((item, itemIdx) => `
       <div class="diario-item-otroDia" data-fecha="${fecha}" data-mid="${mid}" data-item-idx="${itemIdx}"
-        style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
+        style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>
         <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
       </div>`).join('');
 
     html += `
@@ -6495,14 +6569,14 @@ function _diarioRenderFuturo(fecha) {
         ontouchend="futurMfpTouchEnd()"
         ontouchmove="futurMfpTouchEnd()"
         oncontextmenu="event.preventDefault();futurMfpMenuItem('${fecha}','${meal.id}',${i},event)"
-        style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(255,255,255,0.04);">
         <div style="flex:1;min-width:0;cursor:pointer;" onclick="futurMfpEditarItem('${fecha}','${meal.id}',${i})">
           <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre||'')}</div>
-          <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">${item.kcal||0} kcal</div>
         </div>
+        <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
       </div>`).join('');
 
     block.innerHTML = `
@@ -7835,7 +7909,7 @@ function _menuLoadOverrides() {
   try { return JSON.parse(localStorage.getItem('macroai_menu_overrides') || '{}'); } catch(e) { return {}; }
 }
 function _menuSaveOverrides(obj) {
-  try { localStorage.setItem('macroai_menu_overrides', JSON.stringify(obj)); } catch(e) {} 
+  try { localStorage.setItem('macroai_menu_overrides', JSON.stringify(obj)); } catch(e) {} _ajustesPush();
 }
 
 // Calcula el tipo de día para un día de semana (1=Lun..7=Dom), con posible override manual
@@ -10507,11 +10581,7 @@ async function toggleLetraGrandeApp(){
   try{ localStorage.setItem('macroai_letra_grande', on ? '1' : '0'); }catch(e){}
   if(CURRENT_USER){
     try{
-      await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.'+encodeURIComponent(CURRENT_USER.email), {
-        method:'PATCH',
-        headers:{'Prefer':'return=minimal','Content-Type':'application/json'},
-        body: JSON.stringify({letra_grande:on})
-      });
+      await supaFetch('/rest/v1/rpc/actualizar_mi_perfil',{method:'POST',body:JSON.stringify({p_letra_grande:on})});
     }catch(e){}
   }
 }
@@ -10532,11 +10602,7 @@ async function guardarDiasEntreno() {
   saveWeekDays(WEEK_DAYS);
   autoDetectDayType();
   try {
-    await supaAdmin('/rest/v1/perfiles_macroai?cliente_email=eq.' + encodeURIComponent(CURRENT_USER.email), {
-      method: 'PATCH',
-      headers: {'Prefer': 'return=minimal', 'Content-Type': 'application/json'},
-      body: JSON.stringify({dias_entreno: WEEK_DAYS})
-    });
+    await supaFetch('/rest/v1/rpc/actualizar_mi_perfil',{method:'POST',body:JSON.stringify({p_dias_entreno: WEEK_DAYS})});
     showToast('✅ Días guardados');
   } catch(e) {
     showToast('✅ Días guardados localmente');
