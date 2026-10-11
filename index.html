@@ -5456,7 +5456,20 @@ Usa valores nutricionales estándar por 100g. Máximo 3 resultados si hay varian
   });
 
   // Ordenar: recientes primero (por posición en historial), luego el resto
+  // Primero los que EMPIEZAN por lo escrito (sin tildes), luego los que lo contienen
+  // como palabra, luego el resto; dentro de cada grupo, los recientes primero.
+  const _sinTildes = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const qSin = _sinTildes(query);
+  const _grupo = r => {
+    const n = _sinTildes(r.nombre);
+    if (n.startsWith(qSin)) return 0;
+    if (n.split(/[\s,()\/-]+/).some(w => w.startsWith(qSin))) return 1;
+    if (n.includes(qSin)) return 2;
+    return 3;
+  };
+  resultadosConPrioridad.forEach(r => { r._grupo = _grupo(r); });
   resultadosConPrioridad.sort((a, b) => {
+    if (a._grupo !== b._grupo) return a._grupo - b._grupo;
     if (a._recientePOS !== b._recientePOS) return a._recientePOS - b._recientePOS;
     return 0;
   });
