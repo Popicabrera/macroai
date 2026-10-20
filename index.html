@@ -8419,8 +8419,11 @@ const MEDIDAS_CASERAS = [
   { match: /sepia/i,                             base: 200, singular: '1 sepia mediana', plural: 'sepias medianas' },
   { match: /yogur/i,                             base: 125, singular: '1 yogur individual', plural: 'yogures individuales' },
 ];
+// Fiambres y embutidos: no son filetes ni raciones de cazo, no llevan medida casera
+const FIAMBRES_RE = /embuchad|fiambre|loncha|york|serrano|ib[eé]ric|curad|chorizo|salchich|mortadela|jam[oó]n|bacon|beicon|fuet|sobrasada|cecina|longaniza/i;
 function _medidaCaseraHtml(nombreIng, gramos) {
   if (!nombreIng || !gramos) return '';
+  if (FIAMBRES_RE.test(nombreIng)) return '';
   const entry = MEDIDAS_CASERAS.find(t => t.match.test(nombreIng));
   if (!entry) return '';
   const n = Math.round((gramos / entry.base) * 2) / 2; // redondeo a medias
@@ -8428,8 +8431,11 @@ function _medidaCaseraHtml(nombreIng, gramos) {
   let texto;
   if (Math.abs(n - 1) < 0.01) {
     texto = '≈ ' + entry.singular;
+  } else if (n === 0.5) {
+    // Media ración: "½ filete mediano", no "½ filetes medianos"
+    texto = '≈ ½ ' + entry.singular.replace(/^1\s+/, '');
   } else {
-    const numStr = (n % 1 === 0.5) ? (Math.floor(n) + '½') : String(n);
+    const numStr = (n % 1 === 0.5) ? ((Math.floor(n) || '') + '½') : String(n);
     texto = '≈ ' + numStr + ' ' + entry.plural;
   }
   return '<div class="mc-alimento-medida">' + texto + '</div>';
