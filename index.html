@@ -433,6 +433,37 @@ body.letra-grande #viewBuscador .mfp-item-nombre{
 body.letra-grande #viewBuscador .mfp-item-macro{
   font-size:12px!important;
 }
+/* ── Letra grande: resto de pantallas ── */
+body.letra-grande #viewMiMenu .mc-alimento-gramos{font-size:15px!important;}
+body.letra-grande #viewMiMenu .mc-plato-titulo{font-size:16px!important;}
+body.letra-grande #viewMiMenu .mc-alimento-medida{font-size:13px!important;}
+body.letra-grande #viewMiMenu .mc-receta-btn{font-size:14px!important;}
+body.letra-grande #viewMiMenu .mc-receta-texto{font-size:14px!important;}
+body.letra-grande #viewMiMenu .mp-kcal-big{font-size:26px!important;}
+body.letra-grande #viewMiMenu .mp-macro-rest{font-size:19px!important;}
+body.letra-grande #viewMiMenu .lc-nombre{font-size:15px!important;}
+body.letra-grande #viewMiMenu .lc-cant{font-size:14px!important;}
+body.letra-grande #viewMain .mfp-meal-kcal{font-size:17px!important;}
+body.letra-grande #favBody .fav-name{font-size:16px!important;}
+body.letra-grande #favBody .fav-date{font-size:12px!important;}
+body.letra-grande #favBody .fav-ings{font-size:13px!important;}
+body.letra-grande #favBody .fav-macros span{font-size:13px!important;}
+body.letra-grande .fsm-title{font-size:15px!important;}
+body.letra-grande .fsm-subtitle{font-size:14px!important;}
+body.letra-grande .fsm-item-name{font-size:15px!important;}
+body.letra-grande .fsm-macro{font-size:12px!important;}
+body.letra-grande .fsm-source{font-size:11px!important;}
+body.letra-grande #fsmSelectedName,
+body.letra-grande #fsmPer100,
+body.letra-grande #fsmPreview{font-size:14px!important;}
+body.letra-grande .fsm-gram-input{font-size:18px!important;}
+body.letra-grande .fsm-nutri-lbl,
+body.letra-grande .fsm-nutri-val{font-size:14px!important;}
+body.letra-grande #viewConfig .perfil-nombre-txt{font-size:18px!important;}
+body.letra-grande #viewConfig .perfil-email-txt{font-size:14px!important;}
+body.letra-grande #viewConfig .cfg2-title{font-size:12px!important;}
+body.letra-grande #viewConfig .cfg2-macro-kcal{font-size:24px!important;}
+body.letra-grande #viewConfig .cfg2-pill{font-size:11px!important;}
 
 .ibtns{display:flex;gap:5px;align-items:center;flex-shrink:0;}
 .icon-btn{width:36px;height:36px;border-radius:11px;background:var(--s3);border:1px solid var(--border);
@@ -1918,7 +1949,7 @@ function renderFavoritos(){
     const card=document.createElement('div');card.className='fav-card';
     const _stripEmoji=s=>(s||'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/gu,'').trim();
     const ingHtml=f.ingredientes&&f.ingredientes.length?
-      `<div style="padding:2px 12px 4px;font-size:10px;color:var(--muted);line-height:1.6;">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:6px;">• ${escapeHtml(_stripEmoji(i.nombre))} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
+      `<div class="fav-ings" style="padding:2px 12px 4px;font-size:10px;color:var(--muted);line-height:1.6;">${f.ingredientes.map(i=>`<span style="display:inline-block;margin-right:6px;">• ${escapeHtml(_stripEmoji(i.nombre))} <strong>${escapeHtml(i.cantidad)}</strong></span>`).join('')}</div>`:'';
     card.innerHTML=`
       <div class="fav-hdr-row">
         <div class="fav-name">⭐ ${escapeHtml(f.nombre)}</div>
@@ -2472,7 +2503,7 @@ function mfpNombreGramosHtml(nombre){
   const s=String(nombre||'');
   const m=s.match(/^(.*?)(\s*\(\d+(?:\.\d+)?g\))\s*$/);
   if(!m) return `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">${escapeHtml(s)}</span>`;
-  return `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m[1])}</span><span style="flex-shrink:0;white-space:nowrap;">${escapeHtml(m[2])}</span>`;
+  return `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m[1])}</span><span style="flex-shrink:0;white-space:nowrap;margin-left:4px;">${escapeHtml(m[2].trim())}</span>`;
 }
 
 // ── TODAY DATA ──
@@ -6403,10 +6434,10 @@ function _diarioRenderOtroDia(data, fecha) {
       <div class="diario-item-otroDia" data-fecha="${fecha}" data-mid="${mid}" data-item-idx="${itemIdx}"
         style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 14px 8px 42px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nombre||'')}</div>
+          <div class="mfp-item-nombre" style="font-size:13px;font-weight:500;display:flex;min-width:0;">${mfpNombreGramosHtml(item.nombre||'')}</div>
         </div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
+        <div class="mfp-item-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${item.kcal||0} kcal</div>
+        <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:2px;flex-basis:100%;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
       </div>`).join('');
 
     html += `
@@ -6416,11 +6447,11 @@ function _diarioRenderOtroDia(data, fecha) {
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:18px;">${MEAL_EMOJIS[mid]||'🍽️'}</span>
             <div>
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${MEAL_NAMES[mid]||mid}</div>
+              <div class="meal-name">${MEAL_NAMES[mid]||mid}</div>
             </div>
           </div>
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${totalKcal} kcal</span>
-          <div style="flex-basis:100%;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;">${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
+          <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${totalKcal} kcal</span>
+          <div class="mfp-meal-sub" style="flex-basis:100%;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;">${fmtMacros(totalCh,totalProt,totalGrasa)}</div>
         </div>
         ${itemsHtml}
       </div>`;
@@ -6437,11 +6468,11 @@ function _diarioRenderOtroDia(data, fecha) {
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-size:18px;">🍽️</span>
               <div>
-                <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${escapeHtml(item.nombre||'Comida')}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
+                <div class="mfp-item-nombre" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${escapeHtml(item.nombre||'Comida')}</div>
+                <div class="mfp-item-macro" style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;">${fmtMacros(item.ch,item.prot,item.grasa)}</div>
               </div>
             </div>
-            <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${item.kcal||0} kcal</span>
+            <span class="mfp-meal-kcal" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${item.kcal||0} kcal</span>
           </div>
         </div>`;
     });
@@ -6681,7 +6712,7 @@ function _diarioRenderFuturo(fecha) {
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${meal.emoji}</span>
           <div>
-            <div class="meal-name" style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;">${meal.name}</div>
+            <div class="meal-name">${meal.name}</div>
             ${items.length ? '' : `<div class="mfp-meal-sub" style="font-size:10px;color:var(--muted);margin-top:1px;">Sin planificar</div>`}
           </div>
         </div>
@@ -8561,9 +8592,9 @@ function _renderMenuDia() {
       if (recetaMostrar && recetaMostrar.trim()) {
         const recId = 'mc-rec-' + diaNum + '-' + idx + '-' + ci;
         ingredientesHtml += '<div class="mc-receta-toggle" onclick="mcToggleReceta(\'' + recId + '\')" style="display:flex;align-items:center;gap:6px;margin:6px 14px 4px;padding:8px 10px;background:rgba(192,57,43,0.06);border-radius:10px;cursor:pointer;">'
-          + '<span style="font-size:12px;font-weight:700;color:var(--accent);">📖 Ver receta</span>'
+          + '<span class="mc-receta-btn" style="font-size:12px;font-weight:700;color:var(--accent);">📖 Ver receta</span>'
           + '</div>'
-          + '<div id="' + recId + '" style="display:none;font-size:12px;color:var(--muted);line-height:1.7;padding:2px 14px 12px;white-space:pre-line;">'
+          + '<div id="' + recId + '" class="mc-receta-texto" style="display:none;font-size:12px;color:var(--muted);line-height:1.7;padding:2px 14px 12px;white-space:pre-line;">'
           + escapeHtml(recetaMostrar)
           + '<div style="margin-top:8px;font-size:11px;font-style:italic;color:var(--muted2);border-top:1px solid var(--border);padding-top:8px;">💡 Es solo una idea de cómo prepararlo — cocínalo como prefieras, respetando los ingredientes y las cantidades.</div>'
           + '</div>';
