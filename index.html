@@ -437,6 +437,8 @@ body.letra-grande #viewBuscador .mfp-item-macro{
 body.letra-grande #viewMiMenu .mc-alimento-gramos{font-size:15px!important;}
 body.letra-grande #viewMiMenu .mc-plato-titulo{font-size:16px!important;}
 body.letra-grande #viewMiMenu .mc-alimento-medida{font-size:13px!important;}
+body.letra-grande #viewMiMenu .mc-sust-btn{font-size:13px!important;}
+body.letra-grande #viewMiMenu .mc-sust-opt{font-size:15px!important;}
 body.letra-grande #viewMiMenu .mc-receta-btn{font-size:14px!important;}
 body.letra-grande #viewMiMenu .mc-receta-texto{font-size:14px!important;}
 body.letra-grande #viewMiMenu .mp-kcal-big{font-size:26px!important;}
@@ -1661,7 +1663,7 @@ function enterApp(){
 })();
 
 // ── AJUSTES SINCRONIZADOS ENTRE DISPOSITIVOS (tabla ajustes_macroai) ──
-const _AJ_KEYS={cfg:'macroai_cfg',desp:'macroai_desp',numcomidas:'macroai_numcomidas',menu_overrides:'macroai_menu_overrides',weekdays:'macroai_weekdays'};
+const _AJ_KEYS={cfg:'macroai_cfg',desp:'macroai_desp',numcomidas:'macroai_numcomidas',menu_overrides:'macroai_menu_overrides',menu_sust:'macroai_msust',weekdays:'macroai_weekdays'};
 let _ajTimer=null,_ajApplying=false;
 function _ajCollect(){const o={};for(const k in _AJ_KEYS){const v=localStorage.getItem(_AJ_KEYS[k]);if(v!==null){try{o[k]=JSON.parse(v);}catch(e){}}}return o;}
 function _ajustesPush(){
@@ -7955,6 +7957,15 @@ async function handleFotoProducto(e) {
 .mc-plato-titulo{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);padding:10px 14px 6px;}
 .mc-plato-titulo::before{content:'';width:3px;height:16px;background:var(--accent);flex-shrink:0;}
 .mc-alimento-medida{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;color:#b8860b;background:#fdf6e3;padding:2px 8px;border-radius:20px;}
+/* Cambiar ingrediente */
+.mc-sust-btn{margin-top:6px;min-height:32px;padding:4px 10px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-family:inherit;font-size:11px;font-weight:700;color:var(--text);cursor:pointer;white-space:nowrap;}
+.mc-sust-tag{display:inline-block;margin-left:4px;font-size:10px;font-weight:700;color:#2f5d2a;background:#e3eedf;padding:1px 7px;border-radius:20px;vertical-align:middle;}
+.mc-sust-panel{margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:4px;}
+.mc-sust-titulo{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;padding:6px 8px 4px;}
+.mc-sust-opt{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;font-family:inherit;font-size:13px;color:var(--text);text-align:left;cursor:pointer;}
+.mc-sust-opt.activa{border:2px solid var(--accent);background:rgba(192,57,43,0.06);}
+.mc-sust-opt-nombre{flex:1;min-width:0;}
+.mc-sust-opt-g{font-weight:700;color:#b8860b;white-space:nowrap;}
 /* Expandir hint */
 .mc-expand-hint{text-align:center;padding:5px 0 2px;font-size:10px;color:var(--muted2);letter-spacing:0.3px;}
 
@@ -8441,6 +8452,102 @@ function _medidaCaseraHtml(nombreIng, gramos) {
   return '<div class="mc-alimento-medida">' + texto + '</div>';
 }
 
+// ── CAMBIAR INGREDIENTE (vista menú del cliente) ─────────────────────────────
+// Grupos de equivalencias fijos, válidos para todos los clientes. Valores por 100 g en cocinado.
+// modo 'hc': los gramos nuevos dan los mismos carbohidratos que el original (patata ↔ arroz ↔ pasta).
+// modo 'peso': mismo peso (carnes, pescados del mismo tipo, legumbres).
+const SUSTITUCIONES = [
+  { id:'hidrato', titular:true, modo:'hc', titulo:'Equivale a',
+    match:/patata|arroz|pasta|macarr[oó]n|espagueti/i, excluir:/harina|tortita|fideo|pan\b|boniato/i,
+    opciones:[
+      { nombre:'Patata cocida',        corto:'patata', re:/patata/i, kcal_100:77,  hc_100:16.8, p_100:2.1, g_100:0.1 },
+      { nombre:'Arroz blanco cocido',  corto:'arroz',  re:/arroz/i,  kcal_100:130, hc_100:29.3, p_100:2.5, g_100:0.3 },
+      { nombre:'Pasta cocida',         corto:'pasta',  re:/pasta|macarr|espagueti/i, kcal_100:131, hc_100:26.5, p_100:4.7, g_100:0.5 },
+    ] },
+  { id:'carne_picada', modo:'peso', titulo:'Otra carne picada',
+    match:/picad/i, excluir:/cerdo|mixta/i,
+    opciones:[
+      { nombre:'Ternera picada 5 %', corto:'ternera', re:/ternera/i, kcal_100:135, hc_100:0, p_100:21, g_100:5 },
+      { nombre:'Pollo picado',       corto:'pollo',   re:/pollo/i,   kcal_100:150, hc_100:0, p_100:21, g_100:7 },
+      { nombre:'Pavo picado',        corto:'pavo',    re:/pavo/i,    kcal_100:120, hc_100:0, p_100:23, g_100:3 },
+    ] },
+  { id:'carne_magra', modo:'peso', titulo:'Otra carne',
+    match:/pechuga|pavo/i, excluir:/picad|fiambre/i,
+    opciones:[
+      { nombre:'Pechuga de pollo', corto:'pollo', re:/pollo/i, kcal_100:165, hc_100:0, p_100:31, g_100:3.6 },
+      { nombre:'Pechuga de pavo',  corto:'pavo',  re:/pavo/i,  kcal_100:135, hc_100:0, p_100:29, g_100:1.5 },
+    ] },
+  { id:'carne', modo:'peso', titulo:'Otra carne',
+    match:/muslo|lomo|solomillo|cerdo|ternera|conejo/i, excluir:/picad|embuchad|fiambre|pechuga/i,
+    opciones:[
+      { nombre:'Muslo de pollo sin piel', corto:'pollo',   re:/muslo|pollo/i, kcal_100:125, hc_100:0, p_100:19,   g_100:5 },
+      { nombre:'Lomo de cerdo',           corto:'lomo',    re:/lomo|cerdo|solomillo/i, kcal_100:143, hc_100:0, p_100:21.3, g_100:6.2 },
+      { nombre:'Ternera magra',           corto:'ternera', re:/ternera/i, kcal_100:165, hc_100:0, p_100:30, g_100:4.5 },
+      { nombre:'Conejo',                  corto:'conejo',  re:/conejo/i,  kcal_100:140, hc_100:0, p_100:22, g_100:5.5 },
+    ] },
+  { id:'pescado_blanco', titular:true, modo:'peso', titulo:'Otro pescado blanco',
+    match:/merluza|lubina|gallo|bacaladilla|bacalao|rape|lenguado|dorada|pescadilla|pescado blanco/i, excluir:/salado|desalado/i,
+    opciones:[
+      { nombre:'Merluza',        corto:'merluza',      re:/merluza|pescadilla/i, kcal_100:78, hc_100:0, p_100:17,   g_100:1.2 },
+      { nombre:'Lubina',         corto:'lubina',       re:/lubina/i,      kcal_100:97, hc_100:0, p_100:18,   g_100:2.6 },
+      { nombre:'Gallo',          corto:'gallo',        re:/gallo/i,       kcal_100:73, hc_100:0, p_100:16.5, g_100:0.6 },
+      { nombre:'Bacaladilla',    corto:'bacaladillas', re:/bacaladilla/i, kcal_100:73, hc_100:0, p_100:16.5, g_100:0.7 },
+      { nombre:'Bacalao fresco', corto:'bacalao',      re:/bacalao/i,     kcal_100:82, hc_100:0, p_100:18,   g_100:0.7 },
+    ] },
+  { id:'pescado_azul', titular:true, modo:'peso', titulo:'Otro pescado azul',
+    match:/salm[oó]n|sardina|boquer[oó]n|caballa|jurel/i, excluir:/ahumad|lata|conserva/i,
+    opciones:[
+      { nombre:'Salmón',   corto:'salmón',     re:/salm[oó]n/i, kcal_100:208, hc_100:0, p_100:20,   g_100:13 },
+      { nombre:'Sardina',  corto:'sardinas',   re:/sardina/i,   kcal_100:169, hc_100:0, p_100:20,   g_100:9.5 },
+      { nombre:'Boquerón', corto:'boquerones', re:/boquer/i,    kcal_100:131, hc_100:0, p_100:17.2, g_100:6.6 },
+      { nombre:'Caballa',  corto:'caballa',    re:/caballa/i,   kcal_100:205, hc_100:0, p_100:19,   g_100:14 },
+      { nombre:'Jurel',    corto:'jurel',      re:/jurel/i,     kcal_100:125, hc_100:0, p_100:19,   g_100:5 },
+    ] },
+  { id:'legumbre', titular:true, modo:'peso', titulo:'Otra legumbre',
+    match:/lenteja|garbanzo|alubia|jud[ií]as?\s+blancas?/i, excluir:/harina/i,
+    opciones:[
+      { nombre:'Lentejas cocidas',  corto:'lentejas', re:/lenteja/i, kcal_100:116, hc_100:20,   p_100:9,   g_100:0.4 },
+      { nombre:'Garbanzos cocidos', corto:'garbanzos', re:/garbanzo/i, kcal_100:121, hc_100:20, p_100:7.6, g_100:1.9 },
+      { nombre:'Alubias cocidas',   corto:'judías blancas', re:/alubia|jud[ií]a/i, kcal_100:124, hc_100:17.5, p_100:8.7, g_100:0.5 },
+    ] },
+];
+
+// Devuelve el grupo de sustitución de un ingrediente (o null)
+function _sustGrupo(nombreIng) {
+  if (!nombreIng || FIAMBRES_RE.test(nombreIng)) return null;
+  return SUSTITUCIONES.find(g => g.match.test(nombreIng) && !(g.excluir && g.excluir.test(nombreIng))) || null;
+}
+// Gramos equivalentes de la opción elegida a partir del ingrediente original (ya ajustado por tipo de día)
+function _sustGramos(grupo, ingOrig, gramosOrig, opcion) {
+  let g = gramosOrig;
+  if (grupo.modo === 'hc' && (ingOrig.hc_100 || 0) > 0 && opcion.hc_100 > 0) {
+    g = gramosOrig * ingOrig.hc_100 / opcion.hc_100;
+  }
+  return Math.max(5, Math.round(g / 5) * 5);
+}
+// Cambios elegidos por el cliente: { 'celdaId|índice': 'Nombre de la opción' }
+function _sustLoad() {
+  try { return JSON.parse(localStorage.getItem('macroai_msust') || '{}') || {}; } catch(e) { return {}; }
+}
+function _sustSave(obj) {
+  try { localStorage.setItem('macroai_msust', JSON.stringify(obj)); } catch(e) {}
+  _ajustesPush();
+}
+function mcSustToggle(panelId) {
+  const el = document.getElementById(panelId);
+  if (!el) return;
+  const abrir = el.style.display === 'none';
+  document.querySelectorAll('.mc-sust-panel').forEach(p => { p.style.display = 'none'; });
+  el.style.display = abrir ? 'block' : 'none';
+}
+function mcSustElegir(btn) {
+  const key = btn.dataset.key, opcion = btn.dataset.opcion;
+  const st = _sustLoad();
+  if (opcion) st[key] = opcion; else delete st[key];
+  _sustSave(st);
+  _renderMenuDia();
+}
+
 function _renderMenuDia() {
   if (!_menuActivoCache || !_menuCeldasCache || !_menuBibCache) return;
 
@@ -8492,6 +8599,7 @@ function _renderMenuDia() {
 
   let totalKcal=0, totalProt=0, totalHc=0, totalGrasa=0;
   const doneState = _menuLoadDone(diaNum);
+  const sustState = _sustLoad();
 
   // Banner próximo menú (solo si hay uno pendiente)
   const bannerPendiente = _menuPendienteCache
@@ -8531,12 +8639,29 @@ function _renderMenuDia() {
 
       // Ajustar gramos por tipo de día (WLS) si es descanso
       if (ingArr.length && ingArr.some(i => i.gramos)) {
-        // Nombre del plato (tal y como aparece en cocina) antes de sus ingredientes
-        ingredientesHtml += '<div class="mc-plato-titulo">' + escapeHtml(celda.nombre || bib.nombre || '') + '</div>';
-        ingArr.forEach(ing => {
-          if (!ing.gramos) return;
-          const gramosOrig = ing.gramos;
-          const gramosAdj  = _menuAjustarGramos(gramosOrig, ing, tipoDia, _menuPerfilMacros);
+        // Nombre del plato (tal y como aparece en cocina) antes de sus ingredientes.
+        // Si el cliente ha cambiado el hidrato o el pescado, el nombre se adapta ("con arroz" → "con patata").
+        let platoNombre = celda.nombre || bib.nombre || '';
+        let filasHtml = '';
+        ingArr.forEach((ingOrig, ii) => {
+          if (!ingOrig.gramos) return;
+          const gramosOrig = ingOrig.gramos;
+          const gramosBase = _menuAjustarGramos(gramosOrig, ingOrig, tipoDia, _menuPerfilMacros);
+
+          // ¿Se puede cambiar este ingrediente? ¿Lo ha cambiado el cliente?
+          const grupo    = _sustGrupo(ingOrig.nombre || '');
+          const sustKey  = (celda.id || ('c' + ci)) + '|' + ii;
+          const elegida  = (grupo && sustState[sustKey]) ? grupo.opciones.find(o => o.nombre === sustState[sustKey]) : null;
+          const ing      = elegida || ingOrig;
+          const gramosAdj = elegida ? _sustGramos(grupo, ingOrig, gramosBase, elegida) : gramosBase;
+          if (elegida && grupo.titular) {
+            const optOrig = grupo.opciones.find(o => o.re.test(ingOrig.nombre || ''));
+            if (optOrig) {
+              const reTit = new RegExp('[A-Za-zÁÉÍÓÚáéíóúÑñÜü]*(?:' + optOrig.re.source + ')[A-Za-zÁÉÍÓÚáéíóúÑñÜü]*', 'i');
+              platoNombre = platoNombre.replace(reTit, m => (m[0] === m[0].toUpperCase() && m[0] !== m[0].toLowerCase())
+                ? elegida.corto.charAt(0).toUpperCase() + elegida.corto.slice(1) : elegida.corto);
+            }
+          }
 
           // Calcular kcal del ingrediente ajustado
           const factor = gramosAdj / 100;
@@ -8556,18 +8681,45 @@ function _renderMenuDia() {
             : gramosAdj + 'g';
           const _macrosHtml = iProt > 0 ? '<div class="mc-alimento-macros" style="white-space:nowrap;">' + fmtMacros(iHc, iProt, iGrasa) + '</div>' : '';
           const _medidaHtml = _medidaCaseraHtml(ing.nombre||'', gramosAdj);
-          ingredientesHtml += '<div class="mc-alimento-row">'
+
+          // Botón «Cambiar» + lista de equivalencias (solo si el ingrediente tiene grupo)
+          let _sustBtnHtml = '', _sustPanelHtml = '';
+          if (grupo) {
+            const panelId = 'mc-sust-' + diaNum + '-' + idx + '-' + ci + '-' + ii;
+            const optOrigIdx = grupo.opciones.findIndex(o => o.re.test(ingOrig.nombre || ''));
+            const opcionBtn = (label, valor, gr, activa) =>
+              '<button type="button" class="mc-sust-opt' + (activa ? ' activa' : '') + '" data-key="' + escapeHtml(sustKey) + '" data-opcion="' + escapeHtml(valor) + '" onclick="mcSustElegir(this)">'
+              + '<span class="mc-sust-opt-nombre">' + escapeHtml(label) + '</span>'
+              + '<span class="mc-sust-opt-g">' + gr + ' g</span>'
+              + '</button>';
+            let opcionesHtml = opcionBtn(ingOrig.nombre || '', '', gramosBase, !elegida);
+            grupo.opciones.forEach((o, oi) => {
+              if (oi === optOrigIdx) return; // ya está como original
+              opcionesHtml += opcionBtn(o.nombre, o.nombre, _sustGramos(grupo, ingOrig, gramosBase, o), !!elegida && elegida.nombre === o.nombre);
+            });
+            _sustBtnHtml = '<button type="button" class="mc-sust-btn" onclick="mcSustToggle(\'' + panelId + '\')" aria-label="Cambiar ' + escapeHtml(ing.nombre || '') + '">⇄ Cambiar</button>';
+            _sustPanelHtml = '<div class="mc-sust-panel" id="' + panelId + '" style="display:none;">'
+              + '<div class="mc-sust-titulo">' + escapeHtml(grupo.titulo) + '</div>'
+              + opcionesHtml
+              + '</div>';
+          }
+
+          filasHtml += '<div class="mc-alimento-row">'
             + '<div class="mc-alimento-dot"></div>'
             + '<div style="flex:1;min-width:0;">'
-            + '<div><span class="mc-alimento-nombre">' + escapeHtml(ing.nombre||'') + '</span> <span class="mc-alimento-gramos">(' + _gramosHtml + ')</span></div>'
+            + '<div><span class="mc-alimento-nombre">' + escapeHtml(ing.nombre||'') + '</span> <span class="mc-alimento-gramos">(' + _gramosHtml + ')</span>'
+            + (elegida ? ' <span class="mc-sust-tag">Cambiado</span>' : '') + '</div>'
             + _medidaHtml
             + _macrosHtml
+            + _sustPanelHtml
             + '</div>'
             + '<div class="mc-alimento-right">'
             + '<div class="mc-alimento-kcal">' + iKcal + ' kcal</div>'
+            + _sustBtnHtml
             + '</div>'
             + '</div>';
         });
+        ingredientesHtml += '<div class="mc-plato-titulo">' + escapeHtml(platoNombre) + '</div>' + filasHtml;
       } else {
         // Sin desglose por ingrediente → usar macros directos del plato
         const cKcal  = Math.round(baseKcal);
