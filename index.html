@@ -7408,13 +7408,79 @@ function _loopEscaner() {
   _scannerLoop = requestAnimationFrame(loop);
 }
 
+// Busca un código de barras sin depender del Worker (workers.dev no siempre es
+// accesible desde algunas redes): 1) base de datos propia (Supabase),
+// 2) Open Food Facts directamente desde el móvil, 3) el Worker como último recurso.
+// Cada paso tiene límite de tiempo, así que nunca se queda en "buscando..." para siempre.
 async function _buscarEAN(ean) {
+  ean = String(ean || '').trim();
+  if (!/^[0-9]{6,14}$/.test(ean)) return null;
+  const _num = v => Math.round((parseFloat(v) || 0) * 10) / 10;
+
+  // 1) Base de datos propia
   try {
-    const r = await fetch(WORKER_URL + '/barcode', {
+    const res = await fetchConTimeout(SUPA_URL + '/rest/v1/rpc/buscar_alimento_por_codigo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        ...(SUPA_TOKEN ? { 'Authorization': 'Bearer ' + SUPA_TOKEN } : {})
+      },
+      body: JSON.stringify({ p_ean: ean })
+    }, 6000);
+    if (res.ok) {
+      const filas = await res.json();
+      const f = Array.isArray(filas) ? filas[0] : null;
+      if (f && f.nombre) {
+        return { found: true, fuente: 'supabase', nombre: f.nombre,
+          kcal_100: Math.round(parseFloat(f.kcal_100) || 0), p_100: _num(f.p_100),
+          hc_100: _num(f.hc_100), g_100: _num(f.g_100) };
+      }
+    }
+  } catch(e) {}
+
+  // 2) Open Food Facts directamente
+  try {
+    const res = await fetchConTimeout('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(ean) +
+      '.json?fields=product_name,product_name_es,brands,nutriments', {}, 8000);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.status === 1 && data.product) {
+        const p = data.product, n = p.nutriments || {};
+        let kcal = parseFloat(n['energy-kcal_100g']);
+        if (!(kcal > 0) && parseFloat(n['energy-kj_100g']) > 0) kcal = parseFloat(n['energy-kj_100g']) / 4.184;
+        if (!(kcal > 0) && parseFloat(n['energy_100g']) > 0) kcal = parseFloat(n['energy_100g']) / 4.184;
+        kcal = Math.round(kcal || 0);
+        const prot = _num(n['proteins_100g']), hc = _num(n['carbohydrates_100g']), gras = _num(n['fat_100g']);
+        if (kcal > 0 || prot > 0) {
+          let nombre = (p.product_name_es || p.product_name || '').trim();
+          const marca = String(p.brands || '').split(',')[0].trim();
+          if (nombre && marca && !nombre.toLowerCase().includes(marca.toLowerCase())) nombre += ' (' + marca + ')';
+          if (!nombre) nombre = 'Producto ' + ean;
+          const resultado = { found: true, fuente: 'off', nombre, kcal_100: kcal, p_100: prot, hc_100: hc, g_100: gras };
+          // Guardar con su código para que la próxima vez salga al momento (no bloquea)
+          fetchConTimeout(SUPA_URL + '/rest/v1/rpc/guardar_alimento_codigo', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPA_KEY,
+              ...(SUPA_TOKEN ? { 'Authorization': 'Bearer ' + SUPA_TOKEN } : {})
+            },
+            body: JSON.stringify({ p_ean: ean, p_nombre: nombre, p_kcal: kcal, p_p: prot, p_hc: hc, p_g: gras })
+          }, 8000).catch(() => {});
+          return resultado;
+        }
+      }
+    }
+  } catch(e) {}
+
+  // 3) Worker (último recurso)
+  try {
+    const r = await fetchConTimeout(WORKER_URL + '/barcode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ean, usuario_id: CURRENT_USER?.id || null })
-    });
+    }, 6000);
     const d = await r.json();
     if (d.found && d.nombre && d.nombre !== 'undefined' && (d.kcal_100 > 0 || d.p_100 > 0)) return d;
   } catch(e) {}
